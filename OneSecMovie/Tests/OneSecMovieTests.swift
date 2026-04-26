@@ -1,4 +1,5 @@
 import Foundation
+import AppCore
 import CompositionService
 import Models
 import CoreGraphics

@@ -14,6 +14,20 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "160C110EDE7E5A077FC6DB2E"
+               BuildableName = "AppCore.framework"
+               BlueprintName = "AppCore"
+               ReferencedContainer = "container:OneSecMovie.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "702E5B0F1CCEBE75D92E029B"
                BuildableName = "CompositionService.framework"
                BlueprintName = "CompositionService"
@@ -124,9 +138,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "702E5B0F1CCEBE75D92E029B"
-            BuildableName = "CompositionService.framework"
-            BlueprintName = "CompositionService"
+            BlueprintIdentifier = "160C110EDE7E5A077FC6DB2E"
+            BuildableName = "AppCore.framework"
+            BlueprintName = "AppCore"
             ReferencedContainer = "container:OneSecMovie.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -140,9 +154,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "702E5B0F1CCEBE75D92E029B"
-            BuildableName = "CompositionService.framework"
-            BlueprintName = "CompositionService"
+            BlueprintIdentifier = "160C110EDE7E5A077FC6DB2E"
+            BuildableName = "AppCore.framework"
+            BlueprintName = "AppCore"
             ReferencedContainer = "container:OneSecMovie.xcodeproj">
          </BuildableReference>
       </MacroExpansion>

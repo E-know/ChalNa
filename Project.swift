@@ -20,6 +20,10 @@ let project = Project(
             name: "PhotosService",
             dependencies: [.target(name: "Models")]
         ),
+        Module.framework(
+            name: "AppCore",
+            dependencies: [.target(name: "Models")]
+        ),
         .target(
             name: "OneSecMovie",
             destinations: .iOS,
@@ -45,6 +49,7 @@ let project = Project(
                 .target(name: "Models"),
                 .target(name: "CompositionService"),
                 .target(name: "PhotosService"),
+                .target(name: "AppCore"),
             ]
         ),
         .target(
