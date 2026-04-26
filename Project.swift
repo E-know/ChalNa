@@ -9,7 +9,11 @@ let project = Project(
             hasResources: true
         ),
         Module.framework(
-            name: "Models"
+            name: "FileStorage"
+        ),
+        Module.framework(
+            name: "Models",
+            dependencies: [.target(name: "FileStorage")]
         ),
         Module.framework(
             name: "CompositionService",
@@ -46,6 +50,7 @@ let project = Project(
                 .target(name: "Models"),
                 .target(name: "DesignSystem"),
                 .target(name: "CompositionService"),
+                .target(name: "FileStorage"),
             ]
         ),
         Module.framework(
@@ -78,6 +83,7 @@ let project = Project(
             ],
             dependencies: [
                 .target(name: "DesignSystem"),
+                .target(name: "FileStorage"),
                 .target(name: "Models"),
                 .target(name: "CompositionService"),
                 .target(name: "PhotosService"),

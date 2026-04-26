@@ -13,6 +13,7 @@
 		258F2555F82355A5BC7D8D43 /* MediaPickerFeature.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BA048A5EDD3A2B899EC9EBA3 /* MediaPickerFeature.framework */; };
 		31355CF764EF04BC8647A5D4 /* Models.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
 		4914FA721B5F72D586668FCB /* Models.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
+		53443BC0E8493D1EA717CED4 /* FileStorage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1C9BA791DAE952197A445963 /* FileStorage.framework */; };
 		555DDF8EA5DA02FF9F38187C /* TimelineFeature.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F52FB1AF3C9DDB84A3098B94 /* TimelineFeature.framework */; };
 		569BCFAFADC8F6A8A9758A67 /* Models.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
 		6F4897D5A84F44D33D86F5BB /* Models.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
@@ -30,6 +31,8 @@
 		CB074F163EE94478A93B7AFD /* DesignSystem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */; };
 		DFFAC38B387B8E4E78D0D362 /* AppCore.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = D93A356B9B154D8BF13144DF /* AppCore.framework */; };
 		E5CE52863E6E1CA4350AB39A /* DesignSystem.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */; };
+		ED3C17BF6461A0B139AB80E5 /* FileStorage.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 1C9BA791DAE952197A445963 /* FileStorage.framework */; };
+		ED72B2DCD37FF49CDF61B8FF /* FileStorage.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 1C9BA791DAE952197A445963 /* FileStorage.framework */; };
 		F4BE3E0EB8EA625681175BE9 /* DesignSystem.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */; };
 		F6E29140C5948C3658CBE2EA /* Models.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
 /* End PBXBuildFile section */
@@ -70,6 +73,13 @@
 			remoteGlobalIDString = 160C110EDE7E5A077FC6DB2E;
 			remoteInfo = AppCore;
 		};
+		36F9282632233A9AAD267A27 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B254225EEE1C24199C913AAA;
+			remoteInfo = FileStorage;
+		};
 		3B47CC3598295746AB772585 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
@@ -90,6 +100,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = B00630A201BED90159F3F88F;
 			remoteInfo = TimelineFeature;
+		};
+		5C49D4D4688BA2999C8FA354 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B254225EEE1C24199C913AAA;
+			remoteInfo = FileStorage;
 		};
 		5D06CBE9EE485C842625EB65 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -210,6 +227,13 @@
 			remoteGlobalIDString = 160C110EDE7E5A077FC6DB2E;
 			remoteInfo = AppCore;
 		};
+		DF44634E7C5055BF8C25F8B0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B254225EEE1C24199C913AAA;
+			remoteInfo = FileStorage;
+		};
 		EEE1D0CECC2DAF544DB8E1CB /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
@@ -303,6 +327,26 @@
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7A3F22EB5A255A34E1A7B304 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7E6DFEC74A34B6B7AEB10728 /* Dependencies */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 8;
+			dstSubfolderSpec = 16;
+			files = (
+				ED3C17BF6461A0B139AB80E5 /* FileStorage.framework in Dependencies */,
+			);
+			name = Dependencies;
+			runOnlyForDeploymentPostprocessing = 1;
 		};
 		86F91972843E13EEB8CC2CA9 /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -404,6 +448,7 @@
 				BF9EEC2C2768056133355C36 /* AppCore.framework in Dependencies */,
 				73F365A1D8E3387CAB0F9F79 /* CompositionService.framework in Dependencies */,
 				F4BE3E0EB8EA625681175BE9 /* DesignSystem.framework in Dependencies */,
+				ED72B2DCD37FF49CDF61B8FF /* FileStorage.framework in Dependencies */,
 				4914FA721B5F72D586668FCB /* Models.framework in Dependencies */,
 			);
 			name = Dependencies;
@@ -414,6 +459,7 @@
 /* Begin PBXFileReference section */
 		05AB34021014DBBE5A672537 /* OneSecMovieTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "OneSecMovieTests-Info.plist"; sourceTree = "<group>"; };
 		1B1488DE2FCE0220D6A572B6 /* ExportFeature-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "ExportFeature-Info.plist"; sourceTree = "<group>"; };
+		1C9BA791DAE952197A445963 /* FileStorage.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = FileStorage.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		1FA5D7C2553BA8FBF763650E /* HomeFeature.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = HomeFeature.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		38863D49378D4FE1A7842F24 /* TimelineFeature-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "TimelineFeature-Info.plist"; sourceTree = "<group>"; };
 		3EC304501189983E7B1142E7 /* OneSecMovie.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OneSecMovie.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -428,6 +474,7 @@
 		B5C3558DFF49B851298D584F /* Models-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "Models-Info.plist"; sourceTree = "<group>"; };
 		BA048A5EDD3A2B899EC9EBA3 /* MediaPickerFeature.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MediaPickerFeature.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D93A356B9B154D8BF13144DF /* AppCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AppCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D95B12EC26433744A0E0E168 /* FileStorage-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "FileStorage-Info.plist"; sourceTree = "<group>"; };
 		E2F522F79C80B8145409F880 /* PhotosService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "PhotosService-Info.plist"; sourceTree = "<group>"; };
 		ECE96FA65AAD093D894A3228 /* DesignSystem-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "DesignSystem-Info.plist"; sourceTree = "<group>"; };
 		F28E19BB09FFBC09004D1C71 /* MediaPickerFeature-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "MediaPickerFeature-Info.plist"; sourceTree = "<group>"; };
@@ -527,6 +574,15 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
+		DB757C64122FE616A46A02CA /* Sources */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
 		E6E2071E9363445CC3A755B7 /* Sources */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			explicitFileTypes = {
@@ -592,6 +648,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		647809B473E479BC23F6D8F7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		6782F9C3F36E01B29ACDC71D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -607,6 +670,7 @@
 				0BE5C2E8F932A2821325C1DC /* CompositionService.framework in Frameworks */,
 				CB074F163EE94478A93B7AFD /* DesignSystem.framework in Frameworks */,
 				94D9FAE4C44CFD0206927764 /* ExportFeature.framework in Frameworks */,
+				53443BC0E8493D1EA717CED4 /* FileStorage.framework in Frameworks */,
 				9D8CEA5907E96384299F1FE2 /* HomeFeature.framework in Frameworks */,
 				258F2555F82355A5BC7D8D43 /* MediaPickerFeature.framework in Frameworks */,
 				B71BC743982F62909260A9FB /* Models.framework in Frameworks */,
@@ -701,6 +765,7 @@
 				73EE856BA54833874C9E8D77 /* CompositionService.framework */,
 				57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */,
 				62BF7AD70026589502EA6C44 /* ExportFeature.framework */,
+				1C9BA791DAE952197A445963 /* FileStorage.framework */,
 				1FA5D7C2553BA8FBF763650E /* HomeFeature.framework */,
 				BA048A5EDD3A2B899EC9EBA3 /* MediaPickerFeature.framework */,
 				824B7A5A74F90EECAF3AB4A9 /* Models.framework */,
@@ -720,6 +785,14 @@
 				0749BC9751F6C55FFD08FFE9 /* Tests */,
 			);
 			path = OneSecMovie;
+			sourceTree = "<group>";
+		};
+		75CC620624ED6C66501B686B /* FileStorage */ = {
+			isa = PBXGroup;
+			children = (
+				DB757C64122FE616A46A02CA /* Sources */,
+			);
+			path = FileStorage;
 			sourceTree = "<group>";
 		};
 		78F9B6EFCB08DF9E892DE257 /* PhotosService */ = {
@@ -745,6 +818,7 @@
 				88859119BEFADF0E7D19F229 /* CompositionService */,
 				A7CC2F08C3640A4AC217EBF6 /* DesignSystem */,
 				36FF6B728A3E421732D7F172 /* ExportFeature */,
+				75CC620624ED6C66501B686B /* FileStorage */,
 				164F9D79C8D582E5D63D7569 /* HomeFeature */,
 				BBEED08596338C528BDAED81 /* MediaPickerFeature */,
 				37E36937E1DCD1B5825A7019 /* Models */,
@@ -780,6 +854,7 @@
 				AADE608C8F69E5C4092A18AC /* CompositionService-Info.plist */,
 				ECE96FA65AAD093D894A3228 /* DesignSystem-Info.plist */,
 				1B1488DE2FCE0220D6A572B6 /* ExportFeature-Info.plist */,
+				D95B12EC26433744A0E0E168 /* FileStorage-Info.plist */,
 				9FCBF6889CA7BEBA5D0115BE /* HomeFeature-Info.plist */,
 				F28E19BB09FFBC09004D1C71 /* MediaPickerFeature-Info.plist */,
 				B5C3558DFF49B851298D584F /* Models-Info.plist */,
@@ -920,10 +995,12 @@
 				0D68A4542C70B26B45F24B7E /* Resources */,
 				6782F9C3F36E01B29ACDC71D /* Frameworks */,
 				249373143A7C720217628D8A /* Embed Frameworks */,
+				7E6DFEC74A34B6B7AEB10728 /* Dependencies */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				CB4EC796B7DBBAD8418CC82C /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				F51C0C01B8BEB9F6714297B0 /* Sources */,
@@ -1013,6 +1090,29 @@
 			productReference = F52FB1AF3C9DDB84A3098B94 /* TimelineFeature.framework */;
 			productType = "com.apple.product-type.framework";
 		};
+		B254225EEE1C24199C913AAA /* FileStorage */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D835A8A6E51A22519755782B /* Build configuration list for PBXNativeTarget "FileStorage" */;
+			buildPhases = (
+				424BB95D9C93C8FD9BC9C032 /* Sources */,
+				7DD767C1BF30A55185ECC656 /* Resources */,
+				647809B473E479BC23F6D8F7 /* Frameworks */,
+				7A3F22EB5A255A34E1A7B304 /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				DB757C64122FE616A46A02CA /* Sources */,
+			);
+			name = FileStorage;
+			packageProductDependencies = (
+			);
+			productName = FileStorage;
+			productReference = 1C9BA791DAE952197A445963 /* FileStorage.framework */;
+			productType = "com.apple.product-type.framework";
+		};
 		C83623DBA74DFE03F4163AB7 /* ExportFeature */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 0BD04A3DFBC8ECB2FA73918D /* Build configuration list for PBXNativeTarget "ExportFeature" */;
@@ -1029,6 +1129,7 @@
 				E8133957A938E46190071EA6 /* PBXTargetDependency */,
 				8ECEA7921373A8B864B4B253 /* PBXTargetDependency */,
 				FA2CC880B02A282321B4C0E6 /* PBXTargetDependency */,
+				E231757B0BAD1433F3438960 /* PBXTargetDependency */,
 				0A09086917CE30CF739FE516 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
@@ -1081,6 +1182,7 @@
 				A3EFE18A273C05DDA61041F9 /* PBXTargetDependency */,
 				438643049046F65F180B6BCF /* PBXTargetDependency */,
 				0BF5B392E0ACC64866DAB434 /* PBXTargetDependency */,
+				1BA4BF1090CA93CF607C9E39 /* PBXTargetDependency */,
 				1447A1A345CE69D67987615D /* PBXTargetDependency */,
 				A27B562866D9E1EF6900894B /* PBXTargetDependency */,
 				F9DADBE431519A21AD03C7DA /* PBXTargetDependency */,
@@ -1128,6 +1230,7 @@
 				702E5B0F1CCEBE75D92E029B /* CompositionService */,
 				EB5B7FF744703184FB3FD043 /* DesignSystem */,
 				C83623DBA74DFE03F4163AB7 /* ExportFeature */,
+				B254225EEE1C24199C913AAA /* FileStorage */,
 				9B2E91DEA52AE3D24332B7D9 /* HomeFeature */,
 				3E173F911A34131A70260F03 /* MediaPickerFeature */,
 				8355DD3A6CB5718A43CF1585 /* Models */,
@@ -1196,6 +1299,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7DD767C1BF30A55185ECC656 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8106A4291B686E99A60B0BA8 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1228,6 +1338,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		0BA833D74EDF1A02E041671E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		424BB95D9C93C8FD9BC9C032 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -1324,6 +1441,12 @@
 			target = 9B2E91DEA52AE3D24332B7D9 /* HomeFeature */;
 			targetProxy = 3B47CC3598295746AB772585 /* PBXContainerItemProxy */;
 		};
+		1BA4BF1090CA93CF607C9E39 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = FileStorage;
+			target = B254225EEE1C24199C913AAA /* FileStorage */;
+			targetProxy = 36F9282632233A9AAD267A27 /* PBXContainerItemProxy */;
+		};
 		2989C567430DA0F88F3323F5 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = Models;
@@ -1414,11 +1537,23 @@
 			target = 34F9DC660203F3C7E8635D0B /* PhotosService */;
 			targetProxy = D5D6BB154152376F9A7FA703 /* PBXContainerItemProxy */;
 		};
+		CB4EC796B7DBBAD8418CC82C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = FileStorage;
+			target = B254225EEE1C24199C913AAA /* FileStorage */;
+			targetProxy = DF44634E7C5055BF8C25F8B0 /* PBXContainerItemProxy */;
+		};
 		CCA816DAF1E688D934FBC98F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = Models;
 			target = 8355DD3A6CB5718A43CF1585 /* Models */;
 			targetProxy = 286EEC11B385D448241DCB74 /* PBXContainerItemProxy */;
+		};
+		E231757B0BAD1433F3438960 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = FileStorage;
+			target = B254225EEE1C24199C913AAA /* FileStorage */;
+			targetProxy = 5C49D4D4688BA2999C8FA354 /* PBXContainerItemProxy */;
 		};
 		E8133957A938E46190071EA6 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1531,6 +1666,44 @@
 			};
 			name = Release;
 		};
+		3D1AA6AFD5C90D841773934D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = "Derived/InfoPlists/FileStorage-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = ios.inho.OneSecMovie.FileStorage;
+				PRODUCT_NAME = FileStorage;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = (
+					"$(inherited)",
+					DEBUG,
+				);
+				SWIFT_COMPILATION_MODE = singlefile;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
 		47C636F950ED1E590B8C78F6 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1568,6 +1741,40 @@
 				VERSION_INFO_PREFIX = "";
 			};
 			name = Debug;
+		};
+		60D98384CC595F6ADD6E36E7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = "Derived/InfoPlists/FileStorage-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = ios.inho.OneSecMovie.FileStorage;
+				PRODUCT_NAME = FileStorage;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
 		};
 		640F5A09B47A2A9C0F20D78C /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -2431,6 +2638,15 @@
 			buildConfigurations = (
 				99E2CCD6251B2D316045D8A6 /* Debug */,
 				A73FD8CC2A0F316BD109E747 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D835A8A6E51A22519755782B /* Build configuration list for PBXNativeTarget "FileStorage" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3D1AA6AFD5C90D841773934D /* Debug */,
+				60D98384CC595F6ADD6E36E7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
