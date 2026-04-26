@@ -1,4 +1,5 @@
 import Foundation
+import Models
 
 /// 데모/프리뷰용 샘플 데이터. 실제 PhotoKit 연동 전까지 사용.
 public enum SampleData {

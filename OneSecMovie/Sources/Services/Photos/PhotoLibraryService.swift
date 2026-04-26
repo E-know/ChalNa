@@ -1,4 +1,5 @@
 import Foundation
+import Models
 
 public protocol PhotoLibraryServicing: Sendable {
     /// PhotosPicker의 item identifier 목록을 받아 앱 내부 `Clip` 배열로 해석.

@@ -1,4 +1,5 @@
 import SwiftUI
+import Models
 
 /// 외곽 박스를 유지한 채 내부 콘텐츠만 90°/180°/270° 회전시키는 래퍼.
 /// 90°·270°일 땐 GeometryReader로 inner frame의 width/height를 swap해서

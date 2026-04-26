@@ -1,4 +1,5 @@
 import SwiftUI
+import Models
 import DesignSystem
 
 /// 타임라인 편집 화면. 2가지 상태(idle · playing) — 재정렬은 UIKit `UICollectionView` drag interaction이 시스템 레벨에서 처리.

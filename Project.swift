@@ -8,6 +8,10 @@ let project = Project(
             name: "DesignSystem",
             hasResources: true
         ),
+        Module.framework(
+            name: "Models",
+            dependencies: [.target(name: "DesignSystem")]
+        ),
         .target(
             name: "OneSecMovie",
             destinations: .iOS,
@@ -30,6 +34,7 @@ let project = Project(
             ],
             dependencies: [
                 .target(name: "DesignSystem"),
+                .target(name: "Models"),
             ]
         ),
         .target(

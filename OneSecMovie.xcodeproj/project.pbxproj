@@ -7,10 +7,26 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		84CDDC6D6279787AB6F68274 /* DesignSystem.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */; };
+		B71BC743982F62909260A9FB /* Models.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
 		CB074F163EE94478A93B7AFD /* DesignSystem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		0E81808E6DADB118A33E3A51 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EB5B7FF744703184FB3FD043;
+			remoteInfo = DesignSystem;
+		};
+		22755727B3A463171D5FC567 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8355DD3A6CB5718A43CF1585;
+			remoteInfo = Models;
+		};
 		6CEFA1096DC18407E03A82FB /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
@@ -29,6 +45,16 @@
 
 /* Begin PBXCopyFilesBuildPhase section */
 		094C822978D19A41F31E6C75 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		249373143A7C720217628D8A /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
@@ -58,6 +84,16 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7E6DFEC74A34B6B7AEB10728 /* Dependencies */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 8;
+			dstSubfolderSpec = 16;
+			files = (
+				84CDDC6D6279787AB6F68274 /* DesignSystem.framework in Dependencies */,
+			);
+			name = Dependencies;
+			runOnlyForDeploymentPostprocessing = 1;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -65,6 +101,8 @@
 		3EC304501189983E7B1142E7 /* OneSecMovie.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OneSecMovie.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = DesignSystem.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		780023EE20DF36AF219E3AC7 /* OneSecMovieTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OneSecMovieTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		824B7A5A74F90EECAF3AB4A9 /* Models.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Models.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		B5C3558DFF49B851298D584F /* Models-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "Models-Info.plist"; sourceTree = "<group>"; };
 		ECE96FA65AAD093D894A3228 /* DesignSystem-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "DesignSystem-Info.plist"; sourceTree = "<group>"; };
 		F35DA14C8D1B7A3F106611DE /* OneSecMovie-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "OneSecMovie-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -115,6 +153,15 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
+		F51C0C01B8BEB9F6714297B0 /* Sources */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -132,11 +179,19 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6782F9C3F36E01B29ACDC71D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		69F34BCBC52A71E665FB72C5 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				CB074F163EE94478A93B7AFD /* DesignSystem.framework in Frameworks */,
+				B71BC743982F62909260A9FB /* Models.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -159,10 +214,19 @@
 			path = Derived;
 			sourceTree = "<group>";
 		};
+		37E36937E1DCD1B5825A7019 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				F51C0C01B8BEB9F6714297B0 /* Sources */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
 		6D6C0CAB5EDF7339588169F2 /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */,
+				824B7A5A74F90EECAF3AB4A9 /* Models.framework */,
 				3EC304501189983E7B1142E7 /* OneSecMovie.app */,
 				780023EE20DF36AF219E3AC7 /* OneSecMovieTests.xctest */,
 			);
@@ -183,6 +247,7 @@
 			isa = PBXGroup;
 			children = (
 				A7CC2F08C3640A4AC217EBF6 /* DesignSystem */,
+				37E36937E1DCD1B5825A7019 /* Models */,
 			);
 			path = Modules;
 			sourceTree = "<group>";
@@ -210,6 +275,7 @@
 			isa = PBXGroup;
 			children = (
 				ECE96FA65AAD093D894A3228 /* DesignSystem-Info.plist */,
+				B5C3558DFF49B851298D584F /* Models-Info.plist */,
 				F35DA14C8D1B7A3F106611DE /* OneSecMovie-Info.plist */,
 				05AB34021014DBBE5A672537 /* OneSecMovieTests-Info.plist */,
 			);
@@ -219,6 +285,31 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		8355DD3A6CB5718A43CF1585 /* Models */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C0DBE1F88F1CC1DFC0DC0BB8 /* Build configuration list for PBXNativeTarget "Models" */;
+			buildPhases = (
+				CD25DF508749FB5B547785B3 /* Sources */,
+				0D68A4542C70B26B45F24B7E /* Resources */,
+				6782F9C3F36E01B29ACDC71D /* Frameworks */,
+				249373143A7C720217628D8A /* Embed Frameworks */,
+				7E6DFEC74A34B6B7AEB10728 /* Dependencies */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				ABAA47519E751E2D61953126 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				F51C0C01B8BEB9F6714297B0 /* Sources */,
+			);
+			name = Models;
+			packageProductDependencies = (
+			);
+			productName = Models;
+			productReference = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */;
+			productType = "com.apple.product-type.framework";
+		};
 		AB30422B450FBA4470D6CDF3 /* OneSecMovieTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 48D2C0992149C64815CD8C40 /* Build configuration list for PBXNativeTarget "OneSecMovieTests" */;
@@ -280,6 +371,7 @@
 			);
 			dependencies = (
 				438643049046F65F180B6BCF /* PBXTargetDependency */,
+				F9DADBE431519A21AD03C7DA /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				5F4B60E9FE54CC28B55AE7AC /* Sources */,
@@ -319,6 +411,7 @@
 			projectRoot = "";
 			targets = (
 				EB5B7FF744703184FB3FD043 /* DesignSystem */,
+				8355DD3A6CB5718A43CF1585 /* Models */,
 				FC862C46CD92758A6708929D /* OneSecMovie */,
 				AB30422B450FBA4470D6CDF3 /* OneSecMovieTests */,
 			);
@@ -326,6 +419,13 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		0D68A4542C70B26B45F24B7E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		0FC24624006166CFD4902825 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -371,6 +471,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CD25DF508749FB5B547785B3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -385,6 +492,18 @@
 			name = OneSecMovie;
 			target = FC862C46CD92758A6708929D /* OneSecMovie */;
 			targetProxy = 8E200A7C3B33AFB022F86AFE /* PBXContainerItemProxy */;
+		};
+		ABAA47519E751E2D61953126 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = DesignSystem;
+			target = EB5B7FF744703184FB3FD043 /* DesignSystem */;
+			targetProxy = 0E81808E6DADB118A33E3A51 /* PBXContainerItemProxy */;
+		};
+		F9DADBE431519A21AD03C7DA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = Models;
+			target = 8355DD3A6CB5718A43CF1585 /* Models */;
+			targetProxy = 22755727B3A463171D5FC567 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -426,6 +545,78 @@
 				VERSION_INFO_PREFIX = "";
 			};
 			name = Debug;
+		};
+		99E2CCD6251B2D316045D8A6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = "Derived/InfoPlists/Models-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = ios.inho.OneSecMovie.Models;
+				PRODUCT_NAME = Models;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = (
+					"$(inherited)",
+					DEBUG,
+				);
+				SWIFT_COMPILATION_MODE = singlefile;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		A73FD8CC2A0F316BD109E747 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = "Derived/InfoPlists/Models-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = ios.inho.OneSecMovie.Models;
+				PRODUCT_NAME = Models;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
 		};
 		B01B2FF10B2432B3DFF82006 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -722,6 +913,15 @@
 			buildConfigurations = (
 				6FDB00B78C637E65B6093A6D /* Debug */,
 				D44263568F8BB36DA414592A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C0DBE1F88F1CC1DFC0DC0BB8 /* Build configuration list for PBXNativeTarget "Models" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				99E2CCD6251B2D316045D8A6 /* Debug */,
+				A73FD8CC2A0F316BD109E747 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

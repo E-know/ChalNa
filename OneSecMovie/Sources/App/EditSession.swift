@@ -1,4 +1,5 @@
 import Observation
+import Models
 
 /// MediaPicker → Timeline → Export 플로우 전체에서 공유되는 편집 세션.
 /// NavigationStack Route에 `[Clip]`을 싣는 대신 환경값으로 흘려보낸다.
