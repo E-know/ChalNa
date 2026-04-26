@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 
 public enum ClipKind: String, Hashable, Sendable {
@@ -15,6 +16,9 @@ public struct Clip: Identifiable, Hashable, Sendable {
     /// 실제 영상 합성에 사용할 로컬 파일 URL. nil이면 합성에서 스킵.
     public let videoURL: URL?
     public let locationNote: String?
+    /// 원본 영상에 `preferredTransform`을 적용한 후의 표시상 사이즈(width × height).
+    /// 합성 시 출력 캔버스 결정과 가운데 정렬용. 샘플데이터/메타 미추출 시 nil.
+    public let displaySize: CGSize?
 
     public init(
         id: UUID = UUID(),
@@ -24,7 +28,8 @@ public struct Clip: Identifiable, Hashable, Sendable {
         preset: ThumbnailPreset,
         thumbnailData: Data? = nil,
         videoURL: URL? = nil,
-        locationNote: String? = nil
+        locationNote: String? = nil,
+        displaySize: CGSize? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -34,6 +39,7 @@ public struct Clip: Identifiable, Hashable, Sendable {
         self.thumbnailData = thumbnailData
         self.videoURL = videoURL
         self.locationNote = locationNote
+        self.displaySize = displaySize
     }
 }
 
