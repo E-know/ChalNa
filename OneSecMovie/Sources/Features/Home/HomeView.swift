@@ -13,26 +13,32 @@ public struct HomeView: View {
     public init() {}
 
     public var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                cover
-                    .padding(.horizontal, MomentsSpacing.lg)
-                    .padding(.top, MomentsSpacing.md)
+        VStack(spacing: 0) {
+            header
+                .padding(.horizontal, MomentsSpacing.md + 4)
+                .padding(.vertical, MomentsSpacing.sm)
+                .frame(maxWidth: .infinity)
 
-                recentFilmsSection
-                    .padding(.top, MomentsSpacing.xxl)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    cover
+                        .padding(.horizontal, MomentsSpacing.lg)
+                        .padding(.top, MomentsSpacing.md)
 
-                ScallopDivider()
-                    .padding(.horizontal, MomentsSpacing.lg)
-                    .padding(.top, MomentsSpacing.xl)
+                    recentFilmsSection
+                        .padding(.top, MomentsSpacing.xxl)
 
-                ctaStack
-                    .padding(.horizontal, MomentsSpacing.lg)
-                    .padding(.top, MomentsSpacing.xl)
-                    .padding(.bottom, MomentsSpacing.xxxl)
+                    ScallopDivider()
+                        .padding(.horizontal, MomentsSpacing.lg)
+                        .padding(.top, MomentsSpacing.xl)
+
+                    ctaStack
+                        .padding(.horizontal, MomentsSpacing.lg)
+                        .padding(.top, MomentsSpacing.xl)
+                        .padding(.bottom, MomentsSpacing.xxxl)
+                }
             }
         }
-        .momentsTopBar(scrollsBehind: true) { header }
         .momentsScreen()
     }
 
@@ -152,7 +158,8 @@ public struct HomeView: View {
             .buttonStyle(.momentsCoral)
 
             Button("샘플로 먼저 보기") {
-                session.replace(clips: SampleData.jejuTimeline, title: SampleData.filmTitle)
+                let ordered = SampleData.jejuTimeline.sorted { $0.capturedAt > $1.capturedAt }
+                session.replace(clips: ordered, title: SampleData.filmTitle)
                 router.push(.timeline)
             }
             .buttonStyle(.momentsText)

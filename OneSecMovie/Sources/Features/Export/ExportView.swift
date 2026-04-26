@@ -26,26 +26,31 @@ public struct ExportView: View {
     }
 
     public var body: some View {
-        GeometryReader { proxy in
-            VStack(spacing: 0) {
-                Spacer(minLength: 0)
+        VStack(spacing: 0) {
+            header
+                .padding(.horizontal, MomentsSpacing.md + 4)
+                .padding(.vertical, MomentsSpacing.sm)
+                .frame(maxWidth: .infinity)
 
-                cover(width: coverWidth(forAvailableHeight: proxy.size.height))
-                    .padding(.horizontal, MomentsSpacing.xl)
+            GeometryReader { proxy in
+                VStack(spacing: 0) {
+                    cover(width: coverWidth(forAvailableHeight: proxy.size.height))
+                        .padding(.top, MomentsSpacing.md)
+                        .padding(.horizontal, MomentsSpacing.xl)
 
-                statusBlock
-                    .padding(.horizontal, MomentsSpacing.lg)
-                    .padding(.top, MomentsSpacing.xl)
+                    statusBlock
+                        .padding(.horizontal, MomentsSpacing.lg)
+                        .padding(.top, MomentsSpacing.xl)
 
-                Spacer(minLength: 0)
+                    Spacer(minLength: MomentsSpacing.md)
 
-                bottomCTAs
-                    .padding(.horizontal, MomentsSpacing.md)
-                    .padding(.bottom, MomentsSpacing.lg)
+                    bottomCTAs
+                        .padding(.horizontal, MomentsSpacing.md)
+                        .padding(.bottom, MomentsSpacing.lg)
+                }
+                .frame(width: proxy.size.width, height: proxy.size.height)
             }
-            .frame(width: proxy.size.width, height: proxy.size.height)
         }
-        .momentsTopBar { header }
         .momentsScreen()
         .onAppear { startExport() }
         .onDisappear { exportTask?.cancel() }
@@ -204,15 +209,22 @@ public struct ExportView: View {
     // MARK: - Cover
 
     /// 화면 가용 높이에서 PolaroidCard 가 잘리지 않도록 width 를 역산한다.
-    /// PolaroidCard 시각 총 높이 ≈ (width - 24) × 5/4 + 80 + 10 (topTape overhang).
-    /// 비-cover 영역(statusBlock + xl 간격 + bottomCTAs 2행 + 패딩 + 안전 여유)을
-    /// `reservedHeight` 로 차감한 envelope 을 폴라로이드에 할당한 뒤 width 를 산출.
-    /// hero 임팩트 보존을 위해 [200, 280]pt 로 clamp.
+    /// PolaroidCard 시각 총 높이 ≈ (width - 24) × 5/4 + 92 (텍스트 여백 + topTape overhang).
+    /// phase 별로 하단 CTA 영역의 높이가 다르므로 reservedHeight 도 분기한다.
+    ///   .exporting: HandNoteRow 1행 (~24pt)
+    ///   .done:      ShareLink+Save (1행) + 보조 CTA (1행) ≈ 120pt
+    ///   .failed:    Retry + Back (2행) ≈ 110pt
     private func coverWidth(forAvailableHeight available: CGFloat) -> CGFloat {
-        let reservedHeight: CGFloat = 278
-        let envelope = max(available - reservedHeight, 220)
-        let widthFromHeight = (envelope - 90) * 4 / 5 + 24
-        return min(max(widthFromHeight, 200), 280)
+        let reservedHeight: CGFloat = {
+            switch phase {
+            case .idle, .exporting: return 230
+            case .done:             return 320
+            case .failed:           return 310
+            }
+        }()
+        let envelope = max(available - reservedHeight, 200)
+        let widthFromHeight = (envelope - 92) * 4 / 5 + 24
+        return min(max(widthFromHeight, 168), 300)
     }
 
     @ViewBuilder
@@ -391,21 +403,24 @@ public struct ExportView: View {
         didAddToLibrary = false
 
         let clips = session.clips
+        let rotations = session.rotations
         exportTask = Task {
-            for await event in compositionService.export(clips: clips) {
+            for await event in compositionService.export(clips: clips, rotations: rotations) {
                 await MainActor.run {
                     switch event {
                     case .progress(let p):
                         progress = p
-                        if phase != .exporting { phase = .exporting }
+                        if phase != .exporting {
+                            withAnimation(.easeInOut(duration: 0.35)) { phase = .exporting }
+                        }
                     case .completed(let url):
                         progress = 1.0
                         exportedURL = url
-                        phase = .done
+                        withAnimation(.easeInOut(duration: 0.35)) { phase = .done }
                         addCompletedFilmToLibrary(at: url)
                     case .failed(let msg):
                         errorMessage = msg
-                        phase = .failed
+                        withAnimation(.easeInOut(duration: 0.35)) { phase = .failed }
                     }
                 }
             }
@@ -447,9 +462,67 @@ private enum ExportPhase: Equatable {
     }
 }
 
-#Preview("Export") {
+// MARK: - Preview helpers
+
+/// Preview 전용 mock — 미리 정의한 ExportEvent 시퀀스를 스트림으로 흘려보낸다.
+private struct PreviewCompositionService: CompositionServicing {
+    let events: [ExportEvent]
+    let interval: TimeInterval
+
+    init(events: [ExportEvent], interval: TimeInterval = 0.5) {
+        self.events = events
+        self.interval = interval
+    }
+
+    func export(clips: [Clip], rotations: [Clip.ID: ClipRotation]) -> AsyncStream<ExportEvent> {
+        let events = events
+        let interval = interval
+        return AsyncStream { continuation in
+            let task = Task {
+                for event in events {
+                    try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+                    if Task.isCancelled { break }
+                    continuation.yield(event)
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+}
+
+#Preview("Exporting") {
     let session = EditSession(title: SampleData.filmTitle, clips: SampleData.jejuTimeline)
-    return ExportView()
+    // 0.2 → 0.5 → 0.8 까지만 흘리고 멈춰 "저장 중" 상태 유지.
+    let mock = PreviewCompositionService(events: [
+        .progress(0.2), .progress(0.5), .progress(0.8)
+    ])
+    return ExportView(compositionService: mock)
+        .environment(AppRouter())
+        .environment(session)
+        .modelContainer(for: Film.self, inMemory: true)
+}
+
+#Preview("Done") {
+    let session = EditSession(title: SampleData.filmTitle, clips: SampleData.jejuTimeline)
+    // 진행률 한 번 → 즉시 완료.
+    let mock = PreviewCompositionService(
+        events: [.progress(0.5), .completed(URL(fileURLWithPath: "/tmp/preview.mp4"))],
+        interval: 0.2
+    )
+    return ExportView(compositionService: mock)
+        .environment(AppRouter())
+        .environment(session)
+        .modelContainer(for: Film.self, inMemory: true)
+}
+
+#Preview("Failed") {
+    let session = EditSession(title: SampleData.filmTitle, clips: SampleData.jejuTimeline)
+    let mock = PreviewCompositionService(
+        events: [.progress(0.3), .failed("Preview 용 가짜 실패 메시지")],
+        interval: 0.2
+    )
+    return ExportView(compositionService: mock)
         .environment(AppRouter())
         .environment(session)
         .modelContainer(for: Film.self, inMemory: true)

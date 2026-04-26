@@ -5,7 +5,18 @@ import AVFoundation
 import UniformTypeIdentifiers
 import OSLog
 
-private let mediaLogger = Logger(subsystem: "dev.tuist.OneSecMovie", category: "MediaPicker")
+private let mediaLogger = Logger(subsystem: "ios.inho.OneSecMovie", category: "MediaPicker")
+
+/// PhotosPicker 결과의 미디어 종류. Live Photo와 일반 영상은
+/// 둘 다 "움직이는 클립"으로 다뤄지지만, UI에서는 분리해서 표시한다.
+fileprivate enum MediaKind {
+    case video
+    case livePhoto
+    case image
+    case unknown
+
+    var hasMotion: Bool { self == .video || self == .livePhoto }
+}
 
 /// Live Photo + 영상을 여러 장 선택하고 Timeline으로 넘기는 화면.
 /// 선택 시 (a) 썸네일 JPEG Data와 (b) 실제 비디오 파일 URL을 병렬로 로드한다.
@@ -25,28 +36,34 @@ public struct MediaPickerView: View {
     public init() {}
 
     public var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: MomentsSpacing.lg) {
-                intro
-                    .padding(.horizontal, MomentsSpacing.lg)
-                    .padding(.top, MomentsSpacing.lg)
+        VStack(spacing: 0) {
+            header
+                .padding(.horizontal, MomentsSpacing.md + 4)
+                .padding(.vertical, MomentsSpacing.sm)
+                .frame(maxWidth: .infinity)
 
-                pickerLauncher
-                    .padding(.horizontal, MomentsSpacing.lg)
+            ScrollView {
+                VStack(alignment: .leading, spacing: MomentsSpacing.lg) {
+                    intro
+                        .padding(.horizontal, MomentsSpacing.lg)
+                        .padding(.top, MomentsSpacing.lg)
 
-                selectionGrid
-                    .padding(.horizontal, MomentsSpacing.lg)
-                    .padding(.top, MomentsSpacing.sm)
+                    pickerLauncher
+                        .padding(.horizontal, MomentsSpacing.lg)
+
+                    selectionGrid
+                        .padding(.horizontal, MomentsSpacing.lg)
+                        .padding(.top, MomentsSpacing.sm)
+                }
+                .padding(.bottom, MomentsSpacing.xxxl)
             }
-            .padding(.bottom, MomentsSpacing.xxxl)
         }
-        .momentsTopBar(scrollsBehind: true) { header }
+        .momentsScreen()
         .safeAreaInset(edge: .bottom) {
             bottomBar
                 .padding(.horizontal, MomentsSpacing.md)
                 .padding(.bottom, MomentsSpacing.md)
         }
-        .momentsScreen()
         .onChange(of: selectedItems) { _, newItems in
             // 항목 선택 시점에 Photos 권한을 lazy 요청 — Live Photo paired video 추출에 필수.
             if newItems.contains(where: { media[$0] == nil }) {
@@ -123,7 +140,7 @@ public struct MediaPickerView: View {
     private var pickerLauncher: some View {
         PhotosPicker(
             selection: $selectedItems,
-            maxSelectionCount: 12,
+            maxSelectionCount: 0,
             selectionBehavior: .ordered,
             matching: .any(of: [.livePhotos, .videos]),
             photoLibrary: photoLibrary
@@ -135,8 +152,8 @@ public struct MediaPickerView: View {
                     Text(selectedItems.isEmpty ? "사진 보관함 열기" : "선택 다시 고르기")
                         .font(MomentsTypography.krSemibold(15))
                         .foregroundColor(MomentsColor.ink)
-                    Text(selectedItems.isEmpty ? "Live Photo · Video 최대 12장"
-                                               : "\(selectedItems.count) / 12 선택됨")
+                    Text(selectedItems.isEmpty ? "Live Photo · Video 자유롭게"
+                                               : "\(selectedItems.count)장 선택됨")
                         .font(MomentsTypography.krBody(12))
                         .foregroundColor(MomentsColor.taupe)
                 }
@@ -171,12 +188,16 @@ public struct MediaPickerView: View {
             }
         } else {
             VStack(alignment: .leading, spacing: MomentsSpacing.sm) {
-                HStack {
+                HStack(spacing: MomentsSpacing.xs) {
                     Text("SELECTED · \(selectedItems.count)")
                         .tagLabel()
                     Spacer()
-                    MomentsChip("\(usableVideoCount) VIDEOS",
-                                variant: .selected, icon: .film)
+                    if liveCount > 0 {
+                        MomentsChip("\(liveCount) LIVE", variant: .live)
+                    }
+                    if videoCount > 0 {
+                        MomentsChip("\(videoCount) VIDEO", variant: .video, icon: .film)
+                    }
                 }
                 LazyVGrid(
                     columns: Array(repeating: GridItem(.flexible(), spacing: MomentsSpacing.sm), count: 3),
@@ -212,12 +233,19 @@ public struct MediaPickerView: View {
                     .tint(MomentsColor.coral)
             }
 
-            if state.isVideoKind {
+            // 좌상단: 미디어 종류 칩 (LIVE / VIDEO)
+            kindChip(for: state.kind)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(4)
+
+            // 일반 영상에만 중앙 재생 동그라미. Live Photo는 칩으로만 구분.
+            if state.kind == .video {
                 Circle()
                     .fill(Color.white.opacity(0.92))
-                    .frame(width: 20, height: 20)
+                    .frame(width: 22, height: 22)
                     .overlay(MomentsIcon(.play, size: 9).foregroundColor(MomentsColor.ink).offset(x: 1))
             }
+
             if state.videoFailed && state.thumbnail != nil {
                 // 동영상 추출 실패 표식 (모서리 작은 배지).
                 Text("영상 X")
@@ -228,6 +256,20 @@ public struct MediaPickerView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                     .padding(4)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func kindChip(for kind: MediaKind) -> some View {
+        switch kind {
+        case .livePhoto:
+            MomentsChip("LIVE", variant: .live)
+                .scaleEffect(0.78, anchor: .topLeading)
+        case .video:
+            MomentsChip("VIDEO", variant: .video, icon: .film)
+                .scaleEffect(0.78, anchor: .topLeading)
+        case .image, .unknown:
+            EmptyView()
         }
     }
 
@@ -271,9 +313,15 @@ public struct MediaPickerView: View {
         !selectedItems.isEmpty
     }
 
-    private var usableVideoCount: Int {
+    private var liveCount: Int {
         selectedItems.reduce(into: 0) { acc, item in
-            if let s = media[item], s.videoURL != nil { acc += 1 }
+            if media[item]?.kind == .livePhoto { acc += 1 }
+        }
+    }
+
+    private var videoCount: Int {
+        selectedItems.reduce(into: 0) { acc, item in
+            if media[item]?.kind == .video { acc += 1 }
         }
     }
 
@@ -285,17 +333,18 @@ public struct MediaPickerView: View {
 
         for item in newItems where media[item] == nil {
             let initialKind = Self.classify(item)
-            media[item] = MediaLoadState(isVideoKind: initialKind == .video || initialKind == .livePhoto)
+            media[item] = MediaLoadState(kind: initialKind)
 
             Task {
                 async let thumbnail: Data? = Self.loadThumbnail(for: item, kind: initialKind)
                 async let videoURLTask: URL? = Self.loadVideoURL(for: item, kind: initialKind)
                 async let capturedAt: Date? = Self.loadCapturedAt(for: item)
 
-                // duration 은 videoURL 이 결정된 뒤에야 읽을 수 있어 직렬 의존.
+                // duration·displaySize 는 videoURL 이 결정된 뒤에야 읽을 수 있어 직렬 의존.
                 let url = await videoURLTask
-                let dur = await Self.loadVideoDuration(from: url)
-                let (thumb, captured) = await (thumbnail, capturedAt)
+                async let durTask: TimeInterval? = Self.loadVideoDuration(from: url)
+                async let sizeTask: CGSize? = Self.loadDisplaySize(from: url)
+                let (thumb, captured, dur, size) = await (thumbnail, capturedAt, durTask, sizeTask)
 
                 await MainActor.run {
                     guard var state = media[item] else { return }
@@ -305,6 +354,7 @@ public struct MediaPickerView: View {
                     state.videoFailed = (url == nil)
                     state.duration = dur
                     state.capturedAt = captured
+                    state.displaySize = size
                     media[item] = state
                 }
             }
@@ -339,11 +389,29 @@ public struct MediaPickerView: View {
         }
     }
 
+    // MARK: - Display size
+
+    /// 비디오 트랙의 `naturalSize`에 `preferredTransform`을 적용한 표시상 사이즈.
+    /// 세로 영상(rotation 90°)이면 width < height 형태로 정규화돼 나온다.
+    /// 합성 시 출력 캔버스 결정과 가운데 정렬에 쓰인다.
+    private static func loadDisplaySize(from url: URL?) async -> CGSize? {
+        guard let url else { return nil }
+        let asset = AVURLAsset(url: url)
+        guard let track = (try? await asset.loadTracks(withMediaType: .video))?.first else {
+            return nil
+        }
+        let natural = (try? await track.load(.naturalSize)) ?? .zero
+        let transform = (try? await track.load(.preferredTransform)) ?? .identity
+        let display = natural.applying(transform)
+        let w = abs(display.width)
+        let h = abs(display.height)
+        guard w > 0, h > 0 else { return nil }
+        return CGSize(width: w, height: h)
+    }
+
     // MARK: - Classification
 
-    private enum Kind { case video, livePhoto, image, unknown }
-
-    private static func classify(_ item: PhotosPickerItem) -> Kind {
+    fileprivate static func classify(_ item: PhotosPickerItem) -> MediaKind {
         let types = item.supportedContentTypes
         // livePhoto는 .image와 .movie 양쪽에 conform될 수 있으므로 가장 먼저 검사.
         if types.contains(where: { $0.conforms(to: .livePhoto) }) { return .livePhoto }
@@ -354,7 +422,7 @@ public struct MediaPickerView: View {
 
     // MARK: - Thumbnail
 
-    private static func loadThumbnail(for item: PhotosPickerItem, kind: Kind) async -> Data? {
+    private static func loadThumbnail(for item: PhotosPickerItem, kind: MediaKind) async -> Data? {
         // PhotosPicker의 기본 Data는 Live Photo의 경우 스틸 JPEG을 준다. 썸네일로는 그대로 OK.
         if let data = try? await item.loadTransferable(type: Data.self) {
             if let ui = UIImage(data: data), let jpeg = ui.jpegData(compressionQuality: 0.75) {
@@ -394,7 +462,7 @@ public struct MediaPickerView: View {
 
     // MARK: - Video URL
 
-    private static func loadVideoURL(for item: PhotosPickerItem, kind: Kind) async -> URL? {
+    private static func loadVideoURL(for item: PhotosPickerItem, kind: MediaKind) async -> URL? {
         // Live Photo: VideoPayload(.movie)로는 paired video를 얻을 수 없으니 곧장 PHAsset 경로로.
         if kind == .livePhoto {
             return await loadViaPHAsset(item: item)
@@ -506,7 +574,7 @@ public struct MediaPickerView: View {
 
             let clips: [Clip] = items.enumerated().map { idx, item in
                 let state = latest[item] ?? MediaLoadState()
-                let kind: ClipKind = state.isVideoKind ? .video : .live
+                let kind: ClipKind = (state.kind == .video) ? .video : .live
                 return Clip(
                     kind: kind,
                     capturedAt: state.capturedAt ?? fallback.addingTimeInterval(TimeInterval(idx) * 60),
@@ -514,14 +582,19 @@ public struct MediaPickerView: View {
                     preset: presetPool[idx % presetPool.count],
                     thumbnailData: state.thumbnail,
                     videoURL: state.videoURL,
-                    locationNote: nil
+                    locationNote: nil,
+                    displaySize: state.displaySize
                 )
             }
 
+            // 촬영일 오름차순(오래된 것 먼저 → 최신)으로 정렬해 Timeline에 넘긴다.
+            // export 시 클립 순서가 그대로 mp4에 반영되므로, 결과 영상도 시간순으로 흐른다.
+            let orderedClips = clips.sorted { $0.capturedAt < $1.capturedAt }
+
             await MainActor.run {
                 isResolving = false
-                guard !clips.isEmpty else { return }
-                session.replace(clips: clips, title: "내 Vlog")
+                guard !orderedClips.isEmpty else { return }
+                session.replace(clips: orderedClips, title: "내 Vlog")
                 router.push(.timeline)
             }
         }
@@ -540,11 +613,12 @@ public struct MediaPickerView: View {
 // MARK: - State & payload
 
 private struct MediaLoadState {
-    var isVideoKind: Bool = false
+    var kind: MediaKind = .unknown
     var thumbnail: Data? = nil
     var videoURL: URL? = nil
     var duration: TimeInterval? = nil
     var capturedAt: Date? = nil
+    var displaySize: CGSize? = nil
     var thumbnailFailed: Bool = false
     var videoFailed: Bool = false
 
