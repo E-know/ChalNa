@@ -250,7 +250,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
     /// 한 클립이 renderSize 안에서 가운데 정렬되도록 하는 affine transform.
     /// = preferredTransform × userRotation × translate(가운데로).
     /// 회전 후 사이즈가 renderSize보다 크거나 작아도 가운데 정렬 — fit/letterbox 처리.
-    static func transform(
+    public static func transform(
         naturalSize: CGSize,
         preferredTransform: CGAffineTransform,
         rotation: ClipRotation,

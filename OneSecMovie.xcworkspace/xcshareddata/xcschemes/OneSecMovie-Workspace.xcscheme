@@ -14,6 +14,20 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "702E5B0F1CCEBE75D92E029B"
+               BuildableName = "CompositionService.framework"
+               BlueprintName = "CompositionService"
+               ReferencedContainer = "container:OneSecMovie.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "EB5B7FF744703184FB3FD043"
                BuildableName = "DesignSystem.framework"
                BlueprintName = "DesignSystem"
@@ -62,6 +76,20 @@
                ReferencedContainer = "container:OneSecMovie.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "34F9DC660203F3C7E8635D0B"
+               BuildableName = "PhotosService.framework"
+               BlueprintName = "PhotosService"
+               ReferencedContainer = "container:OneSecMovie.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -96,9 +124,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "EB5B7FF744703184FB3FD043"
-            BuildableName = "DesignSystem.framework"
-            BlueprintName = "DesignSystem"
+            BlueprintIdentifier = "702E5B0F1CCEBE75D92E029B"
+            BuildableName = "CompositionService.framework"
+            BlueprintName = "CompositionService"
             ReferencedContainer = "container:OneSecMovie.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -112,9 +140,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "EB5B7FF744703184FB3FD043"
-            BuildableName = "DesignSystem.framework"
-            BlueprintName = "DesignSystem"
+            BlueprintIdentifier = "702E5B0F1CCEBE75D92E029B"
+            BuildableName = "CompositionService.framework"
+            BlueprintName = "CompositionService"
             ReferencedContainer = "container:OneSecMovie.xcodeproj">
          </BuildableReference>
       </MacroExpansion>

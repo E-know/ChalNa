@@ -1,4 +1,5 @@
 import Foundation
+import CompositionService
 import Models
 import CoreGraphics
 import Testing

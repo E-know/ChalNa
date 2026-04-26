@@ -1,4 +1,5 @@
 import SwiftUI
+import CompositionService
 import Models
 import DesignSystem
 import SwiftData
