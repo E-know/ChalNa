@@ -14,6 +14,146 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "160C110EDE7E5A077FC6DB2E"
+               BuildableName = "AppCore.framework"
+               BlueprintName = "AppCore"
+               ReferencedContainer = "container:OneSecMovie.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "D13364CD1030BA8C366AD8A4"
+               BuildableName = "AppCoreTests.xctest"
+               BlueprintName = "AppCoreTests"
+               ReferencedContainer = "container:OneSecMovie.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "702E5B0F1CCEBE75D92E029B"
+               BuildableName = "CompositionService.framework"
+               BlueprintName = "CompositionService"
+               ReferencedContainer = "container:OneSecMovie.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "30C8261B0DEA857392C1A74F"
+               BuildableName = "CompositionServiceTests.xctest"
+               BlueprintName = "CompositionServiceTests"
+               ReferencedContainer = "container:OneSecMovie.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "EB5B7FF744703184FB3FD043"
+               BuildableName = "DesignSystem.framework"
+               BlueprintName = "DesignSystem"
+               ReferencedContainer = "container:OneSecMovie.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "C83623DBA74DFE03F4163AB7"
+               BuildableName = "ExportFeature.framework"
+               BlueprintName = "ExportFeature"
+               ReferencedContainer = "container:OneSecMovie.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "B254225EEE1C24199C913AAA"
+               BuildableName = "FileStorage.framework"
+               BlueprintName = "FileStorage"
+               ReferencedContainer = "container:OneSecMovie.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "9B2E91DEA52AE3D24332B7D9"
+               BuildableName = "HomeFeature.framework"
+               BlueprintName = "HomeFeature"
+               ReferencedContainer = "container:OneSecMovie.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "3E173F911A34131A70260F03"
+               BuildableName = "MediaPickerFeature.framework"
+               BlueprintName = "MediaPickerFeature"
+               ReferencedContainer = "container:OneSecMovie.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "8355DD3A6CB5718A43CF1585"
+               BuildableName = "Models.framework"
+               BlueprintName = "Models"
+               ReferencedContainer = "container:OneSecMovie.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "FC862C46CD92758A6708929D"
                BuildableName = "OneSecMovie.app"
                BlueprintName = "OneSecMovie"
@@ -28,9 +168,37 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "AB30422B450FBA4470D6CDF3"
-               BuildableName = "OneSecMovieTests.xctest"
-               BlueprintName = "OneSecMovieTests"
+               BlueprintIdentifier = "34F9DC660203F3C7E8635D0B"
+               BuildableName = "PhotosService.framework"
+               BlueprintName = "PhotosService"
+               ReferencedContainer = "container:OneSecMovie.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "B00630A201BED90159F3F88F"
+               BuildableName = "TimelineFeature.framework"
+               BlueprintName = "TimelineFeature"
+               ReferencedContainer = "container:OneSecMovie.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "B105E306DD23502260AF89B0"
+               BuildableName = "TimelineFeatureTests.xctest"
+               BlueprintName = "TimelineFeatureTests"
                ReferencedContainer = "container:OneSecMovie.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -47,9 +215,31 @@
             parallelizable = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "AB30422B450FBA4470D6CDF3"
-               BuildableName = "OneSecMovieTests.xctest"
-               BlueprintName = "OneSecMovieTests"
+               BlueprintIdentifier = "D13364CD1030BA8C366AD8A4"
+               BuildableName = "AppCoreTests.xctest"
+               BlueprintName = "AppCoreTests"
+               ReferencedContainer = "container:OneSecMovie.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "30C8261B0DEA857392C1A74F"
+               BuildableName = "CompositionServiceTests.xctest"
+               BlueprintName = "CompositionServiceTests"
+               ReferencedContainer = "container:OneSecMovie.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "B105E306DD23502260AF89B0"
+               BuildableName = "TimelineFeatureTests.xctest"
+               BlueprintName = "TimelineFeatureTests"
                ReferencedContainer = "container:OneSecMovie.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -65,16 +255,15 @@
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
       allowLocationSimulation = "YES">
-      <BuildableProductRunnable
-         runnableDebuggingMode = "0">
+      <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "FC862C46CD92758A6708929D"
-            BuildableName = "OneSecMovie.app"
-            BlueprintName = "OneSecMovie"
+            BlueprintIdentifier = "160C110EDE7E5A077FC6DB2E"
+            BuildableName = "AppCore.framework"
+            BlueprintName = "AppCore"
             ReferencedContainer = "container:OneSecMovie.xcodeproj">
          </BuildableReference>
-      </BuildableProductRunnable>
+      </MacroExpansion>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -82,16 +271,15 @@
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
       debugDocumentVersioning = "YES">
-      <BuildableProductRunnable
-         runnableDebuggingMode = "0">
+      <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "FC862C46CD92758A6708929D"
-            BuildableName = "OneSecMovie.app"
-            BlueprintName = "OneSecMovie"
+            BlueprintIdentifier = "160C110EDE7E5A077FC6DB2E"
+            BuildableName = "AppCore.framework"
+            BlueprintName = "AppCore"
             ReferencedContainer = "container:OneSecMovie.xcodeproj">
          </BuildableReference>
-      </BuildableProductRunnable>
+      </MacroExpansion>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">

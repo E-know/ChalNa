@@ -41,7 +41,7 @@ iOS 빌드/시뮬레이터 실행 작업은 가능하면 `ios-build-run` 서브�
 > Tests 폴더의 케이스는 SwiftUI Preview 보조용 `SampleData`를 적극 활용한다. 새 서비스는 프로토콜 기반으로 만들고 `@Test`(Swift Testing)로 작성한다 — XCTest 금지(UI 테스트 제외).
 
 ## 기술 스택 (엄수)
-- **Swift 6.0+, iOS 17+**
+- **Swift 6.0+, iOS 18+** (`AVAssetExportSession.states(updateInterval:)` 사용으로 deployment 18 고정)
 - **SwiftUI 전용** (UIKit은 `PHPickerViewController`, `AVPlayerViewController` 
   같은 불가피한 경우에만 `UIViewControllerRepresentable`로 래핑)
 - **Swift Concurrency 전용**: `async/await`, `actor`, `Task`, `AsyncStream`
@@ -53,26 +53,43 @@ iOS 빌드/시뮬레이터 실행 작업은 가능하면 `ios-build-run` 서브�
 
 ## 아키텍처
 - **MV 패턴** (Model + View), ViewModel은 `@Observable` 클래스로
-- 피처 단위 폴더링:
+- **Tuist 멀티 타겟** — 앱은 얇은 셸이고 레이어/피처는 staticFramework 모듈로 쪼개져 있다.
+
+### 모듈 그래프 (의존 방향: 위 → 아래)
 
 ```
-Moments/
-App/              # @main, AppRouter
-DesignSystem/     # 컬러, 타이포, 컴포넌트
-Features/
-Home/
-MediaPicker/
-Timeline/
-Export/
-Services/
-Photos/         # PhotoKit 래퍼 (actor)
-Composition/    # AVFoundation 비디오 합성 엔진
-Models/
-Extensions/
+              ┌──────────────────────────┐
+              │  OneSecMovie (앱 셸)      │  @main · ContentView · RootView
+              └────┬─────────────────────┘
+                   │
+   ┌──────┬────────┼─────────┬──────────────┐
+   ▼      ▼        ▼         ▼              ▼
+HomeFt MediaPickerFt TimelineFt ExportFt   AppCore (Router · Session)
+   │      │         │         │              │
+   └──────┴────┬────┴────┬────┘              │
+              ▼         ▼                    │
+        DesignSystem  CompositionService     │
+              │         │                    │
+              └─────────┴────── Models ──────┘
+                                    │
+                              (Film · Clip · ClipRotation ·
+                               ThumbnailPreset · SampleData)
 ```
 
-- 서비스 레이어는 **프로토콜 + actor 구현체**로 작성 (테스트 용이성)
-- 의존성 주입은 생성자 주입, 서드파티 DI 프레임워크 사용 금지
+- **`Modules/<Name>/Sources/`** 가 모든 모듈의 표준 위치. 리소스는 `Modules/<Name>/Resources/`.
+- **앱 셸**(`OneSecMovie/Sources/`) 에는 `OneSecMovieApp.swift`, `ContentView.swift`, `App/RootView.swift` 만 잔류 — Feature dispatch 책임만.
+- 새 모듈을 만들 때는 `Tuist/ProjectDescriptionHelpers/Module.swift` 의 `Module.framework(name:hasResources:dependencies:)` 헬퍼 사용. `Project.swift` 에 추가 후 `tuist generate`.
+- 단일 모듈만 빌드하려면 `tuist focus <Module>` (예: `tuist focus DesignSystem`).
+- 의존성 그래프 재확인: `tuist graph` → `docs/architecture-graph.png`.
+
+### 레이어 규칙
+- **DesignSystem 은 어떤 모듈에도 의존하지 않는다** (가장 아래)
+- **Models**: 현재 ThumbnailPreset 의 `Color(hex:)` 때문에 DesignSystem 의존 (향후 정리 예정)
+- **Services (Composition · Photos)**: Models 만 의존
+- **AppCore**: Models 만 의존, Feature 모름
+- **Feature 끼리 직접 import 금지** — 화면 전환은 AppCore 의 `AppRouter`/`EditSession` 으로
+- 서비스 레이어는 **프로토콜 + actor 구현체** (테스트 용이성)
+- 의존성 주입은 생성자 주입, 서드파티 DI 프레임워크 금지
 
 ### 런타임 흐름 (반드시 숙지)
 - `OneSecMovieApp`(`@main`) → `RootView` → `NavigationStack(path: router.path)`
@@ -83,8 +100,8 @@ Extensions/
 - 모든 push 화면은 기본 네비게이션 바를 숨기고(`toolbar(.hidden)`), `.momentsSwipeBack()` 커스텀 스와이프로 뒤로가기를 제공한다.
 
 ### 모델 / 영속화 경계
-- **`Clip`** (`Sources/Models/Clip.swift`) — 편집 세션의 in-memory value type. SwiftData 모델 아님.
-- **`Film`** (`Sources/Models/Film.swift`) — `@Model`(SwiftData) 라이브러리 단위. mp4 자체는 `Documents/films/<id>.mp4`로 복사하고 모델에는 **상대 경로(`movieFilename`)**만 둔다 (앱 재설치 시 절대 경로가 바뀌므로). 썸네일은 `@Attribute(.externalStorage)`. 파일 청소는 `FilmStorage` 헬퍼 사용.
+- **`Clip`** (`Modules/Models/Sources/Clip.swift`) — 편집 세션의 in-memory value type. SwiftData 모델 아님.
+- **`Film`** (`Modules/Models/Sources/Film.swift`) — `@Model`(SwiftData) 라이브러리 단위. mp4 자체는 `Documents/films/<id>.mp4`로 복사하고 모델에는 **상대 경로(`movieFilename`)**만 둔다 (앱 재설치 시 절대 경로가 바뀌므로). 썸네일은 `@Attribute(.externalStorage)`. 파일 청소는 `FilmStorage` 헬퍼 사용 (현재 Models 안에 잔류, 향후 Services 산하로 이동 검토).
 - `OneSecMovieApp`은 `WindowGroup`에 `.modelContainer(for: Film.self)`만 부착한다. 새 `@Model` 추가 시 여기 시그니처도 갱신.
 
 ## 코드 컨벤션

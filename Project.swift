@@ -1,13 +1,72 @@
 import ProjectDescription
+import ProjectDescriptionHelpers
 
 let project = Project(
     name: "OneSecMovie",
     targets: [
+        Module.framework(
+            name: "DesignSystem",
+            hasResources: true
+        ),
+        Module.framework(
+            name: "FileStorage"
+        ),
+        Module.framework(
+            name: "Models",
+            dependencies: [.target(name: "FileStorage")]
+        ),
+        Module.framework(
+            name: "CompositionService",
+            dependencies: [.target(name: "Models")]
+        ),
+        Module.framework(
+            name: "PhotosService",
+            dependencies: [.target(name: "Models")]
+        ),
+        Module.framework(
+            name: "AppCore",
+            dependencies: [.target(name: "Models")]
+        ),
+        Module.framework(
+            name: "HomeFeature",
+            dependencies: [
+                .target(name: "AppCore"),
+                .target(name: "Models"),
+                .target(name: "DesignSystem"),
+            ]
+        ),
+        Module.framework(
+            name: "MediaPickerFeature",
+            dependencies: [
+                .target(name: "AppCore"),
+                .target(name: "Models"),
+                .target(name: "DesignSystem"),
+            ]
+        ),
+        Module.framework(
+            name: "ExportFeature",
+            dependencies: [
+                .target(name: "AppCore"),
+                .target(name: "Models"),
+                .target(name: "DesignSystem"),
+                .target(name: "CompositionService"),
+                .target(name: "FileStorage"),
+            ]
+        ),
+        Module.framework(
+            name: "TimelineFeature",
+            dependencies: [
+                .target(name: "AppCore"),
+                .target(name: "Models"),
+                .target(name: "DesignSystem"),
+            ]
+        ),
         .target(
             name: "OneSecMovie",
             destinations: .iOS,
             product: .app,
-            bundleId: "ios.inho.OneSecMovie",
+            bundleId: Module.bundleIdPrefix,
+            deploymentTargets: Module.deploymentTargets,
             infoPlist: .extendingDefault(
                 with: [
                     "UILaunchScreen": [
@@ -22,18 +81,33 @@ let project = Project(
                 "OneSecMovie/Sources",
                 "OneSecMovie/Resources",
             ],
-            dependencies: []
+            dependencies: [
+                .target(name: "DesignSystem"),
+                .target(name: "FileStorage"),
+                .target(name: "Models"),
+                .target(name: "CompositionService"),
+                .target(name: "PhotosService"),
+                .target(name: "AppCore"),
+                .target(name: "HomeFeature"),
+                .target(name: "MediaPickerFeature"),
+                .target(name: "ExportFeature"),
+                .target(name: "TimelineFeature"),
+            ]
         ),
-        .target(
-            name: "OneSecMovieTests",
-            destinations: .iOS,
-            product: .unitTests,
-            bundleId: "ios.inho.OneSecMovieTests",
-            infoPlist: .default,
-            buildableFolders: [
-                "OneSecMovie/Tests"
-            ],
-            dependencies: [.target(name: "OneSecMovie")]
+        Module.unitTests(
+            for: "AppCore",
+            dependencies: [.target(name: "Models")]
+        ),
+        Module.unitTests(
+            for: "CompositionService",
+            dependencies: [.target(name: "Models")]
+        ),
+        Module.unitTests(
+            for: "TimelineFeature",
+            dependencies: [
+                .target(name: "Models"),
+                .target(name: "CompositionService"),
+            ]
         ),
     ]
 )
