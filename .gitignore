@@ -52,3 +52,9 @@ xcuserdata/
 **/xcshareddata/WorkspaceSettings.xcsettings
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,xcode
+
+### Tuist ###
+# Tuist 가 swiftc 인덱스 캐시로 만드는 디렉토리 — 매 generate 마다 갱신, commit 대상 아님
+Tuist/.build/
+# tuist graph 가 루트에 만드는 임시 PNG (정식 본은 docs/architecture-graph.png 사용)
+/graph.png
