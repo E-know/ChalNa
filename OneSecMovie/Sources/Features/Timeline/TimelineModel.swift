@@ -1,11 +1,11 @@
 import Foundation
 import Observation
 
-/// Timeline 편집 화면의 3대 상태.
+/// Timeline 편집 화면의 2대 상태.
+/// 재정렬 상태는 UIKit `UICollectionView` drag interaction이 시스템 레벨에서 관리하므로 enum case로 노출하지 않는다.
 public enum TimelineState: Equatable {
     case idle
     case playing
-    case reordering(draggingClipID: Clip.ID, targetSlotIndex: Int)
 }
 
 @Observable
@@ -63,28 +63,12 @@ public final class TimelineModel {
         return false
     }
 
-    public var isReordering: Bool {
-        if case .reordering = state { return true }
-        return false
-    }
-
-    public var draggingClipID: Clip.ID? {
-        if case let .reordering(id, _) = state { return id }
-        return nil
-    }
-
-    public var targetSlotIndex: Int? {
-        if case let .reordering(_, idx) = state { return idx }
-        return nil
-    }
-
     // MARK: - Intents
 
     public func togglePlay() {
         switch state {
-        case .idle:     state = .playing
-        case .playing:  state = .idle
-        case .reordering: break
+        case .idle:    state = .playing
+        case .playing: state = .idle
         }
     }
 
@@ -112,33 +96,22 @@ public final class TimelineModel {
         return t
     }
 
-    public func beginReorder(clipID: Clip.ID) {
-        guard let idx = clips.firstIndex(where: { $0.id == clipID }) else { return }
-        state = .reordering(draggingClipID: clipID, targetSlotIndex: idx + 1)
-    }
-
-    public func updateReorderTarget(slot: Int) {
-        guard case let .reordering(id, _) = state else { return }
-        state = .reordering(draggingClipID: id, targetSlotIndex: max(0, min(slot, clips.count)))
-    }
-
-    public func confirmReorder() {
-        guard case let .reordering(id, target) = state else { return }
-        guard let fromIdx = clips.firstIndex(where: { $0.id == id }) else {
-            state = .idle; return
+    /// UICollectionView drop delegate 호출용. clipID 클립을 toIndex 위치로 이동.
+    /// from == toIndex 면 no-op. clamping은 [0, clips.count - 1].
+    /// currentIndex 가 이동된 클립을 가리키고 있었다면 같이 따라간다.
+    public func move(clipID: Clip.ID, toIndex target: Int) {
+        guard let from = clips.firstIndex(where: { $0.id == clipID }) else { return }
+        let clamped = max(0, min(target, clips.count - 1))
+        guard from != clamped else { return }
+        let clip = clips.remove(at: from)
+        clips.insert(clip, at: clamped)
+        if currentIndex == from {
+            currentIndex = clamped
+        } else if from < currentIndex && clamped >= currentIndex {
+            currentIndex -= 1
+        } else if from > currentIndex && clamped <= currentIndex {
+            currentIndex += 1
         }
-        var newClips = clips
-        let clip = newClips.remove(at: fromIdx)
-        let insertAt = target > fromIdx ? target - 1 : target
-        let clampedInsert = max(0, min(insertAt, newClips.count))
-        newClips.insert(clip, at: clampedInsert)
-        clips = newClips
-        currentIndex = clampedInsert
-        state = .idle
-    }
-
-    public func cancelReorder() {
-        state = .idle
     }
 
     /// 현재 선택된 클립 제거. 이후 currentIndex는 가능한 한 같은 위치를 가리키도록 클램프.
@@ -167,13 +140,12 @@ public final class TimelineModel {
             preset: clip.preset,
             thumbnailData: clip.thumbnailData,
             videoURL: clip.videoURL,
-            locationNote: clip.locationNote
+            locationNote: clip.locationNote,
+            displaySize: clip.displaySize
         )
     }
 
     /// 시뮬레이션 목적의 자동 진행. 재생 중일 때만 동작.
-    /// `playheadSeconds`는 전체(0 → totalDuration) 시간을 나타내며, 누적 시간 범위에서
-    /// 현재 속한 클립 인덱스를 유도해 자동으로 다음 클립으로 넘어간다.
     public func advancePlayheadSimulated() async {
         let tick: TimeInterval = 0.25
         while isPlaying {
@@ -181,7 +153,6 @@ public final class TimelineModel {
             if !isPlaying { return }
             playheadSeconds = min(playheadSeconds + tick, totalDuration)
 
-            // 누적 타임라인에서 현재 인덱스 재계산.
             var cumulative: TimeInterval = 0
             var newIndex = currentIndex
             for (idx, clip) in clips.enumerated() {
