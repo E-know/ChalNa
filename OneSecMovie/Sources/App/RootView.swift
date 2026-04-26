@@ -1,4 +1,5 @@
 import SwiftUI
+import HomeFeature
 import AppCore
 import DesignSystem
 

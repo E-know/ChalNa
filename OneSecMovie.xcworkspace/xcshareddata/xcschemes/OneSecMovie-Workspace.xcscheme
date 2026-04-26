@@ -56,6 +56,20 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "9B2E91DEA52AE3D24332B7D9"
+               BuildableName = "HomeFeature.framework"
+               BlueprintName = "HomeFeature"
+               ReferencedContainer = "container:OneSecMovie.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "8355DD3A6CB5718A43CF1585"
                BuildableName = "Models.framework"
                BlueprintName = "Models"
