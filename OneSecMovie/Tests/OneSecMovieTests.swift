@@ -1,4 +1,5 @@
 import Foundation
+import TimelineFeature
 import AppCore
 import CompositionService
 import Models

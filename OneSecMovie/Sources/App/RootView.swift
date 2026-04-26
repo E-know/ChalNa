@@ -1,4 +1,5 @@
 import SwiftUI
+import TimelineFeature
 import ExportFeature
 import MediaPickerFeature
 import HomeFeature

@@ -146,6 +146,20 @@
                ReferencedContainer = "container:OneSecMovie.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "B00630A201BED90159F3F88F"
+               BuildableName = "TimelineFeature.framework"
+               BlueprintName = "TimelineFeature"
+               ReferencedContainer = "container:OneSecMovie.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction

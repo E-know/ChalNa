@@ -13,13 +13,17 @@
 		258F2555F82355A5BC7D8D43 /* MediaPickerFeature.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BA048A5EDD3A2B899EC9EBA3 /* MediaPickerFeature.framework */; };
 		31355CF764EF04BC8647A5D4 /* Models.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
 		4914FA721B5F72D586668FCB /* Models.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
+		555DDF8EA5DA02FF9F38187C /* TimelineFeature.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F52FB1AF3C9DDB84A3098B94 /* TimelineFeature.framework */; };
 		569BCFAFADC8F6A8A9758A67 /* Models.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
 		6F4897D5A84F44D33D86F5BB /* Models.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
 		73F365A1D8E3387CAB0F9F79 /* CompositionService.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 73EE856BA54833874C9E8D77 /* CompositionService.framework */; };
+		76131AE5578E535DF3C42F6E /* AppCore.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = D93A356B9B154D8BF13144DF /* AppCore.framework */; };
+		76B46796332097F86EB38074 /* Models.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
 		84CDDC6D6279787AB6F68274 /* DesignSystem.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */; };
 		94D9FAE4C44CFD0206927764 /* ExportFeature.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 62BF7AD70026589502EA6C44 /* ExportFeature.framework */; };
 		96EAAF2FD0E2A3881C525B7E /* PhotosService.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 92D881F5F93C60DB8AFAEEE1 /* PhotosService.framework */; };
 		9D8CEA5907E96384299F1FE2 /* HomeFeature.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1FA5D7C2553BA8FBF763650E /* HomeFeature.framework */; };
+		A95ACAA4DBC4FEC8CE64438E /* DesignSystem.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */; };
 		B71BC743982F62909260A9FB /* Models.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
 		BBD11678D07A7EEACECE184B /* AppCore.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = D93A356B9B154D8BF13144DF /* AppCore.framework */; };
 		BF9EEC2C2768056133355C36 /* AppCore.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = D93A356B9B154D8BF13144DF /* AppCore.framework */; };
@@ -67,6 +71,13 @@
 			remoteGlobalIDString = 8355DD3A6CB5718A43CF1585;
 			remoteInfo = Models;
 		};
+		28F77165127C47161871657F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 160C110EDE7E5A077FC6DB2E;
+			remoteInfo = AppCore;
+		};
 		3B47CC3598295746AB772585 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
@@ -80,6 +91,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 702E5B0F1CCEBE75D92E029B;
 			remoteInfo = CompositionService;
+		};
+		51C885A4BBE511D2BDADE313 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B00630A201BED90159F3F88F;
+			remoteInfo = TimelineFeature;
 		};
 		5D06CBE9EE485C842625EB65 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -116,6 +134,13 @@
 			remoteGlobalIDString = 8355DD3A6CB5718A43CF1585;
 			remoteInfo = Models;
 		};
+		81DE4A794331AA7613DD4D17 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EB5B7FF744703184FB3FD043;
+			remoteInfo = DesignSystem;
+		};
 		8E200A7C3B33AFB022F86AFE /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
@@ -129,6 +154,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = EB5B7FF744703184FB3FD043;
 			remoteInfo = DesignSystem;
+		};
+		940324A7AAE986392EB840B2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8355DD3A6CB5718A43CF1585;
+			remoteInfo = Models;
 		};
 		98C70B54877362BA855DB2ED /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -320,6 +352,18 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A519E74D2C6DFC3DA55DC2F4 /* Dependencies */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 8;
+			dstSubfolderSpec = 16;
+			files = (
+				76131AE5578E535DF3C42F6E /* AppCore.framework in Dependencies */,
+				A95ACAA4DBC4FEC8CE64438E /* DesignSystem.framework in Dependencies */,
+				76B46796332097F86EB38074 /* Models.framework in Dependencies */,
+			);
+			name = Dependencies;
+			runOnlyForDeploymentPostprocessing = 1;
+		};
 		A8FCDA74CB7A3CD27F30A700 /* Dependencies */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 8;
@@ -331,6 +375,16 @@
 			runOnlyForDeploymentPostprocessing = 1;
 		};
 		BE541CDF0942C5C769E5FCCB /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C16F4EC473A3256DEC42B5DA /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
@@ -379,6 +433,7 @@
 		05AB34021014DBBE5A672537 /* OneSecMovieTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "OneSecMovieTests-Info.plist"; sourceTree = "<group>"; };
 		1B1488DE2FCE0220D6A572B6 /* ExportFeature-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "ExportFeature-Info.plist"; sourceTree = "<group>"; };
 		1FA5D7C2553BA8FBF763650E /* HomeFeature.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = HomeFeature.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		38863D49378D4FE1A7842F24 /* TimelineFeature-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "TimelineFeature-Info.plist"; sourceTree = "<group>"; };
 		3EC304501189983E7B1142E7 /* OneSecMovie.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OneSecMovie.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = DesignSystem.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		62BF7AD70026589502EA6C44 /* ExportFeature.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ExportFeature.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -395,10 +450,20 @@
 		ECE96FA65AAD093D894A3228 /* DesignSystem-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "DesignSystem-Info.plist"; sourceTree = "<group>"; };
 		F28E19BB09FFBC09004D1C71 /* MediaPickerFeature-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "MediaPickerFeature-Info.plist"; sourceTree = "<group>"; };
 		F35DA14C8D1B7A3F106611DE /* OneSecMovie-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "OneSecMovie-Info.plist"; sourceTree = "<group>"; };
+		F52FB1AF3C9DDB84A3098B94 /* TimelineFeature.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TimelineFeature.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		FD33A23C9E0ECCD08ED08C5D /* AppCore-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "AppCore-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		06FBE8E2E43C8C6CB769D541 /* Sources */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
 		0749BC9751F6C55FFD08FFE9 /* Tests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			explicitFileTypes = {
@@ -510,6 +575,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		1B172FEEF81159D7A472DFD1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		217126FF7773D74600BEDE9B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -557,6 +629,7 @@
 				258F2555F82355A5BC7D8D43 /* MediaPickerFeature.framework in Frameworks */,
 				B71BC743982F62909260A9FB /* Models.framework in Frameworks */,
 				96EAAF2FD0E2A3881C525B7E /* PhotosService.framework in Frameworks */,
+				555DDF8EA5DA02FF9F38187C /* TimelineFeature.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -591,6 +664,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		043D367C94900CD76C210EA3 /* TimelineFeature */ = {
+			isa = PBXGroup;
+			children = (
+				06FBE8E2E43C8C6CB769D541 /* Sources */,
+			);
+			path = TimelineFeature;
+			sourceTree = "<group>";
+		};
 		06EF8FFA1845E7C1B3E73D28 = {
 			isa = PBXGroup;
 			children = (
@@ -644,6 +725,7 @@
 				3EC304501189983E7B1142E7 /* OneSecMovie.app */,
 				780023EE20DF36AF219E3AC7 /* OneSecMovieTests.xctest */,
 				92D881F5F93C60DB8AFAEEE1 /* PhotosService.framework */,
+				F52FB1AF3C9DDB84A3098B94 /* TimelineFeature.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -685,6 +767,7 @@
 				BBEED08596338C528BDAED81 /* MediaPickerFeature */,
 				37E36937E1DCD1B5825A7019 /* Models */,
 				78F9B6EFCB08DF9E892DE257 /* PhotosService */,
+				043D367C94900CD76C210EA3 /* TimelineFeature */,
 			);
 			path = Modules;
 			sourceTree = "<group>";
@@ -721,6 +804,7 @@
 				F35DA14C8D1B7A3F106611DE /* OneSecMovie-Info.plist */,
 				05AB34021014DBBE5A672537 /* OneSecMovieTests-Info.plist */,
 				E2F522F79C80B8145409F880 /* PhotosService-Info.plist */,
+				38863D49378D4FE1A7842F24 /* TimelineFeature-Info.plist */,
 			);
 			path = InfoPlists;
 			sourceTree = "<group>";
@@ -922,6 +1006,33 @@
 			productReference = 780023EE20DF36AF219E3AC7 /* OneSecMovieTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		B00630A201BED90159F3F88F /* TimelineFeature */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 86E8376736816FBD64CF500A /* Build configuration list for PBXNativeTarget "TimelineFeature" */;
+			buildPhases = (
+				081A642E412B99B1F720B9E0 /* Sources */,
+				8106A4291B686E99A60B0BA8 /* Resources */,
+				1B172FEEF81159D7A472DFD1 /* Frameworks */,
+				C16F4EC473A3256DEC42B5DA /* Embed Frameworks */,
+				A519E74D2C6DFC3DA55DC2F4 /* Dependencies */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				35BD881A25701DD8E2129284 /* PBXTargetDependency */,
+				72E3EC00D2F7D8D5261379F9 /* PBXTargetDependency */,
+				2F7DC98F6A768E9ADCE2BF3C /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				06FBE8E2E43C8C6CB769D541 /* Sources */,
+			);
+			name = TimelineFeature;
+			packageProductDependencies = (
+			);
+			productName = TimelineFeature;
+			productReference = F52FB1AF3C9DDB84A3098B94 /* TimelineFeature.framework */;
+			productType = "com.apple.product-type.framework";
+		};
 		C83623DBA74DFE03F4163AB7 /* ExportFeature */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 0BD04A3DFBC8ECB2FA73918D /* Build configuration list for PBXNativeTarget "ExportFeature" */;
@@ -994,6 +1105,7 @@
 				A27B562866D9E1EF6900894B /* PBXTargetDependency */,
 				F9DADBE431519A21AD03C7DA /* PBXTargetDependency */,
 				BE4DC891755191F7BC4F954B /* PBXTargetDependency */,
+				9AE49C0843FD3DC0C42C1343 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				5F4B60E9FE54CC28B55AE7AC /* Sources */,
@@ -1042,6 +1154,7 @@
 				FC862C46CD92758A6708929D /* OneSecMovie */,
 				AB30422B450FBA4470D6CDF3 /* OneSecMovieTests */,
 				34F9DC660203F3C7E8635D0B /* PhotosService */,
+				B00630A201BED90159F3F88F /* TimelineFeature */,
 			);
 		};
 /* End PBXProject section */
@@ -1103,6 +1216,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		8106A4291B686E99A60B0BA8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B2B8FB84A40496EC023DDC4A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1120,6 +1240,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		081A642E412B99B1F720B9E0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		0BA833D74EDF1A02E041671E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1223,6 +1350,18 @@
 			target = 8355DD3A6CB5718A43CF1585 /* Models */;
 			targetProxy = 71840A47DFAEB393C5CF5873 /* PBXContainerItemProxy */;
 		};
+		2F7DC98F6A768E9ADCE2BF3C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = Models;
+			target = 8355DD3A6CB5718A43CF1585 /* Models */;
+			targetProxy = 940324A7AAE986392EB840B2 /* PBXContainerItemProxy */;
+		};
+		35BD881A25701DD8E2129284 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AppCore;
+			target = 160C110EDE7E5A077FC6DB2E /* AppCore */;
+			targetProxy = 28F77165127C47161871657F /* PBXContainerItemProxy */;
+		};
 		438643049046F65F180B6BCF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = DesignSystem;
@@ -1240,6 +1379,12 @@
 			name = DesignSystem;
 			target = EB5B7FF744703184FB3FD043 /* DesignSystem */;
 			targetProxy = BC723E87476EA1DBEBA5AE94 /* PBXContainerItemProxy */;
+		};
+		72E3EC00D2F7D8D5261379F9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = DesignSystem;
+			target = EB5B7FF744703184FB3FD043 /* DesignSystem */;
+			targetProxy = 81DE4A794331AA7613DD4D17 /* PBXContainerItemProxy */;
 		};
 		777B8A6217B62AF682F9F9A6 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1264,6 +1409,12 @@
 			name = CompositionService;
 			target = 702E5B0F1CCEBE75D92E029B /* CompositionService */;
 			targetProxy = 48C8B6879903760961E27924 /* PBXContainerItemProxy */;
+		};
+		9AE49C0843FD3DC0C42C1343 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = TimelineFeature;
+			target = B00630A201BED90159F3F88F /* TimelineFeature */;
+			targetProxy = 51C885A4BBE511D2BDADE313 /* PBXContainerItemProxy */;
 		};
 		A27B562866D9E1EF6900894B /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1732,6 +1883,44 @@
 			};
 			name = Release;
 		};
+		AC6FEED6B9978CAD039605E9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = "Derived/InfoPlists/TimelineFeature-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = ios.inho.OneSecMovie.TimelineFeature;
+				PRODUCT_NAME = TimelineFeature;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = (
+					"$(inherited)",
+					DEBUG,
+				);
+				SWIFT_COMPILATION_MODE = singlefile;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
 		B01B2FF10B2432B3DFF82006 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2102,6 +2291,40 @@
 			};
 			name = Debug;
 		};
+		F78ABB96E42C9404E723B0A8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = "Derived/InfoPlists/TimelineFeature-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = ios.inho.OneSecMovie.TimelineFeature;
+				PRODUCT_NAME = TimelineFeature;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
 		FE732A95E39A027E09779219 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2189,6 +2412,15 @@
 			buildConfigurations = (
 				6FDB00B78C637E65B6093A6D /* Debug */,
 				D44263568F8BB36DA414592A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		86E8376736816FBD64CF500A /* Build configuration list for PBXNativeTarget "TimelineFeature" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC6FEED6B9978CAD039605E9 /* Debug */,
+				F78ABB96E42C9404E723B0A8 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
