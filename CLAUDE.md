@@ -1,6 +1,44 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # Moments — iOS 앱
 
 Live Photo와 동영상을 촬영일 순서로 이어붙여 Vlog를 만드는 iOS 앱.
+
+> **네이밍**: Tuist 타겟·Xcode 프로젝트·번들 ID는 모두 `OneSecMovie`(`ios.inho.OneSecMovie`)이지만, 제품/디자인 시스템 brand prefix는 `Moments` (`MomentsColor`, `MomentsTypography`, `MomentsButton` 등). 둘 다 같은 앱을 가리킨다.
+
+## 빌드 / 실행 / 테스트
+
+이 프로젝트는 **Tuist** 기반이라 `.xcodeproj`는 생성물이다. 클론 직후 또는 `Project.swift` / `Tuist/Package.swift` 수정 후에는 반드시 재생성한다.
+
+```bash
+# Xcode 프로젝트 생성/갱신 (필수, 첫 셋업·의존성 변경 후)
+tuist generate
+
+# 워크스페이스 열기
+open OneSecMovie.xcworkspace
+
+# CLI 빌드 (시뮬레이터)
+xcodebuild -workspace OneSecMovie.xcworkspace \
+           -scheme OneSecMovie \
+           -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+           build
+
+# 전체 테스트
+xcodebuild -workspace OneSecMovie.xcworkspace \
+           -scheme OneSecMovie \
+           -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+           test
+
+# 단일 테스트만 (Swift Testing 파일/케이스 단위)
+xcodebuild ... test \
+  -only-testing:OneSecMovieTests/TimelinePlaybackTests/testAdvancePlayheadSimulated_UpdatesCurrentIndex
+```
+
+iOS 빌드/시뮬레이터 실행 작업은 가능하면 `ios-build-run` 서브에이전트에 위임한다 (매번 fresh build → 시뮬레이터 설치/실행으로 시각 검증).
+
+> Tests 폴더의 케이스는 SwiftUI Preview 보조용 `SampleData`를 적극 활용한다. 새 서비스는 프로토콜 기반으로 만들고 `@Test`(Swift Testing)로 작성한다 — XCTest 금지(UI 테스트 제외).
 
 ## 기술 스택 (엄수)
 - **Swift 6.0+, iOS 17+**
@@ -35,6 +73,19 @@ Extensions/
 
 - 서비스 레이어는 **프로토콜 + actor 구현체**로 작성 (테스트 용이성)
 - 의존성 주입은 생성자 주입, 서드파티 DI 프레임워크 사용 금지
+
+### 런타임 흐름 (반드시 숙지)
+- `OneSecMovieApp`(`@main`) → `RootView` → `NavigationStack(path: router.path)`
+- `RootView`가 두 개의 `@Observable`을 **환경값**으로 한 번만 주입한다:
+  - `AppRouter` — `enum Route { mediaPicker | timeline | export }` 스택. Home은 루트라 push하지 않음.
+  - `EditSession` — `title` + `[Clip]`. 화면 간 편집 상태 전달은 **Route payload가 아니라 이 EditSession에 실어 흘려보낸다**.
+- 화면 호출: `@Environment(AppRouter.self)`, `@Environment(EditSession.self)`로 받아서 `router.push(.timeline)` 등으로 진행. 새 화면 추가 시 `Route` enum과 `RootView.destination(for:)` switch에 케이스를 더한다.
+- 모든 push 화면은 기본 네비게이션 바를 숨기고(`toolbar(.hidden)`), `.momentsSwipeBack()` 커스텀 스와이프로 뒤로가기를 제공한다.
+
+### 모델 / 영속화 경계
+- **`Clip`** (`Sources/Models/Clip.swift`) — 편집 세션의 in-memory value type. SwiftData 모델 아님.
+- **`Film`** (`Sources/Models/Film.swift`) — `@Model`(SwiftData) 라이브러리 단위. mp4 자체는 `Documents/films/<id>.mp4`로 복사하고 모델에는 **상대 경로(`movieFilename`)**만 둔다 (앱 재설치 시 절대 경로가 바뀌므로). 썸네일은 `@Attribute(.externalStorage)`. 파일 청소는 `FilmStorage` 헬퍼 사용.
+- `OneSecMovieApp`은 `WindowGroup`에 `.modelContainer(for: Film.self)`만 부착한다. 새 `@Model` 추가 시 여기 시그니처도 갱신.
 
 ## 코드 컨벤션
 - 타입 추론이 명확한 곳에서는 타입 생략, 공개 API는 명시

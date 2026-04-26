@@ -7,7 +7,7 @@ let project = Project(
             name: "OneSecMovie",
             destinations: .iOS,
             product: .app,
-            bundleId: "dev.tuist.OneSecMovie",
+            bundleId: "ios.inho.OneSecMovie",
             infoPlist: .extendingDefault(
                 with: [
                     "UILaunchScreen": [
@@ -28,7 +28,7 @@ let project = Project(
             name: "OneSecMovieTests",
             destinations: .iOS,
             product: .unitTests,
-            bundleId: "dev.tuist.OneSecMovieTests",
+            bundleId: "ios.inho.OneSecMovieTests",
             infoPlist: .default,
             buildableFolders: [
                 "OneSecMovie/Tests"

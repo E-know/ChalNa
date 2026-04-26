@@ -316,7 +316,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = dev.tuist.OneSecMovie;
+				PRODUCT_BUNDLE_IDENTIFIER = ios.inho.OneSecMovie;
 				PRODUCT_NAME = OneSecMovie;
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;
@@ -402,7 +402,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = dev.tuist.OneSecMovie;
+				PRODUCT_BUNDLE_IDENTIFIER = ios.inho.OneSecMovie;
 				PRODUCT_NAME = OneSecMovie;
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;
@@ -426,7 +426,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = dev.tuist.OneSecMovieTests;
+				PRODUCT_BUNDLE_IDENTIFIER = ios.inho.OneSecMovieTests;
 				PRODUCT_NAME = OneSecMovieTests;
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;
@@ -453,7 +453,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = dev.tuist.OneSecMovieTests;
+				PRODUCT_BUNDLE_IDENTIFIER = ios.inho.OneSecMovieTests;
 				PRODUCT_NAME = OneSecMovieTests;
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;
