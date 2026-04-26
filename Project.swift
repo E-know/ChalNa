@@ -94,17 +94,20 @@ let project = Project(
                 .target(name: "TimelineFeature"),
             ]
         ),
-        .target(
-            name: "OneSecMovieTests",
-            destinations: .iOS,
-            product: .unitTests,
-            bundleId: "\(Module.bundleIdPrefix)Tests",
-            deploymentTargets: Module.deploymentTargets,
-            infoPlist: .default,
-            buildableFolders: [
-                "OneSecMovie/Tests"
-            ],
-            dependencies: [.target(name: "OneSecMovie")]
+        Module.unitTests(
+            for: "AppCore",
+            dependencies: [.target(name: "Models")]
+        ),
+        Module.unitTests(
+            for: "CompositionService",
+            dependencies: [.target(name: "Models")]
+        ),
+        Module.unitTests(
+            for: "TimelineFeature",
+            dependencies: [
+                .target(name: "Models"),
+                .target(name: "CompositionService"),
+            ]
         ),
     ]
 )

@@ -23,4 +23,21 @@ public enum Module {
             dependencies: dependencies
         )
     }
+
+    /// `Modules/<name>/Tests` 폴더를 사용하는 단위 테스트 타겟.
+    /// 이름은 자동으로 `<name>Tests`. 의존성은 자기 모듈 + 명시한 추가 모듈.
+    public static func unitTests(
+        for moduleName: String,
+        dependencies: [TargetDependency] = []
+    ) -> Target {
+        return .target(
+            name: "\(moduleName)Tests",
+            destinations: .iOS,
+            product: .unitTests,
+            bundleId: "\(bundleIdPrefix).\(moduleName)Tests",
+            deploymentTargets: deploymentTargets,
+            buildableFolders: [.folder(.relativeToManifest("Modules/\(moduleName)/Tests"))],
+            dependencies: [.target(name: moduleName)] + dependencies
+        )
+    }
 }
