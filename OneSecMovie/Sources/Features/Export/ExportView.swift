@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 import SwiftData
 import Photos
 
@@ -27,10 +28,7 @@ public struct ExportView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            header
-                .padding(.horizontal, MomentsSpacing.md + 4)
-                .padding(.vertical, MomentsSpacing.sm)
-                .frame(maxWidth: .infinity)
+            header.momentsHeaderBar()
 
             GeometryReader { proxy in
                 VStack(spacing: 0) {

@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 
 /// FilmStrip의 날짜 구분자(필름 sprocket 스타일).
 /// `MM.dd` 라벨 + 점선 같은 sprocket dot 라인. UIKit 셀(`UIHostingConfiguration`)에서도 사용 가능하도록 internal.

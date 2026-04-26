@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 
 /// 앱 루트. Home을 루트로 삼고 MediaPicker / Timeline / Export를 push.
 public struct RootView: View {

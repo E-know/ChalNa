@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 
 /// HTML 프로토타입의 `.th-*` 클래스에 대응하는 따뜻한 여행 톤 썸네일 프리셋.
 public enum ThumbnailPreset: String, CaseIterable, Hashable, Sendable {

@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 import PhotosUI
 import Photos
 import AVFoundation
@@ -29,6 +30,9 @@ public struct MediaPickerView: View {
     @State private var selectedItems: [PhotosPickerItem] = []
     @State private var media: [PhotosPickerItem: MediaLoadState] = [:]
     @State private var isResolving = false
+    @State private var scrollProgress: Double = 0
+    @State private var titleInput: String = ""
+    @FocusState private var isTitleFocused: Bool
     // PhotosPicker가 PHAsset localIdentifier(itemIdentifier)를 채워 주려면
     // photoLibrary 파라미터로 동일한 라이브러리를 명시해야 한다 (iOS 17+).
     @State private var photoLibrary = PHPhotoLibrary.shared()
@@ -37,16 +41,18 @@ public struct MediaPickerView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            header
-                .padding(.horizontal, MomentsSpacing.md + 4)
-                .padding(.vertical, MomentsSpacing.sm)
-                .frame(maxWidth: .infinity)
+            header.momentsHeaderBar(scrollProgress: scrollProgress)
+                .zIndex(1)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: MomentsSpacing.lg) {
                     intro
                         .padding(.horizontal, MomentsSpacing.lg)
                         .padding(.top, MomentsSpacing.lg)
+                        .trackScrollOffset(in: "media-picker-scroll")
+
+                    titleField
+                        .padding(.horizontal, MomentsSpacing.lg)
 
                     pickerLauncher
                         .padding(.horizontal, MomentsSpacing.lg)
@@ -57,12 +63,27 @@ public struct MediaPickerView: View {
                 }
                 .padding(.bottom, MomentsSpacing.xxxl)
             }
+            .coordinateSpace(name: "media-picker-scroll")
+            .scrollDismissesKeyboard(.interactively)
+            .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
+                let p = max(0, min(1, offset / 8))
+                if abs(p - scrollProgress) > 0.01 {
+                    withAnimation(.easeInOut(duration: 0.15)) { scrollProgress = p }
+                }
+            }
         }
         .momentsScreen()
         .safeAreaInset(edge: .bottom) {
             bottomBar
                 .padding(.horizontal, MomentsSpacing.md)
                 .padding(.bottom, MomentsSpacing.md)
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("완료") { isTitleFocused = false }
+                    .foregroundColor(MomentsColor.coral)
+            }
         }
         .onChange(of: selectedItems) { _, newItems in
             // 항목 선택 시점에 Photos 권한을 lazy 요청 — Live Photo paired video 추출에 필수.
@@ -132,6 +153,47 @@ public struct MediaPickerView: View {
                 .font(MomentsTypography.krBody(13))
                 .foregroundColor(MomentsColor.taupe)
                 .padding(.top, MomentsSpacing.xxs)
+        }
+    }
+
+    // MARK: - Title field
+
+    private var titleField: some View {
+        VStack(alignment: .leading, spacing: MomentsSpacing.xs) {
+            Text("TITLE · 이번 필름의 제목")
+                .tagLabel()
+
+            TextField(
+                "",
+                text: $titleInput,
+                prompt: Text("예: 제주도, 우리의 봄")
+                    .font(MomentsTypography.krBody(15))
+                    .foregroundColor(MomentsColor.taupe.opacity(0.6))
+            )
+            .font(MomentsTypography.krBody(16, weight: .medium))
+            .foregroundColor(MomentsColor.ink)
+            .submitLabel(.done)
+            .focused($isTitleFocused)
+            .padding(.horizontal, MomentsSpacing.md)
+            .padding(.vertical, MomentsSpacing.sm + 2)
+            .background(
+                RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
+                    .fill(Color.white)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
+                    .strokeBorder(
+                        isTitleFocused
+                            ? MomentsColor.coral.opacity(0.55)
+                            : MomentsColor.taupe.opacity(0.18),
+                        lineWidth: 1
+                    )
+            )
+            .animation(.easeInOut(duration: 0.15), value: isTitleFocused)
+
+            Text("비워두면 나중에 자동으로 채워져요.")
+                .font(MomentsTypography.krBody(12))
+                .foregroundColor(MomentsColor.taupe)
         }
     }
 
@@ -594,7 +656,8 @@ public struct MediaPickerView: View {
             await MainActor.run {
                 isResolving = false
                 guard !orderedClips.isEmpty else { return }
-                session.replace(clips: orderedClips, title: "내 Vlog")
+                let trimmed = titleInput.trimmingCharacters(in: .whitespacesAndNewlines)
+                session.replace(clips: orderedClips, title: trimmed)
                 router.push(.timeline)
             }
         }

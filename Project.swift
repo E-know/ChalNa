@@ -1,13 +1,19 @@
 import ProjectDescription
+import ProjectDescriptionHelpers
 
 let project = Project(
     name: "OneSecMovie",
     targets: [
+        Module.framework(
+            name: "DesignSystem",
+            hasResources: true
+        ),
         .target(
             name: "OneSecMovie",
             destinations: .iOS,
             product: .app,
-            bundleId: "ios.inho.OneSecMovie",
+            bundleId: Module.bundleIdPrefix,
+            deploymentTargets: Module.deploymentTargets,
             infoPlist: .extendingDefault(
                 with: [
                     "UILaunchScreen": [
@@ -22,13 +28,16 @@ let project = Project(
                 "OneSecMovie/Sources",
                 "OneSecMovie/Resources",
             ],
-            dependencies: []
+            dependencies: [
+                .target(name: "DesignSystem"),
+            ]
         ),
         .target(
             name: "OneSecMovieTests",
             destinations: .iOS,
             product: .unitTests,
-            bundleId: "ios.inho.OneSecMovieTests",
+            bundleId: "\(Module.bundleIdPrefix)Tests",
+            deploymentTargets: Module.deploymentTargets,
             infoPlist: .default,
             buildableFolders: [
                 "OneSecMovie/Tests"

@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 import SwiftData
 
 /// 앱 루트 화면. Moments 커버 · 최근 필름 · Vlog 만들기 CTA.
@@ -10,20 +11,21 @@ public struct HomeView: View {
     @Query(sort: [SortDescriptor(\Film.createdAt, order: .reverse)])
     private var films: [Film]
 
+    @State private var scrollProgress: Double = 0
+
     public init() {}
 
     public var body: some View {
         VStack(spacing: 0) {
-            header
-                .padding(.horizontal, MomentsSpacing.md + 4)
-                .padding(.vertical, MomentsSpacing.sm)
-                .frame(maxWidth: .infinity)
+            header.momentsHeaderBar(scrollProgress: scrollProgress)
+                .zIndex(1)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     cover
                         .padding(.horizontal, MomentsSpacing.lg)
                         .padding(.top, MomentsSpacing.md)
+                        .trackScrollOffset(in: "home-scroll")
 
                     recentFilmsSection
                         .padding(.top, MomentsSpacing.xxl)
@@ -36,6 +38,13 @@ public struct HomeView: View {
                         .padding(.horizontal, MomentsSpacing.lg)
                         .padding(.top, MomentsSpacing.xl)
                         .padding(.bottom, MomentsSpacing.xxxl)
+                }
+            }
+            .coordinateSpace(name: "home-scroll")
+            .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
+                let p = max(0, min(1, offset / 8))
+                if abs(p - scrollProgress) > 0.01 {
+                    withAnimation(.easeInOut(duration: 0.15)) { scrollProgress = p }
                 }
             }
         }
@@ -156,13 +165,6 @@ public struct HomeView: View {
                 }
             }
             .buttonStyle(.momentsCoral)
-
-            Button("샘플로 먼저 보기") {
-                let ordered = SampleData.jejuTimeline.sorted { $0.capturedAt > $1.capturedAt }
-                session.replace(clips: ordered, title: SampleData.filmTitle)
-                router.push(.timeline)
-            }
-            .buttonStyle(.momentsText)
         }
     }
 

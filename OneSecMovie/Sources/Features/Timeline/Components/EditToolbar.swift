@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 
 /// Idle 상태의 하단 4-버튼 툴바 (회전 · 자르기 · 삭제 · 음악).
 /// 클립 순서 변경은 FilmStrip에서 long-press → drag&drop으로 직접 수행한다.

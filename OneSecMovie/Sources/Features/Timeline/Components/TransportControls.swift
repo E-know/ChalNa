@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 
 /// Playing 상태의 3-버튼 전송 컨트롤 (이전 · 재생/일시정지 · 다음).
 struct TransportControls: View {

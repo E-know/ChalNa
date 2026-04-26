@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 
 /// 고정 크기 영상 프리뷰 패널. Idle(큰 플레이) · Playing(큰 일시정지 + 스크럽바) · Reordering(디밍 + 배너).
 /// 콘텐츠 비율과 무관하게 박스 크기는 항상 같고, 내부 사진/영상은 letterbox 로 fit.
