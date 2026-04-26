@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaPickerFeature
 import HomeFeature
 import AppCore
 import DesignSystem

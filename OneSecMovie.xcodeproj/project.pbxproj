@@ -10,15 +10,19 @@
 		0BE5C2E8F932A2821325C1DC /* CompositionService.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 73EE856BA54833874C9E8D77 /* CompositionService.framework */; };
 		0F2A95E7C3F88C4354F839BC /* Models.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
 		1738AE2A7D7A3EF272A68E45 /* AppCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D93A356B9B154D8BF13144DF /* AppCore.framework */; };
+		258F2555F82355A5BC7D8D43 /* MediaPickerFeature.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BA048A5EDD3A2B899EC9EBA3 /* MediaPickerFeature.framework */; };
+		31355CF764EF04BC8647A5D4 /* Models.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
 		569BCFAFADC8F6A8A9758A67 /* Models.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
 		6F4897D5A84F44D33D86F5BB /* Models.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
 		84CDDC6D6279787AB6F68274 /* DesignSystem.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */; };
 		96EAAF2FD0E2A3881C525B7E /* PhotosService.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 92D881F5F93C60DB8AFAEEE1 /* PhotosService.framework */; };
 		9D8CEA5907E96384299F1FE2 /* HomeFeature.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1FA5D7C2553BA8FBF763650E /* HomeFeature.framework */; };
 		B71BC743982F62909260A9FB /* Models.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
+		BBD11678D07A7EEACECE184B /* AppCore.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = D93A356B9B154D8BF13144DF /* AppCore.framework */; };
 		C7034C7FEDE3D1FF110034E1 /* DesignSystem.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */; };
 		CB074F163EE94478A93B7AFD /* DesignSystem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */; };
 		DFFAC38B387B8E4E78D0D362 /* AppCore.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = D93A356B9B154D8BF13144DF /* AppCore.framework */; };
+		E5CE52863E6E1CA4350AB39A /* DesignSystem.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */; };
 		F6E29140C5948C3658CBE2EA /* Models.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
 /* End PBXBuildFile section */
 
@@ -29,6 +33,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = EB5B7FF744703184FB3FD043;
 			remoteInfo = DesignSystem;
+		};
+		20448A343EBB8499F03433DC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 160C110EDE7E5A077FC6DB2E;
+			remoteInfo = AppCore;
 		};
 		22755727B3A463171D5FC567 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -107,6 +118,20 @@
 			remoteGlobalIDString = EB5B7FF744703184FB3FD043;
 			remoteInfo = DesignSystem;
 		};
+		BF7BC2C2B26FED8BD5305143 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8355DD3A6CB5718A43CF1585;
+			remoteInfo = Models;
+		};
+		C204E68EB1DC08A2DAC588FC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3E173F911A34131A70260F03;
+			remoteInfo = MediaPickerFeature;
+		};
 		D5D6BB154152376F9A7FA703 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
@@ -120,6 +145,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 160C110EDE7E5A077FC6DB2E;
 			remoteInfo = AppCore;
+		};
+		EEE1D0CECC2DAF544DB8E1CB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EB5B7FF744703184FB3FD043;
+			remoteInfo = DesignSystem;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -166,7 +198,29 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		435CA2DBED6FE1D7AFA0192D /* Dependencies */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 8;
+			dstSubfolderSpec = 16;
+			files = (
+				BBD11678D07A7EEACECE184B /* AppCore.framework in Dependencies */,
+				E5CE52863E6E1CA4350AB39A /* DesignSystem.framework in Dependencies */,
+				31355CF764EF04BC8647A5D4 /* Models.framework in Dependencies */,
+			);
+			name = Dependencies;
+			runOnlyForDeploymentPostprocessing = 1;
+		};
 		44FF7E49B3E47AC48BE4FA70 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		67A97D3DCBF8403BA91AE49E /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
@@ -270,9 +324,11 @@
 		9FCBF6889CA7BEBA5D0115BE /* HomeFeature-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "HomeFeature-Info.plist"; sourceTree = "<group>"; };
 		AADE608C8F69E5C4092A18AC /* CompositionService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "CompositionService-Info.plist"; sourceTree = "<group>"; };
 		B5C3558DFF49B851298D584F /* Models-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "Models-Info.plist"; sourceTree = "<group>"; };
+		BA048A5EDD3A2B899EC9EBA3 /* MediaPickerFeature.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MediaPickerFeature.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D93A356B9B154D8BF13144DF /* AppCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AppCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		E2F522F79C80B8145409F880 /* PhotosService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "PhotosService-Info.plist"; sourceTree = "<group>"; };
 		ECE96FA65AAD093D894A3228 /* DesignSystem-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "DesignSystem-Info.plist"; sourceTree = "<group>"; };
+		F28E19BB09FFBC09004D1C71 /* MediaPickerFeature-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "MediaPickerFeature-Info.plist"; sourceTree = "<group>"; };
 		F35DA14C8D1B7A3F106611DE /* OneSecMovie-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "OneSecMovie-Info.plist"; sourceTree = "<group>"; };
 		FD33A23C9E0ECCD08ED08C5D /* AppCore-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "AppCore-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -350,6 +406,15 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
+		E6E2071E9363445CC3A755B7 /* Sources */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
 		EE7D7CF8D7F38DF53E3AC1EE /* Resources */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			explicitFileTypes = {
@@ -414,12 +479,20 @@
 				0BE5C2E8F932A2821325C1DC /* CompositionService.framework in Frameworks */,
 				CB074F163EE94478A93B7AFD /* DesignSystem.framework in Frameworks */,
 				9D8CEA5907E96384299F1FE2 /* HomeFeature.framework in Frameworks */,
+				258F2555F82355A5BC7D8D43 /* MediaPickerFeature.framework in Frameworks */,
 				B71BC743982F62909260A9FB /* Models.framework in Frameworks */,
 				96EAAF2FD0E2A3881C525B7E /* PhotosService.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		6C18613FF16329B00FCAE464 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CDF0AD2EF890FB621C89A2CC /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -475,6 +548,7 @@
 				73EE856BA54833874C9E8D77 /* CompositionService.framework */,
 				57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */,
 				1FA5D7C2553BA8FBF763650E /* HomeFeature.framework */,
+				BA048A5EDD3A2B899EC9EBA3 /* MediaPickerFeature.framework */,
 				824B7A5A74F90EECAF3AB4A9 /* Models.framework */,
 				3EC304501189983E7B1142E7 /* OneSecMovie.app */,
 				780023EE20DF36AF219E3AC7 /* OneSecMovieTests.xctest */,
@@ -516,6 +590,7 @@
 				88859119BEFADF0E7D19F229 /* CompositionService */,
 				A7CC2F08C3640A4AC217EBF6 /* DesignSystem */,
 				164F9D79C8D582E5D63D7569 /* HomeFeature */,
+				BBEED08596338C528BDAED81 /* MediaPickerFeature */,
 				37E36937E1DCD1B5825A7019 /* Models */,
 				78F9B6EFCB08DF9E892DE257 /* PhotosService */,
 			);
@@ -548,12 +623,21 @@
 				AADE608C8F69E5C4092A18AC /* CompositionService-Info.plist */,
 				ECE96FA65AAD093D894A3228 /* DesignSystem-Info.plist */,
 				9FCBF6889CA7BEBA5D0115BE /* HomeFeature-Info.plist */,
+				F28E19BB09FFBC09004D1C71 /* MediaPickerFeature-Info.plist */,
 				B5C3558DFF49B851298D584F /* Models-Info.plist */,
 				F35DA14C8D1B7A3F106611DE /* OneSecMovie-Info.plist */,
 				05AB34021014DBBE5A672537 /* OneSecMovieTests-Info.plist */,
 				E2F522F79C80B8145409F880 /* PhotosService-Info.plist */,
 			);
 			path = InfoPlists;
+			sourceTree = "<group>";
+		};
+		BBEED08596338C528BDAED81 /* MediaPickerFeature */ = {
+			isa = PBXGroup;
+			children = (
+				E6E2071E9363445CC3A755B7 /* Sources */,
+			);
+			path = MediaPickerFeature;
 			sourceTree = "<group>";
 		};
 		DAE368F65B6659961B838991 /* AppCore */ = {
@@ -615,6 +699,33 @@
 			);
 			productName = PhotosService;
 			productReference = 92D881F5F93C60DB8AFAEEE1 /* PhotosService.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		3E173F911A34131A70260F03 /* MediaPickerFeature */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A230C5681B21C89224B78FA0 /* Build configuration list for PBXNativeTarget "MediaPickerFeature" */;
+			buildPhases = (
+				B3AFCACFE1D9296A07BCDA81 /* Sources */,
+				678F3590203E1544B3B926E6 /* Resources */,
+				CDF0AD2EF890FB621C89A2CC /* Frameworks */,
+				67A97D3DCBF8403BA91AE49E /* Embed Frameworks */,
+				435CA2DBED6FE1D7AFA0192D /* Dependencies */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FF582435587E6A3ABB39A5A1 /* PBXTargetDependency */,
+				777B8A6217B62AF682F9F9A6 /* PBXTargetDependency */,
+				ED6BEE3674CCE99A289D85E3 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				E6E2071E9363445CC3A755B7 /* Sources */,
+			);
+			name = MediaPickerFeature;
+			packageProductDependencies = (
+			);
+			productName = MediaPickerFeature;
+			productReference = BA048A5EDD3A2B899EC9EBA3 /* MediaPickerFeature.framework */;
 			productType = "com.apple.product-type.framework";
 		};
 		702E5B0F1CCEBE75D92E029B /* CompositionService */ = {
@@ -758,6 +869,7 @@
 				A3EFE18A273C05DDA61041F9 /* PBXTargetDependency */,
 				438643049046F65F180B6BCF /* PBXTargetDependency */,
 				1447A1A345CE69D67987615D /* PBXTargetDependency */,
+				A27B562866D9E1EF6900894B /* PBXTargetDependency */,
 				F9DADBE431519A21AD03C7DA /* PBXTargetDependency */,
 				BE4DC891755191F7BC4F954B /* PBXTargetDependency */,
 			);
@@ -802,6 +914,7 @@
 				702E5B0F1CCEBE75D92E029B /* CompositionService */,
 				EB5B7FF744703184FB3FD043 /* DesignSystem */,
 				9B2E91DEA52AE3D24332B7D9 /* HomeFeature */,
+				3E173F911A34131A70260F03 /* MediaPickerFeature */,
 				8355DD3A6CB5718A43CF1585 /* Models */,
 				FC862C46CD92758A6708929D /* OneSecMovie */,
 				AB30422B450FBA4470D6CDF3 /* OneSecMovieTests */,
@@ -847,6 +960,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		464E3F1B5F4DAF6E90AA3DB2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		678F3590203E1544B3B926E6 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -912,6 +1032,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B3AFCACFE1D9296A07BCDA81 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C8B541EB15E07CA641A92336 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -965,6 +1092,12 @@
 			target = EB5B7FF744703184FB3FD043 /* DesignSystem */;
 			targetProxy = BC723E87476EA1DBEBA5AE94 /* PBXContainerItemProxy */;
 		};
+		777B8A6217B62AF682F9F9A6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = DesignSystem;
+			target = EB5B7FF744703184FB3FD043 /* DesignSystem */;
+			targetProxy = EEE1D0CECC2DAF544DB8E1CB /* PBXContainerItemProxy */;
+		};
 		7AB0CDBD80B8A6D6A0C1322F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = OneSecMovie;
@@ -976,6 +1109,12 @@
 			name = AppCore;
 			target = 160C110EDE7E5A077FC6DB2E /* AppCore */;
 			targetProxy = D788A5D1DE76878C8070F50D /* PBXContainerItemProxy */;
+		};
+		A27B562866D9E1EF6900894B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = MediaPickerFeature;
+			target = 3E173F911A34131A70260F03 /* MediaPickerFeature */;
+			targetProxy = C204E68EB1DC08A2DAC588FC /* PBXContainerItemProxy */;
 		};
 		A3EFE18A273C05DDA61041F9 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1007,15 +1146,65 @@
 			target = 8355DD3A6CB5718A43CF1585 /* Models */;
 			targetProxy = 98C70B54877362BA855DB2ED /* PBXContainerItemProxy */;
 		};
+		ED6BEE3674CCE99A289D85E3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = Models;
+			target = 8355DD3A6CB5718A43CF1585 /* Models */;
+			targetProxy = BF7BC2C2B26FED8BD5305143 /* PBXContainerItemProxy */;
+		};
 		F9DADBE431519A21AD03C7DA /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = Models;
 			target = 8355DD3A6CB5718A43CF1585 /* Models */;
 			targetProxy = 22755727B3A463171D5FC567 /* PBXContainerItemProxy */;
 		};
+		FF582435587E6A3ABB39A5A1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AppCore;
+			target = 160C110EDE7E5A077FC6DB2E /* AppCore */;
+			targetProxy = 20448A343EBB8499F03433DC /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		20DE918756E3564383F5E15A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = "Derived/InfoPlists/MediaPickerFeature-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = ios.inho.OneSecMovie.MediaPickerFeature;
+				PRODUCT_NAME = MediaPickerFeature;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = (
+					"$(inherited)",
+					DEBUG,
+				);
+				SWIFT_COMPILATION_MODE = singlefile;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
 		47C636F950ED1E590B8C78F6 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1425,6 +1614,40 @@
 			};
 			name = Debug;
 		};
+		B516FE058166EAD4BF59A635 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = "Derived/InfoPlists/MediaPickerFeature-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = ios.inho.OneSecMovie.MediaPickerFeature;
+				PRODUCT_NAME = MediaPickerFeature;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
 		BD7FF2E74C71B198DB39A7B8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1727,6 +1950,15 @@
 			buildConfigurations = (
 				47C636F950ED1E590B8C78F6 /* Debug */,
 				8261158235D183C9BA86CC3E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A230C5681B21C89224B78FA0 /* Build configuration list for PBXNativeTarget "MediaPickerFeature" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				20DE918756E3564383F5E15A /* Debug */,
+				B516FE058166EAD4BF59A635 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
