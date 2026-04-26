@@ -40,6 +40,15 @@ let project = Project(
                 .target(name: "DesignSystem"),
             ]
         ),
+        Module.framework(
+            name: "ExportFeature",
+            dependencies: [
+                .target(name: "AppCore"),
+                .target(name: "Models"),
+                .target(name: "DesignSystem"),
+                .target(name: "CompositionService"),
+            ]
+        ),
         .target(
             name: "OneSecMovie",
             destinations: .iOS,
@@ -68,6 +77,7 @@ let project = Project(
                 .target(name: "AppCore"),
                 .target(name: "HomeFeature"),
                 .target(name: "MediaPickerFeature"),
+                .target(name: "ExportFeature"),
             ]
         ),
         .target(

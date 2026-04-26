@@ -1,4 +1,5 @@
 import SwiftUI
+import ExportFeature
 import MediaPickerFeature
 import HomeFeature
 import AppCore
