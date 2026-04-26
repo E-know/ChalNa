@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 타임라인 편집 화면. 3가지 상태(idle · playing · reordering)를 단일 뷰에서 렌더.
+/// 타임라인 편집 화면. 2가지 상태(idle · playing) — 재정렬은 UIKit `UICollectionView` drag interaction이 시스템 레벨에서 처리.
 public struct TimelineView: View {
     @Environment(AppRouter.self) private var router
     @Environment(EditSession.self) private var session
@@ -17,6 +17,11 @@ public struct TimelineView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
+            header
+                .padding(.horizontal, MomentsSpacing.md + 4)
+                .padding(.vertical, MomentsSpacing.sm)
+                .frame(maxWidth: .infinity)
+
             preview
                 .padding(.horizontal, MomentsSpacing.md)
                 .padding(.top, MomentsSpacing.md)
@@ -28,22 +33,18 @@ public struct TimelineView: View {
                 .padding(.horizontal, MomentsSpacing.md + 4)
                 .padding(.top, MomentsSpacing.md + 4)
 
-            FilmStrip(
+            FilmStripCollectionView(
                 model: model,
-                onTapClip: { model.select(clipAt: $0) },
-                onLongPressClip: { idx in
-                    guard model.clips.indices.contains(idx) else { return }
-                    model.beginReorder(clipID: model.clips[idx].id)
-                    // 데모용: 드롭 타깃을 앞/뒤로 약간 이동시킨 초기값 제공
-                    model.updateReorderTarget(slot: min(idx + 3, model.clips.count))
-                }
+                session: session,
+                onTapClip: { model.select(clipAt: $0) }
             )
+            .frame(height: 104)
             .padding(.horizontal, MomentsSpacing.md)
             .padding(.top, MomentsSpacing.xs)
 
             hintRow
                 .padding(.horizontal, MomentsSpacing.md + 4)
-                .padding(.top, model.isPlaying ? MomentsSpacing.md : MomentsSpacing.md)
+                .padding(.top, MomentsSpacing.md)
 
             if model.isPlaying {
                 TransportControls(
@@ -57,11 +58,8 @@ public struct TimelineView: View {
 
             Spacer(minLength: 0)
         }
-        .momentsTopBar {
-            header.opacity(model.isReordering ? 0.6 : 1)
-        }
-        .safeAreaInset(edge: .bottom) { bottomBar.padding(.horizontal, MomentsSpacing.md) }
         .momentsScreen()
+        .safeAreaInset(edge: .bottom) { bottomBar.padding(.horizontal, MomentsSpacing.md) }
         .onAppear {
             syncFromSessionIfNeeded()
             wirePlaybackControllerIfNeeded()
@@ -113,7 +111,6 @@ public struct TimelineView: View {
         playback.onClipEnd = { [model, playback] in
             if model.currentIndex + 1 < model.clips.count {
                 model.next()
-                // onChange(of: currentIndex)가 playback.load + play를 수행.
             } else {
                 model.state = .idle
                 model.currentIndex = 0
@@ -176,22 +173,20 @@ public struct TimelineView: View {
     }
 
     private var canSave: Bool {
-        !model.isReordering && !model.clips.isEmpty
+        !model.clips.isEmpty
     }
 
     private var headerTitle: String {
         switch model.state {
-        case .idle:       return "편집"
-        case .playing:    return "재생 중"
-        case .reordering: return "순서 변경"
+        case .idle:    return "편집"
+        case .playing: return "재생 중"
         }
     }
 
     private var headerSubtitle: String {
         switch model.state {
-        case .idle:       return model.title
-        case .playing:    return "PLAYING"
-        case .reordering: return "REORDERING"
+        case .idle:    return model.title
+        case .playing: return "PLAYING"
         }
     }
 
@@ -211,7 +206,7 @@ public struct TimelineView: View {
                 rotationDegrees: model.isPlaying ? 1.5 : -1.5,
                 leftTape: model.isPlaying ? .sage : .coral,
                 rightTape: model.isPlaying ? .coral : .sage,
-                muted: model.isReordering
+                muted: false
             )
         }
     }
@@ -240,16 +235,15 @@ public struct TimelineView: View {
 
     private var labelLeft: String {
         switch model.state {
-        case .idle:       return "TIMELINE · \(model.clips.count) CLIPS"
-        case .playing:    return "▶ NOW PLAYING · CLIP \(model.currentIndex + 1)"
-        case .reordering: return "◈ MOVING CLIP \((model.clips.firstIndex(where: { $0.id == model.draggingClipID }) ?? 0) + 1) → SLOT \((model.targetSlotIndex ?? 0) + 1)"
+        case .idle:    return "TIMELINE · \(model.clips.count) CLIPS"
+        case .playing: return "▶ NOW PLAYING · CLIP \(model.currentIndex + 1)"
         }
     }
 
     private var labelLeftColor: Color {
         switch model.state {
         case .idle:    return MomentsColor.taupe
-        default:       return MomentsColor.coral
+        case .playing: return MomentsColor.coral
         }
     }
 
@@ -263,8 +257,6 @@ public struct TimelineView: View {
                 .foregroundColor(MomentsColor.ink))
         case .playing:
             Text("\(model.playheadLabel) / \(model.totalClockLabel)").tagLabel()
-        case .reordering:
-            Text("HOLD · DRAG").tagLabel()
         }
     }
 
@@ -274,18 +266,10 @@ public struct TimelineView: View {
     private var hintRow: some View {
         switch model.state {
         case .idle:
-            HandNoteRow("클립을 탭해 편집 · 순서 버튼 또는 길게 눌러 이동", tone: .muted)
+            HandNoteRow("클립을 탭해 편집 · 길게 눌러서 끌어 이동", tone: .muted)
         case .playing:
             EmptyView()
-        case .reordering:
-            HandNoteRow(hintForReorder, tone: .accent, size: 18)
         }
-    }
-
-    private var hintForReorder: String {
-        let groups = model.clips.groupedByDay()
-        guard groups.count > 1 else { return "여기에 놓으면 순서가 바뀌어요 ✦" }
-        return "여기에 놓으면 \(groups[1].dayKey) 사이에 들어가요 ✦"
     }
 
     // MARK: - Bottom bar
@@ -295,21 +279,16 @@ public struct TimelineView: View {
         switch model.state {
         case .idle:
             EditToolbar(
+                rotationActive: currentRotationActive,
+                onRotate:  { rotateCurrentClip() },
                 onTrim:    { showTrimSheet = true },
-                onReorder: { beginReorderFromButton() },
                 onDelete:  { model.deleteCurrent() },
                 onMusic:   { showMusicSheet = true }
             )
             .padding(.bottom, MomentsSpacing.md)
         case .playing:
-            EditToolbar(dimmed: true)
+            EditToolbar(dimmed: true, rotationActive: currentRotationActive)
                 .padding(.bottom, MomentsSpacing.md)
-        case .reordering:
-            ReorderConfirmBar(
-                onCancel: { model.cancelReorder() },
-                onConfirm: { model.confirmReorder() }
-            )
-            .padding(.bottom, MomentsSpacing.md)
         }
     }
 
@@ -319,11 +298,17 @@ public struct TimelineView: View {
         model.togglePlay()
     }
 
-    private func beginReorderFromButton() {
+    // MARK: - Rotation
+
+    private var currentRotationActive: Bool {
+        guard let id = model.currentClip?.id else { return false }
+        return session.rotation(for: id) != .r0
+    }
+
+    private func rotateCurrentClip() {
         guard let id = model.currentClip?.id else { return }
-        model.beginReorder(clipID: id)
-        // 버튼으로 진입 시 초기 타겟은 "다음 슬롯"으로 힌트 제공.
-        model.updateReorderTarget(slot: min(model.currentIndex + 2, model.clips.count))
+        session.cycleRotation(for: id)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 }
 
@@ -454,23 +439,4 @@ private extension TimelineModel {
         self.state = state
         self.currentIndex = currentIndex
     }
-}
-
-#Preview("Reordering") {
-    TimelineView(
-        model: {
-            let m = TimelineModel()
-            if let third = m.clips[safe: 2] {
-                m.beginReorder(clipID: third.id)
-                m.updateReorderTarget(slot: 5)
-            }
-            return m
-        }()
-    )
-    .environment(AppRouter())
-    .environment(EditSession())
-}
-
-private extension Array {
-    subscript(safe i: Int) -> Element? { indices.contains(i) ? self[i] : nil }
 }

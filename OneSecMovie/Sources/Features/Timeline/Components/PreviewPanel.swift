@@ -6,9 +6,16 @@ struct PreviewPanel: View {
     /// Figma 노드 `39:81` 기준 고정 높이.
     private static let previewHeight: CGFloat = 224
 
+    @Environment(EditSession.self) private var session
+
     let model: TimelineModel
     let playback: ClipPlaybackController
     let onTogglePlay: () -> Void
+
+    private var currentRotation: ClipRotation {
+        guard let id = model.currentClip?.id else { return .r0 }
+        return session.rotation(for: id)
+    }
 
     var body: some View {
         ZStack {
@@ -18,7 +25,6 @@ struct PreviewPanel: View {
                 .overlay(topRightClipIndex)
                 .overlay(playPauseButton)
                 .overlay(bottomControls, alignment: .bottom)
-                .overlay(reorderBannerOverlay)
         }
         .frame(maxWidth: .infinity)
         .frame(height: Self.previewHeight)
@@ -37,10 +43,12 @@ struct PreviewPanel: View {
     private var thumbnail: some View {
         ZStack {
             if let clip = model.currentClip {
-                if clip.videoURL != nil && playback.hasVideo {
-                    PlayerLayerView(player: playback.player)
-                } else {
-                    clip.thumbnailView(contentMode: .fit)
+                RotatableContent(rotation: currentRotation) {
+                    if clip.videoURL != nil && playback.hasVideo {
+                        PlayerLayerView(player: playback.player)
+                    } else {
+                        clip.thumbnailView(contentMode: .fit)
+                    }
                 }
             } else {
                 MomentsColor.ivory
@@ -54,10 +62,6 @@ struct PreviewPanel: View {
                     endRadius: 260
                 )
             }
-            // Reordering: 브라이트니스 + 잉크 워시로 흐리게
-            if model.isReordering {
-                Color.black.opacity(0.45)
-            }
         }
     }
 
@@ -65,7 +69,7 @@ struct PreviewPanel: View {
 
     @ViewBuilder
     private var topRightClipIndex: some View {
-        if !model.isReordering {
+        Group {
             Text(topRightIndexAttributed)
                 .font(MomentsTypography.monoFallback(10, weight: .semibold))
                 .foregroundColor(.white)
@@ -89,29 +93,25 @@ struct PreviewPanel: View {
 
     @ViewBuilder
     private var playPauseButton: some View {
-        if !model.isReordering {
-            Button(action: onTogglePlay) {
-                ZStack {
-                    Circle()
-                        .fill(Color.white.opacity(0.94))
-                        .frame(width: 64, height: 64)
-                        .shadow(color: .black.opacity(0.3), radius: 14, y: 10)
-                    MomentsIcon(model.isPlaying ? .pause : .play, size: 22)
-                        .foregroundColor(MomentsColor.ink)
-                        .offset(x: model.isPlaying ? 0 : 2)
-                }
+        Button(action: onTogglePlay) {
+            ZStack {
+                Circle()
+                    .fill(Color.white.opacity(0.94))
+                    .frame(width: 64, height: 64)
+                    .shadow(color: .black.opacity(0.3), radius: 14, y: 10)
+                MomentsIcon(model.isPlaying ? .pause : .play, size: 22)
+                    .foregroundColor(MomentsColor.ink)
+                    .offset(x: model.isPlaying ? 0 : 2)
             }
-            .buttonStyle(.plain)
         }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Bottom controls
 
     @ViewBuilder
     private var bottomControls: some View {
-        if model.isReordering {
-            EmptyView()
-        } else if model.isPlaying {
+        if model.isPlaying {
             ScrubBar(
                 currentLabel: model.playheadLabel,
                 totalLabel: model.totalClockLabel,
@@ -138,16 +138,6 @@ struct PreviewPanel: View {
         tail.foregroundColor = .white.opacity(0.65)
         s.append(tail)
         return s
-    }
-
-    // MARK: - Reorder banner
-
-    @ViewBuilder
-    private var reorderBannerOverlay: some View {
-        if model.isReordering {
-            ReorderBanner()
-                .padding(.horizontal, MomentsSpacing.md)
-        }
     }
 
     // MARK: - Glow (coral ring when playing)
