@@ -6,6 +6,7 @@ public enum MomentsIconKind: String, CaseIterable, Sendable {
     case skipBack, skipForward
     case scissors, reorderLines, trash, music
     case move
+    case rotate
 }
 
 /// Lucide 스타일 라인 아이콘. 1.5pt stroke, 24x24 viewBox, round cap/join.
@@ -255,6 +256,25 @@ private struct LucideShape: Shape {
                     p.addLine(to: .init(x: 21, y: 15))
                 },
                 Path(ellipseIn: CGRect(x: 9, y: 9, width: 6, height: 6))
+            ]
+
+        case .rotate:
+            // 시계방향 회전 화살표: 12시에서 시계방향으로 270° 도는 호 + 12시 끝에서 우측 위로 꺾이는 ㄴ자 화살촉.
+            return [
+                Path { p in
+                    p.addArc(
+                        center: CGPoint(x: 12, y: 12),
+                        radius: 8,
+                        startAngle: .degrees(-90),
+                        endAngle: .degrees(180),
+                        clockwise: false
+                    )
+                },
+                Path { p in
+                    p.move(to: .init(x: 12, y: 4))
+                    p.addLine(to: .init(x: 16, y: 4))
+                    p.addLine(to: .init(x: 16, y: 8))
+                }
             ]
         }
     }
