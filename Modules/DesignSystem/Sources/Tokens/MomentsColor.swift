@@ -19,7 +19,7 @@ public enum MomentsColor {
     }
 }
 
-public extension Color {
+extension Color {
     init(hex: UInt32, opacity: Double = 1.0) {
         let r = Double((hex >> 16) & 0xFF) / 255.0
         let g = Double((hex >>  8) & 0xFF) / 255.0

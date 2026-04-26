@@ -9,8 +9,7 @@ let project = Project(
             hasResources: true
         ),
         Module.framework(
-            name: "Models",
-            dependencies: [.target(name: "DesignSystem")]
+            name: "Models"
         ),
         Module.framework(
             name: "CompositionService",
