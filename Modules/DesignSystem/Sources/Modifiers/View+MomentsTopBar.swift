@@ -14,6 +14,17 @@ public extension View {
             .padding(.horizontal, MomentsSpacing.md + 4)
             .padding(.vertical, MomentsSpacing.sm)
             .frame(maxWidth: .infinity)
+            .background {
+                if #available(iOS 26.0, *) {
+                    Rectangle()
+                        .fill(.clear)
+                        .glassEffect(
+                            .regular.tint(MomentsColor.cream.opacity(0.18)),
+                            in: Rectangle()
+                        )
+                        .opacity(p)
+                }
+            }
             .overlay(alignment: .bottom) {
                 Rectangle()
                     .fill(MomentsColor.taupe.opacity(0.12 * p))

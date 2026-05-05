@@ -12,7 +12,16 @@ struct EditToolbar: View {
     var onDelete: () -> Void = {}
     var onMusic: () -> Void = {}
 
+    @ViewBuilder
     var body: some View {
+        if #available(iOS 26.0, *) {
+            liquidGlassToolbar
+        } else {
+            paperToolbar
+        }
+    }
+
+    private var paperToolbar: some View {
         HStack(spacing: 0) {
             item(icon: .rotate, label: "회전", action: onRotate, dotIndicator: rotationActive)
             item(icon: .scissors, label: "자르기", action: onTrim)
@@ -32,6 +41,22 @@ struct EditToolbar: View {
                 : nil
         )
         .opacity(dimmed ? 0.85 : 1)
+        .allowsHitTesting(!dimmed)
+        .accessibilityHidden(dimmed)
+    }
+
+    @available(iOS 26.0, *)
+    private var liquidGlassToolbar: some View {
+        GlassEffectContainer(spacing: MomentsSpacing.xs) {
+            HStack(spacing: MomentsSpacing.xs) {
+                glassItem(icon: .rotate, label: "회전", action: onRotate, dotIndicator: rotationActive)
+                glassItem(icon: .scissors, label: "자르기", action: onTrim)
+                glassItem(icon: .trash, label: "삭제", action: onDelete, tone: .destructive)
+                glassItem(icon: .music, label: "음악", action: onMusic)
+            }
+            .padding(.vertical, MomentsSpacing.xxs)
+        }
+        .opacity(dimmed ? 0.82 : 1)
         .allowsHitTesting(!dimmed)
         .accessibilityHidden(dimmed)
     }
@@ -66,6 +91,43 @@ struct EditToolbar: View {
         }
         .buttonStyle(.plain)
         .momentsHitTarget()
+        .disabled(dimmed)
+        .accessibilityLabel(label)
+        .accessibilityHint(tone.accessibilityHint)
+    }
+
+    @available(iOS 26.0, *)
+    private func glassItem(
+        icon: MomentsIconKind,
+        label: String,
+        action: @escaping () -> Void,
+        dotIndicator: Bool = false,
+        tone: ToolbarItemTone = .normal
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                ZStack(alignment: .topTrailing) {
+                    MomentsIcon(icon, size: 20)
+                        .foregroundColor(tone.foregroundColor)
+                    if dotIndicator {
+                        Circle()
+                            .fill(MomentsColor.coral)
+                            .frame(width: 6, height: 6)
+                            .offset(x: 4, y: -2)
+                    }
+                }
+                if !dimmed {
+                    Text(label)
+                        .font(MomentsTypography.krBody(10, weight: .medium))
+                        .foregroundColor(tone.foregroundColor)
+                }
+            }
+            .opacity(dimmed ? 0.45 : 1)
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: 52)
+        }
+        .buttonStyle(.glass)
+        .frame(maxWidth: .infinity)
         .disabled(dimmed)
         .accessibilityLabel(label)
         .accessibilityHint(tone.accessibilityHint)

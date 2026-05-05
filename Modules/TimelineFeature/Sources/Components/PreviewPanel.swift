@@ -25,9 +25,7 @@ struct PreviewPanel: View {
             // letterbox 베이스 — 가로/세로 비율이 다른 콘텐츠에서 띠 영역의 색.
             MomentsColor.ink
             thumbnail
-                .overlay(topRightClipIndex)
-                .overlay(playPauseButton)
-                .overlay(bottomControls, alignment: .bottom)
+                .overlay(hudOverlay)
         }
         .frame(maxWidth: .infinity)
         .frame(height: Self.previewHeight)
@@ -68,12 +66,43 @@ struct PreviewPanel: View {
         }
     }
 
+    @ViewBuilder
+    private var hudOverlay: some View {
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer(spacing: MomentsSpacing.md) {
+                hudStack
+            }
+        } else {
+            hudStack
+        }
+    }
+
+    private var hudStack: some View {
+        ZStack {
+            topRightClipIndex
+            playPauseButton
+            bottomControls
+        }
+    }
+
     // MARK: - Top-right "1 / 12"
 
     @ViewBuilder
     private var topRightClipIndex: some View {
-        Group {
-            Text(topRightIndexAttributed)
+        if #available(iOS 26.0, *) {
+            Text(topRightIndexAttributed(foreground: MomentsColor.ink, tail: MomentsColor.taupe))
+                .font(MomentsTypography.monoFallback(10, weight: .semibold))
+                .foregroundColor(MomentsColor.ink)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .glassEffect(
+                    .regular.tint(MomentsColor.ivory.opacity(0.32)),
+                    in: Capsule(style: .continuous)
+                )
+                .padding(MomentsSpacing.sm)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+        } else {
+            Text(topRightIndexAttributed(foreground: .white, tail: .white.opacity(0.6)))
                 .font(MomentsTypography.monoFallback(10, weight: .semibold))
                 .foregroundColor(.white)
                 .padding(.horizontal, 10)
@@ -84,10 +113,11 @@ struct PreviewPanel: View {
         }
     }
 
-    private var topRightIndexAttributed: AttributedString {
+    private func topRightIndexAttributed(foreground: Color, tail tailColor: Color) -> AttributedString {
         var s = AttributedString("\(model.currentIndex + 1) ")
+        s.foregroundColor = foreground
         var tail = AttributedString("/ \(model.clips.count)")
-        tail.foregroundColor = .white.opacity(0.6)
+        tail.foregroundColor = tailColor
         s.append(tail)
         return s
     }
@@ -97,6 +127,26 @@ struct PreviewPanel: View {
     @ViewBuilder
     private var playPauseButton: some View {
         Button(action: onTogglePlay) {
+            playPauseButtonLabel
+        }
+        .buttonStyle(.plain)
+        .momentsHitTarget(minSize: 64)
+        .accessibilityLabel(model.isPlaying ? "일시정지" : "재생")
+        .accessibilityHint("타임라인 미리보기 재생 상태를 전환합니다.")
+    }
+
+    @ViewBuilder
+    private var playPauseButtonLabel: some View {
+        if #available(iOS 26.0, *) {
+            MomentsIcon(model.isPlaying ? .pause : .play, size: 22)
+                .foregroundColor(MomentsColor.ink)
+                .offset(x: model.isPlaying ? 0 : 2)
+                .frame(width: 64, height: 64)
+                .glassEffect(
+                    .regular.tint(MomentsColor.ivory.opacity(0.34)).interactive(),
+                    in: Circle()
+                )
+        } else {
             ZStack {
                 Circle()
                     .fill(Color.white.opacity(0.94))
@@ -107,10 +157,6 @@ struct PreviewPanel: View {
                     .offset(x: model.isPlaying ? 0 : 2)
             }
         }
-        .buttonStyle(.plain)
-        .momentsHitTarget(minSize: 64)
-        .accessibilityLabel(model.isPlaying ? "일시정지" : "재생")
-        .accessibilityHint("타임라인 미리보기 재생 상태를 전환합니다.")
     }
 
     // MARK: - Bottom controls
@@ -121,12 +167,33 @@ struct PreviewPanel: View {
             ScrubBar(
                 currentLabel: model.playheadLabel,
                 totalLabel: model.totalClockLabel,
-                progress: min(1.0, max(0.0, model.playheadSeconds / max(model.totalDuration, 0.001)))
+                progress: min(1.0, max(0.0, model.playheadSeconds / max(model.totalDuration, 0.001))),
+                style: .liquidGlass
             )
             .padding(.horizontal, MomentsSpacing.sm)
             .padding(.bottom, 10)
         } else {
-            Text(timecodeIdleAttributed)
+            idleTimecodePill
+        }
+    }
+
+    @ViewBuilder
+    private var idleTimecodePill: some View {
+        if #available(iOS 26.0, *) {
+            Text(timecodeIdleAttributed(foreground: MomentsColor.ink, tail: MomentsColor.taupe))
+                .font(MomentsTypography.monoFallback(11, weight: .semibold))
+                .foregroundColor(MomentsColor.ink)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .glassEffect(
+                    .regular.tint(MomentsColor.ivory.opacity(0.3)),
+                    in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+                )
+                .padding(.horizontal, MomentsSpacing.sm)
+                .padding(.bottom, MomentsSpacing.sm)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            Text(timecodeIdleAttributed(foreground: .white, tail: .white.opacity(0.65)))
                 .font(MomentsTypography.monoFallback(11, weight: .semibold))
                 .foregroundColor(.white)
                 .padding(.horizontal, 8)
@@ -138,10 +205,11 @@ struct PreviewPanel: View {
         }
     }
 
-    private var timecodeIdleAttributed: AttributedString {
+    private func timecodeIdleAttributed(foreground: Color, tail tailColor: Color) -> AttributedString {
         var s = AttributedString("00:00 ")
+        s.foregroundColor = foreground
         var tail = AttributedString("/ \(model.totalClockLabel)")
-        tail.foregroundColor = .white.opacity(0.65)
+        tail.foregroundColor = tailColor
         s.append(tail)
         return s
     }
@@ -161,27 +229,72 @@ struct PreviewPanel: View {
 
 // MARK: - Scrub bar (재생 중)
 
+private enum ScrubBarStyle {
+    case paper
+    case liquidGlass
+}
+
 private struct ScrubBar: View {
     let currentLabel: String
     let totalLabel: String
     let progress: Double
+    var style: ScrubBarStyle = .paper
 
+    @ViewBuilder
     var body: some View {
+        if #available(iOS 26.0, *), style == .liquidGlass {
+            liquidGlassBody
+        } else {
+            paperBody
+        }
+    }
+
+    private var paperBody: some View {
+        scrubContent(
+            textColor: .white,
+            secondaryTextColor: .white.opacity(0.7),
+            trackColor: .white.opacity(0.3),
+            knobColor: .white
+        )
+    }
+
+    @available(iOS 26.0, *)
+    private var liquidGlassBody: some View {
+        scrubContent(
+            textColor: MomentsColor.ink,
+            secondaryTextColor: MomentsColor.taupe,
+            trackColor: MomentsColor.ink.opacity(0.18),
+            knobColor: MomentsColor.ivory
+        )
+        .padding(.horizontal, MomentsSpacing.sm)
+        .padding(.vertical, MomentsSpacing.xs)
+        .glassEffect(
+            .regular.tint(MomentsColor.ivory.opacity(0.3)),
+            in: RoundedRectangle(cornerRadius: MomentsRadius.button, style: .continuous)
+        )
+    }
+
+    private func scrubContent(
+        textColor: Color,
+        secondaryTextColor: Color,
+        trackColor: Color,
+        knobColor: Color
+    ) -> some View {
         HStack(spacing: MomentsSpacing.xs) {
             Text(currentLabel)
                 .font(MomentsTypography.monoFallback(11, weight: .semibold))
-                .foregroundColor(.white)
+                .foregroundColor(textColor)
 
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(Color.white.opacity(0.3))
+                        .fill(trackColor)
                         .frame(height: 3)
                     Capsule()
                         .fill(MomentsColor.coral)
                         .frame(width: max(0, proxy.size.width * progress), height: 3)
                     Circle()
-                        .fill(Color.white)
+                        .fill(knobColor)
                         .frame(width: 12, height: 12)
                         .overlay(Circle().stroke(MomentsColor.coral, lineWidth: 2))
                         .overlay(Circle().stroke(MomentsColor.coral.opacity(0.3), lineWidth: 3).padding(-2))
@@ -193,7 +306,7 @@ private struct ScrubBar: View {
 
             Text(totalLabel)
                 .font(MomentsTypography.monoFallback(11, weight: .semibold))
-                .foregroundColor(.white.opacity(0.7))
+                .foregroundColor(secondaryTextColor)
         }
     }
 }

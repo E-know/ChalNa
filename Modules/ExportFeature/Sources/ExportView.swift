@@ -332,6 +332,73 @@ public struct ExportView: View {
         case .idle, .exporting:
             HandNoteRow("잠깐만 기다려주세요 ✦", icon: .film, tone: .muted, size: 16)
         case .done:
+            completedCTAs
+        case .failed:
+            failedCTAs
+        }
+    }
+
+    @ViewBuilder
+    private var completedCTAs: some View {
+        if #available(iOS 26.0, *) {
+            liquidGlassCompletedCTAs
+        } else {
+            paperCompletedCTAs
+        }
+    }
+
+    private var paperCompletedCTAs: some View {
+        VStack(spacing: MomentsSpacing.sm) {
+            if let url = exportedURL {
+                HStack(spacing: MomentsSpacing.sm) {
+                    ShareLink(item: url) {
+                        HStack(spacing: 6) {
+                            MomentsIcon(.share, size: 14)
+                            Text("공유하기")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.momentsOutline)
+                    .frame(maxWidth: .infinity)
+
+                    Button {
+                        saveToPhotoLibrary()
+                    } label: {
+                        HStack(spacing: 6) {
+                            if isSaving {
+                                ProgressView().controlSize(.small).tint(MomentsColor.ink)
+                            } else {
+                                MomentsIcon(.download, size: 14)
+                            }
+                            Text(isSaving ? "저장 중…" : "저장하기")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.momentsCoral)
+                    .frame(maxWidth: .infinity)
+                    .disabled(isSaving)
+                }
+            }
+
+            HStack(spacing: MomentsSpacing.sm) {
+                Button("다른 영상 만들기") {
+                    startAnotherFilm()
+                }
+                .buttonStyle(.momentsOutline)
+                .frame(maxWidth: .infinity)
+
+                Button("홈으로 →") {
+                    router.popToRoot()
+                }
+                .buttonStyle(.momentsText)
+                .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    @available(iOS 26.0, *)
+    private var liquidGlassCompletedCTAs: some View {
+        GlassEffectContainer(spacing: MomentsSpacing.sm) {
             VStack(spacing: MomentsSpacing.sm) {
                 if let url = exportedURL {
                     HStack(spacing: MomentsSpacing.sm) {
@@ -340,9 +407,10 @@ public struct ExportView: View {
                                 MomentsIcon(.share, size: 14)
                                 Text("공유하기")
                             }
-                            .frame(maxWidth: .infinity)
+                            .foregroundStyle(MomentsColor.ink)
+                            .frame(maxWidth: .infinity, minHeight: MomentsSpacing.minimumHitTarget)
                         }
-                        .buttonStyle(.momentsOutline)
+                        .buttonStyle(.glass)
                         .frame(maxWidth: .infinity)
 
                         Button {
@@ -356,29 +424,72 @@ public struct ExportView: View {
                                 }
                                 Text(isSaving ? "저장 중…" : "저장하기")
                             }
-                            .frame(maxWidth: .infinity)
+                            .foregroundStyle(MomentsColor.ink)
+                            .frame(maxWidth: .infinity, minHeight: MomentsSpacing.minimumHitTarget)
                         }
-                        .buttonStyle(.momentsCoral)
+                        .buttonStyle(.glassProminent)
+                        .tint(MomentsColor.coral)
                         .frame(maxWidth: .infinity)
                         .disabled(isSaving)
                     }
                 }
 
                 HStack(spacing: MomentsSpacing.sm) {
-                    Button("다른 영상 만들기") {
+                    Button {
                         startAnotherFilm()
+                    } label: {
+                        Text("다른 영상 만들기")
+                            .foregroundStyle(MomentsColor.ink)
+                            .frame(maxWidth: .infinity, minHeight: MomentsSpacing.minimumHitTarget)
                     }
-                    .buttonStyle(.momentsOutline)
+                    .buttonStyle(.glass)
                     .frame(maxWidth: .infinity)
 
-                    Button("홈으로 →") {
+                    Button {
                         router.popToRoot()
+                    } label: {
+                        Text("홈으로 →")
+                            .foregroundStyle(MomentsColor.ink)
+                            .frame(maxWidth: .infinity, minHeight: MomentsSpacing.minimumHitTarget)
                     }
-                    .buttonStyle(.momentsText)
+                    .buttonStyle(.glass)
                     .frame(maxWidth: .infinity)
                 }
             }
-        case .failed:
+        }
+    }
+
+    @ViewBuilder
+    private var failedCTAs: some View {
+        if #available(iOS 26.0, *) {
+            liquidGlassFailedCTAs
+        } else {
+            paperFailedCTAs
+        }
+    }
+
+    private var paperFailedCTAs: some View {
+        VStack(spacing: MomentsSpacing.sm) {
+            Button {
+                startExport(force: true)
+            } label: {
+                HStack(spacing: 8) {
+                    MomentsIcon(.plus, size: 14)
+                    Text("다시 시도")
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.momentsCoral)
+
+            Button("편집으로 돌아가기") { router.pop() }
+                .buttonStyle(.momentsOutline)
+                .frame(maxWidth: .infinity)
+        }
+    }
+
+    @available(iOS 26.0, *)
+    private var liquidGlassFailedCTAs: some View {
+        GlassEffectContainer(spacing: MomentsSpacing.sm) {
             VStack(spacing: MomentsSpacing.sm) {
                 Button {
                     startExport(force: true)
@@ -387,13 +498,21 @@ public struct ExportView: View {
                         MomentsIcon(.plus, size: 14)
                         Text("다시 시도")
                     }
-                    .frame(maxWidth: .infinity)
+                    .foregroundStyle(MomentsColor.ink)
+                    .frame(maxWidth: .infinity, minHeight: MomentsSpacing.minimumHitTarget)
                 }
-                .buttonStyle(.momentsCoral)
+                .buttonStyle(.glassProminent)
+                .tint(MomentsColor.coral)
 
-                Button("편집으로 돌아가기") { router.pop() }
-                    .buttonStyle(.momentsOutline)
-                    .frame(maxWidth: .infinity)
+                Button {
+                    router.pop()
+                } label: {
+                    Text("편집으로 돌아가기")
+                        .foregroundStyle(MomentsColor.ink)
+                        .frame(maxWidth: .infinity, minHeight: MomentsSpacing.minimumHitTarget)
+                }
+                .buttonStyle(.glass)
+                .frame(maxWidth: .infinity)
             }
         }
     }
