@@ -1104,6 +1104,10 @@ private struct MediaLoadState {
     var didFailTimelinePreparation: Bool {
         !isLoading && (thumbnail == nil || videoURL == nil)
     }
+
+    var isReadyForTimeline: Bool {
+        (thumbnail != nil || thumbnailFailed) && videoURL != nil
+    }
 }
 
 /// `FileRepresentation`을 통해 PhotosPicker에서 동영상 파일 URL을 temp 디렉터리로 복사받는 전송 타입.

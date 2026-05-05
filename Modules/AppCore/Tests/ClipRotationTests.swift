@@ -8,11 +8,11 @@ struct ClipRotationTests {
     @Test func testNextCyclesThroughFourSteps() {
         var r: ClipRotation = .r0
         r = r.next()
-        #expect(r == .r90)
+        #expect(r == .r270)
         r = r.next()
         #expect(r == .r180)
         r = r.next()
-        #expect(r == .r270)
+        #expect(r == .r90)
         r = r.next()
         #expect(r == .r0, "4번 next() 후에는 원위치여야 한다")
     }
@@ -29,7 +29,7 @@ struct ClipRotationTests {
         let id = UUID()
         #expect(session.rotation(for: id) == .r0, "기본값은 r0")
         session.cycleRotation(for: id)
-        #expect(session.rotation(for: id) == .r90)
+        #expect(session.rotation(for: id) == .r270)
         session.cycleRotation(for: id)
         session.cycleRotation(for: id)
         session.cycleRotation(for: id)

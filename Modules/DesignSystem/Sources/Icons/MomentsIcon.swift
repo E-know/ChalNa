@@ -22,9 +22,17 @@ public struct MomentsIcon: View {
     }
 
     public var body: some View {
-        LucideShape(kind: kind)
-            .stroke(style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round, lineJoin: .round))
-            .frame(width: size, height: size)
+        if kind == .rotate {
+            Image(systemName: "rotate.left")
+                .resizable()
+                .scaledToFit()
+                .symbolRenderingMode(.monochrome)
+                .frame(width: size, height: size)
+        } else {
+            LucideShape(kind: kind)
+                .stroke(style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round, lineJoin: .round))
+                .frame(width: size, height: size)
+        }
     }
 }
 
@@ -259,23 +267,7 @@ private struct LucideShape: Shape {
             ]
 
         case .rotate:
-            // 시계방향 회전 화살표: 12시에서 시계방향으로 270° 도는 호 + 12시 끝에서 우측 위로 꺾이는 ㄴ자 화살촉.
-            return [
-                Path { p in
-                    p.addArc(
-                        center: CGPoint(x: 12, y: 12),
-                        radius: 8,
-                        startAngle: .degrees(-90),
-                        endAngle: .degrees(180),
-                        clockwise: false
-                    )
-                },
-                Path { p in
-                    p.move(to: .init(x: 12, y: 4))
-                    p.addLine(to: .init(x: 16, y: 4))
-                    p.addLine(to: .init(x: 16, y: 8))
-                }
-            ]
+            return []
         }
     }
 
