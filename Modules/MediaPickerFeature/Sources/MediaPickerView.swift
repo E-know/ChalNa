@@ -57,6 +57,7 @@ public struct MediaPickerView: View {
     public var body: some View {
         VStack(spacing: 0) {
             header.momentsHeaderBar(scrollProgress: scrollProgress)
+                .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
                 .zIndex(1)
 
             ScrollView {
@@ -65,21 +66,29 @@ public struct MediaPickerView: View {
                         .padding(.horizontal, MomentsSpacing.lg)
                         .padding(.top, MomentsSpacing.lg)
                         .trackScrollOffset(in: "media-picker-scroll")
+                        .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
 
                     titleField
                         .padding(.horizontal, MomentsSpacing.lg)
 
                     pickerLauncher
                         .padding(.horizontal, MomentsSpacing.lg)
+                        .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
 
                     selectionGrid
                         .padding(.horizontal, MomentsSpacing.lg)
                         .padding(.top, MomentsSpacing.sm)
+                        .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
                 }
                 .padding(.bottom, MomentsSpacing.xxxl)
             }
             .coordinateSpace(name: "media-picker-scroll")
             .scrollDismissesKeyboard(.interactively)
+            .background(
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { dismissTitleKeyboard() }
+            )
             .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
                 let p = max(0, min(1, offset / 8))
                 if abs(p - scrollProgress) > 0.01 {
@@ -88,6 +97,7 @@ public struct MediaPickerView: View {
             }
 
             bottomActionArea
+                .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
         }
         .momentsScreen()
         .onChange(of: selectedItems) { _, newItems in
@@ -107,6 +117,7 @@ public struct MediaPickerView: View {
     private var header: some View {
         HStack {
             Button {
+                dismissTitleKeyboard()
                 router.pop()
             } label: {
                 HStack(spacing: 2) {
@@ -132,6 +143,7 @@ public struct MediaPickerView: View {
             Spacer()
 
             Button {
+                dismissTitleKeyboard()
                 confirmSelection()
             } label: {
                 if isResolving || isPreparingPhotoLibraryMedia {
@@ -183,6 +195,7 @@ public struct MediaPickerView: View {
                     .font(MomentsTypography.krBody(15))
                     .foregroundColor(MomentsColor.taupe.opacity(0.6))
             )
+            .textFieldStyle(.plain)
             .font(MomentsTypography.krBody(16, weight: .medium))
             .foregroundColor(MomentsColor.ink)
             .submitLabel(.done)
@@ -193,6 +206,7 @@ public struct MediaPickerView: View {
             .accessibilityLabel("이번 필름의 제목")
             .padding(.horizontal, MomentsSpacing.md)
             .padding(.vertical, MomentsSpacing.sm + 2)
+            .frame(minHeight: MomentsSpacing.minimumHitTarget + MomentsSpacing.xs)
             .background(
                 RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
                     .fill(Color.white)
@@ -206,7 +220,6 @@ public struct MediaPickerView: View {
                         lineWidth: 1
                     )
             )
-            .animation(.easeInOut(duration: 0.15), value: isTitleFocused)
 
             Text("비워두면 나중에 자동으로 채워져요.")
                 .font(MomentsTypography.krBody(12))
@@ -407,6 +420,7 @@ public struct MediaPickerView: View {
                     ForEach(Array(devAssets.enumerated()), id: \.element.id) { idx, asset in
                         let isSelected = selectedDevAssetIDs.contains(asset.id)
                         Button {
+                            dismissTitleKeyboard()
                             toggleDevAsset(asset.id)
                         } label: {
                             DevMediaAssetCard(
@@ -511,6 +525,7 @@ public struct MediaPickerView: View {
         GlassEffectContainer(spacing: MomentsSpacing.xs) {
             HStack(spacing: MomentsSpacing.xs) {
                 Button {
+                    dismissTitleKeyboard()
                     router.pop()
                 } label: {
                     Text("취소")
@@ -521,6 +536,7 @@ public struct MediaPickerView: View {
                 .frame(maxWidth: .infinity)
 
                 Button {
+                    dismissTitleKeyboard()
                     confirmSelection()
                 } label: {
                     confirmBottomLabel
@@ -541,6 +557,7 @@ public struct MediaPickerView: View {
     private var momentsBottomBar: some View {
         HStack(spacing: MomentsSpacing.xs) {
             Button {
+                dismissTitleKeyboard()
                 router.pop()
             } label: {
                 Text("취소")
@@ -550,6 +567,7 @@ public struct MediaPickerView: View {
             .frame(maxWidth: .infinity)
 
             Button {
+                dismissTitleKeyboard()
                 confirmSelection()
             } label: {
                 confirmBottomLabel
@@ -666,6 +684,10 @@ public struct MediaPickerView: View {
         case .devFixtures:
             return selectedDevAssetIDs.count
         }
+    }
+
+    private func dismissTitleKeyboard() {
+        isTitleFocused = false
     }
 
     private var liveCount: Int {
