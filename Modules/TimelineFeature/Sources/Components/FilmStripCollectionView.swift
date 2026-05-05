@@ -51,6 +51,7 @@ final class FilmStripVC: UIViewController,
     private weak var session: EditSession?
     private var currentClipID: Clip.ID?
     private var isPlaying: Bool = false
+    private var rotationByClipID: [Clip.ID: ClipRotation] = [:]
     private var onTapClip: ((Int) -> Void)?
 
     // MARK: - Lifecycle
@@ -199,31 +200,137 @@ final class FilmStripVC: UIViewController,
     // MARK: - Update from SwiftUI
 
     func update(model: TimelineModel, session: EditSession, onTapClip: @escaping (Int) -> Void) {
+        let previousItems = dataSource.snapshot().itemIdentifiers
+        let previousCurrentClipID = currentClipID
+        let previousIsPlaying = isPlaying
+        let previousRotationByClipID = rotationByClipID
+
         self.model = model
         self.session = session
         self.clips = model.clips
         self.currentClipID = clips.indices.contains(model.currentIndex) ? clips[model.currentIndex].id : nil
         self.isPlaying = model.isPlaying
+        self.rotationByClipID = Self.rotationByClipID(for: clips, session: session)
         self.onTapClip = onTapClip
-        applySnapshot(animated: true)
+
+        let nextItems = Self.items(for: clips)
+        if previousItems != nextItems {
+            applySnapshot(animated: true)
+            return
+        }
+
+        let itemsToRefresh = itemsNeedingRefresh(
+            in: nextItems,
+            previousCurrentClipID: previousCurrentClipID,
+            previousIsPlaying: previousIsPlaying,
+            previousRotationByClipID: previousRotationByClipID
+        )
+        reconfigureSnapshotItems(itemsToRefresh)
+        refreshVisibleCells(matching: Set(itemsToRefresh))
     }
 
     private func applySnapshot(animated: Bool) {
         var snapshot = NSDiffableDataSourceSnapshot<Int, FilmStripItem>()
         snapshot.appendSections([0])
+        snapshot.appendItems(Self.items(for: clips), toSection: 0)
+        dataSource.apply(snapshot, animatingDifferences: animated) { [weak self] in
+            self?.refreshVisibleCells(matching: nil)
+        }
+    }
 
+    static func items(for clips: [Clip]) -> [FilmStripItem] {
         var items: [FilmStripItem] = []
         var occurrence: [String: Int] = [:]
-        for (dayKey, dayClips) in clips.groupedByDay() {
-            let occ = occurrence[dayKey, default: 0]
-            occurrence[dayKey] = occ + 1
-            items.append(.daySprocket(occurrenceIndex: occ, dayKey: dayKey))
-            for clip in dayClips {
-                items.append(.clip(clip.id))
+        var previousDayKey: String?
+        let df = DateFormatter()
+        df.dateFormat = "MM.dd"
+
+        for clip in clips {
+            let dayKey = df.string(from: clip.capturedAt)
+            if dayKey != previousDayKey {
+                let occ = occurrence[dayKey, default: 0]
+                occurrence[dayKey] = occ + 1
+                items.append(.daySprocket(occurrenceIndex: occ, dayKey: dayKey))
+                previousDayKey = dayKey
+            }
+            items.append(.clip(clip.id))
+        }
+        return items
+    }
+
+    private static func rotationByClipID(
+        for clips: [Clip],
+        session: EditSession
+    ) -> [Clip.ID: ClipRotation] {
+        Dictionary(uniqueKeysWithValues: clips.map { clip in
+            (clip.id, session.rotation(for: clip.id))
+        })
+    }
+
+    private func itemsNeedingRefresh(
+        in items: [FilmStripItem],
+        previousCurrentClipID: Clip.ID?,
+        previousIsPlaying: Bool,
+        previousRotationByClipID: [Clip.ID: ClipRotation]
+    ) -> [FilmStripItem] {
+        if previousIsPlaying != isPlaying {
+            return items
+        }
+
+        var clipIDs = Set<Clip.ID>()
+        if previousCurrentClipID != currentClipID {
+            if let previousCurrentClipID {
+                clipIDs.insert(previousCurrentClipID)
+            }
+            if let currentClipID {
+                clipIDs.insert(currentClipID)
             }
         }
-        snapshot.appendItems(items, toSection: 0)
-        dataSource.apply(snapshot, animatingDifferences: animated)
+
+        for clip in clips {
+            let previousRotation = previousRotationByClipID[clip.id] ?? .r0
+            let currentRotation = rotationByClipID[clip.id] ?? .r0
+            if previousRotation != currentRotation {
+                clipIDs.insert(clip.id)
+            }
+        }
+
+        let daySprocketNeedsRefresh = isPlaying && previousCurrentClipID != currentClipID
+        return items.filter { item in
+            switch item {
+            case .clip(let id):
+                return clipIDs.contains(id)
+            case .daySprocket:
+                return daySprocketNeedsRefresh
+            }
+        }
+    }
+
+    private func reconfigureSnapshotItems(_ items: [FilmStripItem]) {
+        guard !items.isEmpty else { return }
+
+        var snapshot = dataSource.snapshot()
+        let visibleItems = Set(snapshot.itemIdentifiers)
+        let retainedItems = items.filter { visibleItems.contains($0) }
+        guard !retainedItems.isEmpty else { return }
+
+        snapshot.reconfigureItems(retainedItems)
+        dataSource.apply(snapshot, animatingDifferences: false)
+    }
+
+    private func refreshVisibleCells(matching items: Set<FilmStripItem>?) {
+        for indexPath in collectionView.indexPathsForVisibleItems {
+            guard let item = dataSource.itemIdentifier(for: indexPath),
+                  items?.contains(item) ?? true,
+                  let cell = collectionView.cellForItem(at: indexPath) else { continue }
+
+            switch item {
+            case .clip(let id):
+                configureClipCell(cell, clipID: id)
+            case .daySprocket:
+                configureDayCell(cell, item: item)
+            }
+        }
     }
 
     // MARK: - UICollectionViewDelegate (tap)
@@ -232,6 +339,13 @@ final class FilmStripVC: UIViewController,
         guard let item = dataSource.itemIdentifier(for: indexPath),
               case .clip(let clipID) = item,
               let flat = clips.firstIndex(where: { $0.id == clipID }) else { return }
+        let previousClipID = currentClipID
+        currentClipID = clipID
+        let itemsToRefresh = [previousClipID, currentClipID]
+            .compactMap { $0 }
+            .map(FilmStripItem.clip)
+        reconfigureSnapshotItems(itemsToRefresh)
+        refreshVisibleCells(matching: Set(itemsToRefresh))
         onTapClip?(flat)
     }
 
