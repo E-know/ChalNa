@@ -11,8 +11,6 @@ public struct TimelineView: View {
     @State private var model: TimelineModel
     @State private var playback = ClipPlaybackController()
     @State private var didWireController = false
-    @State private var showTrimSheet = false
-    @State private var showMusicSheet = false
     @State private var pendingDeleteClip: Clip?
     @State private var isConfirmingDelete = false
 
@@ -87,16 +85,6 @@ public struct TimelineView: View {
             }
         }
         .onDisappear { playback.pause() }
-        .sheet(isPresented: $showTrimSheet) {
-            TrimSheet(model: model)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $showMusicSheet) {
-            MusicSheet()
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-        }
         .confirmationDialog(
             "클립을 삭제할까요?",
             isPresented: $isConfirmingDelete,
@@ -307,9 +295,7 @@ public struct TimelineView: View {
             EditToolbar(
                 rotationActive: currentRotationActive,
                 onRotate:  { rotateCurrentClip() },
-                onTrim:    { showTrimSheet = true },
-                onDelete:  { requestDeleteCurrentClip() },
-                onMusic:   { showMusicSheet = true }
+                onDelete:  { requestDeleteCurrentClip() }
             )
             .padding(.bottom, MomentsSpacing.md)
         case .playing:
@@ -357,93 +343,6 @@ private struct PulseDot: View {
             .fill(MomentsColor.coral)
             .frame(width: 6, height: 6)
             .overlay(Circle().stroke(MomentsColor.coral.opacity(0.3), lineWidth: 3).padding(-3))
-    }
-}
-
-// MARK: - Trim sheet (placeholder)
-
-private struct TrimSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    let model: TimelineModel
-
-    var body: some View {
-        VStack(spacing: MomentsSpacing.md) {
-            Text("자르기")
-                .font(MomentsTypography.krSemibold(17))
-                .foregroundColor(MomentsColor.ink)
-                .accessibilityAddTraits(.isHeader)
-
-            if let clip = model.currentClip {
-                Text("현재 클립 · \(clip.durationSecondsLabel)")
-                    .font(MomentsTypography.monoFallback(12, weight: .medium))
-                    .foregroundColor(MomentsColor.taupe)
-            }
-
-            HStack(spacing: MomentsSpacing.sm) {
-                Button {
-                    model.trimCurrent(deltaSeconds: -0.5)
-                } label: {
-                    HStack(spacing: 6) {
-                        MomentsIcon(.skipBack, size: 14)
-                        Text("-0.5s")
-                    }
-                }
-                .buttonStyle(.momentsOutline)
-
-                Button {
-                    model.trimCurrent(deltaSeconds: +0.5)
-                } label: {
-                    HStack(spacing: 6) {
-                        Text("+0.5s")
-                        MomentsIcon(.skipForward, size: 14)
-                    }
-                }
-                .buttonStyle(.momentsCoral)
-            }
-
-            HandNoteRow("0.5s 부터 조정돼요", tone: .muted, size: 15)
-
-            Button("완료") { dismiss() }
-                .buttonStyle(.momentsText)
-                .padding(.bottom, MomentsSpacing.sm)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, MomentsSpacing.lg)
-        .padding(.vertical, MomentsSpacing.md)
-        .background(MomentsColor.cream)
-    }
-}
-
-// MARK: - Music sheet (placeholder)
-
-private struct MusicSheet: View {
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        VStack(spacing: MomentsSpacing.md) {
-            HStack(spacing: MomentsSpacing.xs) {
-                MomentsIcon(.music, size: 18).foregroundColor(MomentsColor.coral)
-                Text("음악")
-                    .font(MomentsTypography.krSemibold(17))
-                    .foregroundColor(MomentsColor.ink)
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityAddTraits(.isHeader)
-
-            HandNoteRow("배경 음악은 곧 추가될 예정이에요 ✦", tone: .accent, size: 17)
-                .padding(.horizontal, MomentsSpacing.lg)
-
-            Text("MUSIC · COMING SOON")
-                .tagLabel(color: MomentsColor.coral)
-
-            Button("닫기") { dismiss() }
-                .buttonStyle(.momentsText)
-                .padding(.bottom, MomentsSpacing.sm)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, MomentsSpacing.lg)
-        .padding(.vertical, MomentsSpacing.md)
-        .background(MomentsColor.cream)
     }
 }
 
