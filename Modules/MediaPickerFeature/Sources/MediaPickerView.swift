@@ -134,7 +134,7 @@ public struct MediaPickerView: View {
             Button {
                 confirmSelection()
             } label: {
-                if isResolving {
+                if isResolving || isPreparingTimelineMedia {
                     ProgressView().controlSize(.small).tint(MomentsColor.coral)
                 } else {
                     Text("다음")
@@ -144,8 +144,8 @@ public struct MediaPickerView: View {
             }
             .buttonStyle(.plain)
             .momentsHitTarget()
-            .accessibilityLabel(isResolving ? "미디어 준비 중" : "다음")
-            .accessibilityHint(canProceed ? "선택한 미디어로 타임라인을 만듭니다." : "미디어를 선택하면 다음 단계로 이동할 수 있습니다.")
+            .accessibilityLabel(isResolving || isPreparingTimelineMedia ? "미디어 준비 중" : "다음")
+            .accessibilityHint(confirmAccessibilityHint)
             .disabled(!canProceed || isResolving)
         }
     }
@@ -337,6 +337,27 @@ public struct MediaPickerView: View {
                         MomentsChip("\(videoCount) VIDEO", variant: .video, icon: .film)
                     }
                 }
+                if let photoLibraryStatusMessage {
+                    HStack(spacing: MomentsSpacing.xs) {
+                        if isPreparingTimelineMedia {
+                            ProgressView()
+                                .controlSize(.small)
+                                .tint(MomentsColor.coral)
+                        } else {
+                            MomentsIcon(.download, size: 12)
+                        }
+                        Text(photoLibraryStatusMessage)
+                            .font(MomentsTypography.krBody(12, weight: .medium))
+                    }
+                    .foregroundColor(photoLibraryStatusColor)
+                    .padding(.horizontal, MomentsSpacing.sm)
+                    .padding(.vertical, MomentsSpacing.xs)
+                    .background(
+                        RoundedRectangle(cornerRadius: MomentsRadius.button, style: .continuous)
+                            .fill(MomentsColor.ivory.opacity(0.75))
+                    )
+                    .accessibilityElement(children: .combine)
+                }
                 LazyVGrid(
                     columns: Array(repeating: GridItem(.flexible(), spacing: MomentsSpacing.sm), count: 3),
                     spacing: MomentsSpacing.sm
@@ -511,6 +532,8 @@ public struct MediaPickerView: View {
                 .frame(maxWidth: .infinity)
                 .disabled(!canProceed || isResolving)
                 .opacity(canProceed ? 1 : 0.5)
+                .accessibilityLabel(confirmButtonTitle)
+                .accessibilityHint(confirmAccessibilityHint)
             }
         }
     }
@@ -536,17 +559,19 @@ public struct MediaPickerView: View {
             .frame(maxWidth: .infinity)
             .disabled(!canProceed || isResolving)
             .opacity(canProceed ? 1 : 0.5)
+            .accessibilityLabel(confirmButtonTitle)
+            .accessibilityHint(confirmAccessibilityHint)
         }
     }
 
     private var confirmBottomLabel: some View {
         HStack(spacing: 6) {
-            if isResolving {
+            if isResolving || isPreparingTimelineMedia {
                 ProgressView().controlSize(.small).tint(MomentsColor.ink)
             } else {
                 MomentsIcon(.check, size: 14)
             }
-            Text(selectedCount == 0 ? "선택 후 다음" : "Timeline으로 (\(selectedCount))")
+            Text(confirmButtonTitle)
         }
     }
 
@@ -555,9 +580,82 @@ public struct MediaPickerView: View {
     private var canProceed: Bool {
         switch source {
         case .photoLibrary:
-            return !selectedItems.isEmpty
+            return !selectedItems.isEmpty && selectedItems.allSatisfy { item in
+                media[item]?.isReadyForTimeline == true
+            }
         case .devFixtures:
             return !selectedDevAssetIDs.isEmpty
+        }
+    }
+
+    private var isPreparingTimelineMedia: Bool {
+        guard case .photoLibrary = source, !selectedItems.isEmpty else { return false }
+        return !canProceed && !hasUnavailableTimelineMedia
+    }
+
+    private var hasUnavailableTimelineMedia: Bool {
+        guard case .photoLibrary = source else { return false }
+        return selectedItems.contains { item in
+            media[item]?.videoFailed == true
+        }
+    }
+
+    private var readyTimelineMediaCount: Int {
+        selectedItems.reduce(into: 0) { count, item in
+            if media[item]?.isReadyForTimeline == true {
+                count += 1
+            }
+        }
+    }
+
+    private var photoLibraryStatusMessage: String? {
+        guard case .photoLibrary = source, !selectedItems.isEmpty else { return nil }
+        if hasUnavailableTimelineMedia {
+            return "iCloud 원본을 불러오지 못한 항목이 있어요. 다시 선택해 주세요."
+        }
+        if readyTimelineMediaCount < selectedItems.count {
+            return "iCloud 원본 다운로드 중 · \(readyTimelineMediaCount)/\(selectedItems.count)"
+        }
+        return nil
+    }
+
+    private var photoLibraryStatusColor: Color {
+        hasUnavailableTimelineMedia ? MomentsColor.coral : MomentsColor.taupe
+    }
+
+    private var confirmButtonTitle: String {
+        if selectedCount == 0 {
+            return "선택 후 다음"
+        }
+        if case .photoLibrary = source {
+            if hasUnavailableTimelineMedia {
+                return "원본 확인 필요"
+            }
+            if !canProceed {
+                return "iCloud 다운로드 중"
+            }
+        }
+        return "Timeline으로 (\(selectedCount))"
+    }
+
+    private var confirmAccessibilityHint: String {
+        if isResolving {
+            return "선택한 미디어를 타임라인으로 넘기고 있습니다."
+        }
+        switch source {
+        case .photoLibrary:
+            if selectedItems.isEmpty {
+                return "미디어를 선택하면 다음 단계로 이동할 수 있습니다."
+            }
+            if hasUnavailableTimelineMedia {
+                return "iCloud 원본을 불러오지 못한 항목이 있어 타임라인으로 이동할 수 없습니다."
+            }
+            if !canProceed {
+                return "iCloud 원본 다운로드가 모두 끝나면 타임라인으로 이동할 수 있습니다."
+            }
+            return "선택한 미디어로 타임라인을 만듭니다."
+        case .devFixtures:
+            return canProceed ? "선택한 미디어로 타임라인을 만듭니다." : "미디어를 선택하면 다음 단계로 이동할 수 있습니다."
         }
     }
 
@@ -878,11 +976,13 @@ public struct MediaPickerView: View {
         let items = selectedItems
 
         Task {
-            // 아직 로딩 중인 항목이 있으면 잠깐 대기. 무한 대기는 피함.
-            for _ in 0..<10 where items.contains(where: { !(media[$0]?.isFullyLoaded ?? false) }) {
-                try? await Task.sleep(nanoseconds: 200_000_000)
-            }
             let latest = await MainActor.run { self.media }
+            guard items.allSatisfy({ latest[$0]?.isReadyForTimeline == true }) else {
+                await MainActor.run {
+                    isResolving = false
+                }
+                return
+            }
 
             let presetPool: [ThumbnailPreset] = [
                 .jejuSea, .jejuOrange, .hallasan, .seoulSun,
@@ -971,6 +1071,10 @@ private struct MediaLoadState {
 
     var isFullyLoaded: Bool {
         (thumbnail != nil || thumbnailFailed) && (videoURL != nil || videoFailed)
+    }
+
+    var isReadyForTimeline: Bool {
+        (thumbnail != nil || thumbnailFailed) && videoURL != nil
     }
 }
 

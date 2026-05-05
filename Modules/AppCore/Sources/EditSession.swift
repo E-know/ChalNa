@@ -38,7 +38,7 @@ public final class EditSession {
         rotations[id] ?? .r0
     }
 
-    /// 시계 방향으로 한 단계 순환. 4번 호출 시 원위치.
+    /// 반시계 방향으로 한 단계 순환. 4번 호출 시 원위치.
     public func cycleRotation(for id: Clip.ID) {
         rotations[id] = rotation(for: id).next()
     }

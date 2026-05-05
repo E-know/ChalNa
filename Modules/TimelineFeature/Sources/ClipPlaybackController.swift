@@ -120,7 +120,7 @@ public final class ClipPlaybackController {
                 try? await Task.sleep(nanoseconds: 100_000_000)
                 if Task.isCancelled { return }
                 let elapsed = Date().timeIntervalSince(started)
-                await MainActor.run {
+                await MainActor.run { [weak self] in
                     guard let self, self.staticTask != nil else { return }
                     self.onElapsed?(elapsed)
                     if elapsed >= duration {
