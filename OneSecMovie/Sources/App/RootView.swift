@@ -5,6 +5,7 @@ import MediaPickerFeature
 import HomeFeature
 import AppCore
 import DesignSystem
+import PhotosService
 
 /// 앱 루트. Home을 루트로 삼고 MediaPicker / Timeline / Export를 push.
 public struct RootView: View {
@@ -32,9 +33,18 @@ public struct RootView: View {
     @ViewBuilder
     private func destination(for route: Route) -> some View {
         switch route {
-        case .mediaPicker: MediaPickerView()
+        case .mediaPicker: MediaPickerView(source: mediaPickerSource)
         case .timeline:    TimelineView()
         case .export:      ExportView()
+        }
+    }
+
+    private var mediaPickerSource: MediaPickerSource {
+        switch AppMode.current {
+        case .real:
+            return .photoLibrary
+        case .devMock:
+            return .devFixtures(BundledDevMediaSource())
         }
     }
 }

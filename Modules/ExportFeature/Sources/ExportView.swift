@@ -204,6 +204,9 @@ public struct ExportView: View {
             .foregroundColor(MomentsColor.taupe)
         }
         .buttonStyle(.plain)
+        .momentsHitTarget()
+        .accessibilityLabel("편집으로")
+        .accessibilityHint(phase == .exporting ? "내보내기 중에는 편집 화면으로 돌아갈 수 없습니다." : "타임라인 편집 화면으로 돌아갑니다.")
         .disabled(phase == .exporting)
         .opacity(phase == .exporting ? 0.4 : 1)
     }
@@ -291,11 +294,15 @@ public struct ExportView: View {
                 }
             }
             .frame(height: 6)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("내보내기 진행률")
+            .accessibilityValue("\(Int(progress * 100))퍼센트")
 
             Text(statusLine)
                 .font(MomentsTypography.krBody(13))
                 .foregroundColor(MomentsColor.taupe)
         }
+        .accessibilityElement(children: .combine)
     }
 
     private var statusLabelLeft: String {
@@ -343,7 +350,7 @@ public struct ExportView: View {
                         } label: {
                             HStack(spacing: 6) {
                                 if isSaving {
-                                    ProgressView().controlSize(.small).tint(.white)
+                                    ProgressView().controlSize(.small).tint(MomentsColor.ink)
                                 } else {
                                     MomentsIcon(.download, size: 14)
                                 }
@@ -359,7 +366,7 @@ public struct ExportView: View {
 
                 HStack(spacing: MomentsSpacing.sm) {
                     Button("다른 영상 만들기") {
-                        router.popToRoot()
+                        startAnotherFilm()
                     }
                     .buttonStyle(.momentsOutline)
                     .frame(maxWidth: .infinity)
@@ -430,6 +437,12 @@ public struct ExportView: View {
                 exportTask = nil
             }
         }
+    }
+
+    private func startAnotherFilm() {
+        session.clear()
+        router.popToRoot()
+        router.push(.mediaPicker)
     }
 }
 

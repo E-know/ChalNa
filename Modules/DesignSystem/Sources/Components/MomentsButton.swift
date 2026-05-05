@@ -28,7 +28,7 @@ public struct MomentsButtonStyle: ButtonStyle {
         c.label
             .font(MomentsTypography.krSemibold(15))
             .tracking(-0.15)
-            .foregroundColor(.white)
+            .foregroundColor(MomentsColor.ink)
             .padding(.horizontal, MomentsSpacing.lg)
             .padding(.vertical, MomentsSpacing.sm)
             .background(
@@ -41,6 +41,7 @@ public struct MomentsButtonStyle: ButtonStyle {
                     )
             )
             .momentsShadow(MomentsShadow.md)
+            .momentsHitTarget()
             .scaleEffect(c.isPressed ? 0.97 : 1)
             .opacity(c.isPressed ? 0.9 : 1)
             .animation(.easeOut(duration: 0.15), value: c.isPressed)
@@ -58,6 +59,7 @@ public struct MomentsButtonStyle: ButtonStyle {
                 RoundedRectangle(cornerRadius: MomentsRadius.button, style: .continuous)
                     .stroke(MomentsColor.ink, lineWidth: 1.25)
             )
+            .momentsHitTarget()
             .scaleEffect(c.isPressed ? 0.97 : 1)
             .opacity(c.isPressed ? 0.7 : 1)
             .animation(.easeOut(duration: 0.15), value: c.isPressed)
@@ -67,7 +69,7 @@ public struct MomentsButtonStyle: ButtonStyle {
     private func text(_ c: Configuration) -> some View {
         c.label
             .font(MomentsTypography.krBody(14, weight: .medium))
-            .foregroundColor(MomentsColor.coral)
+            .foregroundColor(MomentsColor.ink)
             .padding(.horizontal, MomentsSpacing.xs)
             .padding(.vertical, MomentsSpacing.xxs)
             .overlay(alignment: .bottom) {
@@ -76,6 +78,7 @@ public struct MomentsButtonStyle: ButtonStyle {
                     .frame(height: 1)
                     .padding(.horizontal, MomentsSpacing.xs)
             }
+            .momentsHitTarget()
             .opacity(c.isPressed ? 0.6 : 1)
     }
 }

@@ -159,6 +159,20 @@ final class FilmStripVC: UIViewController,
         // 셀 자체 그림자 클리핑 방지 (rotation/shadow가 셀 bounds 밖으로 살짝 뻗음).
         cell.contentView.clipsToBounds = false
         cell.clipsToBounds = false
+        cell.isAccessibilityElement = true
+        cell.accessibilityLabel = accessibilityLabel(for: clip, index: flatIndex, isCurrent: isCurrent)
+        cell.accessibilityHint = "선택하려면 두 번 탭하고, 순서를 바꾸려면 사용자 동작을 사용하세요."
+        var traits: UIAccessibilityTraits = [.button]
+        if isCurrent { traits.insert(.selected) }
+        cell.accessibilityTraits = traits
+        cell.accessibilityCustomActions = [
+            UIAccessibilityCustomAction(name: "앞으로 이동") { [weak self] _ in
+                self?.moveClipForAccessibility(clipID, by: -1) ?? false
+            },
+            UIAccessibilityCustomAction(name: "뒤로 이동") { [weak self] _ in
+                self?.moveClipForAccessibility(clipID, by: 1) ?? false
+            },
+        ]
     }
 
     private func configureDayCell(_ cell: UICollectionViewCell, item: FilmStripItem) {
@@ -168,6 +182,10 @@ final class FilmStripVC: UIViewController,
             DaySprocket(label: dayKey, highlighted: highlighted)
         }
         .margins(.all, 0)
+        cell.isAccessibilityElement = true
+        cell.accessibilityLabel = "\(dayKey) 촬영일"
+        cell.accessibilityTraits = [.staticText]
+        cell.accessibilityCustomActions = nil
     }
 
     private func highlightedDayKey() -> String? {
@@ -313,6 +331,24 @@ final class FilmStripVC: UIViewController,
             }
         }
         return nil
+    }
+
+    private func accessibilityLabel(for clip: Clip, index: Int, isCurrent: Bool) -> String {
+        let kind = clip.kind == .live ? "라이브 포토" : "비디오"
+        let selected = isCurrent ? ", 선택됨" : ""
+        return "\(index + 1)번째 클립, \(kind), \(clip.durationSecondsLabel)\(selected)"
+    }
+
+    private func moveClipForAccessibility(_ clipID: Clip.ID, by delta: Int) -> Bool {
+        guard let from = clips.firstIndex(where: { $0.id == clipID }) else { return false }
+        let target = from + delta
+        guard clips.indices.contains(target) else { return false }
+        model?.move(clipID: clipID, toIndex: target)
+        UIAccessibility.post(
+            notification: .announcement,
+            argument: "\(target + 1)번째 위치로 이동했습니다."
+        )
+        return true
     }
 
     /// 폴라로이드 셀의 살짝 회전 — 인덱스 기반 결정적 회전(0/1/2 사이 반복).

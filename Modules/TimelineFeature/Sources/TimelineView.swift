@@ -13,6 +13,8 @@ public struct TimelineView: View {
     @State private var didWireController = false
     @State private var showTrimSheet = false
     @State private var showMusicSheet = false
+    @State private var pendingDeleteClip: Clip?
+    @State private var isConfirmingDelete = false
 
     public init(model: TimelineModel = TimelineModel()) {
         self._model = State(initialValue: model)
@@ -87,11 +89,30 @@ public struct TimelineView: View {
         .onDisappear { playback.pause() }
         .sheet(isPresented: $showTrimSheet) {
             TrimSheet(model: model)
-                .presentationDetents([.height(280)])
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showMusicSheet) {
             MusicSheet()
-                .presentationDetents([.height(260)])
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        .confirmationDialog(
+            "클립을 삭제할까요?",
+            isPresented: $isConfirmingDelete,
+            titleVisibility: .visible
+        ) {
+            if let pendingDeleteClip {
+                Button("삭제", role: .destructive) {
+                    delete(pendingDeleteClip)
+                    self.pendingDeleteClip = nil
+                }
+            }
+            Button("취소", role: .cancel) {
+                pendingDeleteClip = nil
+            }
+        } message: {
+            Text("삭제한 클립은 현재 타임라인에서 제거됩니다.")
         }
     }
 
@@ -146,6 +167,8 @@ public struct TimelineView: View {
                 .foregroundColor(MomentsColor.taupe)
             }
             .buttonStyle(.plain)
+            .momentsHitTarget()
+            .accessibilityLabel("뒤로")
 
             Spacer()
 
@@ -165,9 +188,12 @@ public struct TimelineView: View {
             Button(action: { router.push(.export) }) {
                 Text("저장")
                     .font(MomentsTypography.krSemibold(14))
-                    .foregroundColor(canSave ? MomentsColor.coral : MomentsColor.taupe.opacity(0.5))
+                    .foregroundColor(canSave ? MomentsColor.ink : MomentsColor.taupe.opacity(0.5))
             }
             .buttonStyle(.plain)
+            .momentsHitTarget()
+            .accessibilityLabel("저장")
+            .accessibilityHint(canSave ? "완성된 영상을 내보냅니다." : "클립이 있으면 저장할 수 있습니다.")
             .disabled(!canSave)
         }
     }
@@ -282,7 +308,7 @@ public struct TimelineView: View {
                 rotationActive: currentRotationActive,
                 onRotate:  { rotateCurrentClip() },
                 onTrim:    { showTrimSheet = true },
-                onDelete:  { model.deleteCurrent() },
+                onDelete:  { requestDeleteCurrentClip() },
                 onMusic:   { showMusicSheet = true }
             )
             .padding(.bottom, MomentsSpacing.md)
@@ -310,6 +336,17 @@ public struct TimelineView: View {
         session.cycleRotation(for: id)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
+
+    private func requestDeleteCurrentClip() {
+        pendingDeleteClip = model.currentClip
+        isConfirmingDelete = pendingDeleteClip != nil
+    }
+
+    private func delete(_ clip: Clip) {
+        guard let index = model.clips.firstIndex(where: { $0.id == clip.id }) else { return }
+        model.currentIndex = index
+        model.deleteCurrent()
+    }
 }
 
 // MARK: - Pulse dot (header)
@@ -331,14 +368,10 @@ private struct TrimSheet: View {
 
     var body: some View {
         VStack(spacing: MomentsSpacing.md) {
-            Capsule()
-                .fill(MomentsColor.taupe.opacity(0.35))
-                .frame(width: 44, height: 4)
-                .padding(.top, MomentsSpacing.sm)
-
             Text("자르기")
                 .font(MomentsTypography.krSemibold(17))
                 .foregroundColor(MomentsColor.ink)
+                .accessibilityAddTraits(.isHeader)
 
             if let clip = model.currentClip {
                 Text("현재 클립 · \(clip.durationSecondsLabel)")
@@ -375,6 +408,8 @@ private struct TrimSheet: View {
                 .padding(.bottom, MomentsSpacing.sm)
         }
         .frame(maxWidth: .infinity)
+        .padding(.horizontal, MomentsSpacing.lg)
+        .padding(.vertical, MomentsSpacing.md)
         .background(MomentsColor.cream)
     }
 }
@@ -386,17 +421,14 @@ private struct MusicSheet: View {
 
     var body: some View {
         VStack(spacing: MomentsSpacing.md) {
-            Capsule()
-                .fill(MomentsColor.taupe.opacity(0.35))
-                .frame(width: 44, height: 4)
-                .padding(.top, MomentsSpacing.sm)
-
             HStack(spacing: MomentsSpacing.xs) {
                 MomentsIcon(.music, size: 18).foregroundColor(MomentsColor.coral)
                 Text("음악")
                     .font(MomentsTypography.krSemibold(17))
                     .foregroundColor(MomentsColor.ink)
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
 
             HandNoteRow("배경 음악은 곧 추가될 예정이에요 ✦", tone: .accent, size: 17)
                 .padding(.horizontal, MomentsSpacing.lg)
@@ -409,6 +441,8 @@ private struct MusicSheet: View {
                 .padding(.bottom, MomentsSpacing.sm)
         }
         .frame(maxWidth: .infinity)
+        .padding(.horizontal, MomentsSpacing.lg)
+        .padding(.vertical, MomentsSpacing.md)
         .background(MomentsColor.cream)
     }
 }

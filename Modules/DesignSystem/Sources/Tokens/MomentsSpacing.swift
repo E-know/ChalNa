@@ -10,4 +10,7 @@ public enum MomentsSpacing {
     public static let xxl: CGFloat  = 48
     public static let xxxl: CGFloat = 64
     public static let huge: CGFloat = 96
+
+    /// Apple HIG minimum comfortable touch target on iOS.
+    public static let minimumHitTarget: CGFloat = 44
 }

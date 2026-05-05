@@ -10,13 +10,13 @@ struct TransportControls: View {
 
     var body: some View {
         HStack(spacing: MomentsSpacing.lg) {
-            sideButton(icon: .skipBack, action: onPrev)
+            sideButton(icon: .skipBack, label: "이전 클립", action: onPrev)
             centerButton
-            sideButton(icon: .skipForward, action: onNext)
+            sideButton(icon: .skipForward, label: "다음 클립", action: onNext)
         }
     }
 
-    private func sideButton(icon: MomentsIconKind, action: @escaping () -> Void) -> some View {
+    private func sideButton(icon: MomentsIconKind, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             ZStack {
                 Circle().fill(MomentsColor.ivory).frame(width: 40, height: 40)
@@ -24,6 +24,8 @@ struct TransportControls: View {
             }
         }
         .buttonStyle(.plain)
+        .momentsHitTarget()
+        .accessibilityLabel(label)
     }
 
     private var centerButton: some View {
@@ -31,11 +33,14 @@ struct TransportControls: View {
             ZStack {
                 Circle().fill(MomentsColor.coral).frame(width: 56, height: 56)
                 MomentsIcon(isPlaying ? .pause : .play, size: 18)
-                    .foregroundColor(.white)
+                    .foregroundColor(MomentsColor.ink)
                     .offset(x: isPlaying ? 0 : 2)
             }
             .shadow(color: MomentsColor.coral.opacity(0.6), radius: 16, x: 0, y: 8)
         }
         .buttonStyle(.plain)
+        .momentsHitTarget(minSize: 56)
+        .accessibilityLabel(isPlaying ? "일시정지" : "재생")
+        .accessibilityHint("현재 클립 재생 상태를 전환합니다.")
     }
 }
