@@ -1,16 +1,14 @@
 import SwiftUI
 import DesignSystem
 
-/// Idle 상태의 하단 4-버튼 툴바 (회전 · 자르기 · 삭제 · 음악).
+/// Idle 상태의 하단 2-버튼 툴바 (회전 · 삭제).
 /// 클립 순서 변경은 FilmStrip에서 long-press → drag&drop으로 직접 수행한다.
 struct EditToolbar: View {
     var dimmed: Bool = false
     /// 현재 클립이 r0이 아닐 때 회전 아이콘 우상단에 coral dot으로 "회전 적용 중" 표시.
     var rotationActive: Bool = false
     var onRotate: () -> Void = {}
-    var onTrim: () -> Void = {}
     var onDelete: () -> Void = {}
-    var onMusic: () -> Void = {}
 
     @ViewBuilder
     var body: some View {
@@ -24,9 +22,7 @@ struct EditToolbar: View {
     private var paperToolbar: some View {
         HStack(spacing: 0) {
             item(icon: .rotate, label: "회전", action: onRotate, dotIndicator: rotationActive)
-            item(icon: .scissors, label: "자르기", action: onTrim)
             item(icon: .trash, label: "삭제", action: onDelete, tone: .destructive)
-            item(icon: .music, label: "음악", action: onMusic)
         }
         .padding(.vertical, MomentsSpacing.sm)
         .background(
@@ -50,9 +46,7 @@ struct EditToolbar: View {
         GlassEffectContainer(spacing: MomentsSpacing.xs) {
             HStack(spacing: MomentsSpacing.xs) {
                 glassItem(icon: .rotate, label: "회전", action: onRotate, dotIndicator: rotationActive)
-                glassItem(icon: .scissors, label: "자르기", action: onTrim)
                 glassItem(icon: .trash, label: "삭제", action: onDelete, tone: .destructive)
-                glassItem(icon: .music, label: "음악", action: onMusic)
             }
             .padding(.vertical, MomentsSpacing.xxs)
         }

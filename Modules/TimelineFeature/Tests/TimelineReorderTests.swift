@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 import Models
-import TimelineFeature
+@testable import TimelineFeature
 
 struct TimelineReorderTests {
 
@@ -82,5 +82,26 @@ struct TimelineReorderTests {
 
         #expect(model.currentIndex == 6, "currentIndex가 이동된 클립을 따라가야 함")
         #expect(model.clips[6].id == movingID)
+    }
+
+    /// 다른 날짜 경계로 옮긴 클립도 FilmStrip 표시 순서가 model.clips 순서를 따라야 한다.
+    @Test func testFilmStripItems_PreservesCrossDateMovedOrder() {
+        let model = TimelineModel(clips: SampleData.jejuTimeline)
+        let dayTwoClipID = model.clips[3].id
+
+        model.move(clipID: dayTwoClipID, toIndex: 1)
+        let items = FilmStripVC.items(for: model.clips)
+
+        let renderedClipIDs = items.compactMap { item -> Clip.ID? in
+            guard case .clip(let id) = item else { return nil }
+            return id
+        }
+        let renderedDayKeys = items.compactMap { item -> String? in
+            guard case .daySprocket(_, let dayKey) = item else { return nil }
+            return dayKey
+        }
+
+        #expect(renderedClipIDs == model.clips.map(\.id), "표시용 clip 순서가 편집 모델 순서와 같아야 함")
+        #expect(renderedDayKeys == ["09.14", "09.15", "09.14", "09.15"], "같은 날짜라도 비연속 구간이면 구분자를 다시 표시해야 함")
     }
 }

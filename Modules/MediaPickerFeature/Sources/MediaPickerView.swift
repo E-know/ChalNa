@@ -57,6 +57,7 @@ public struct MediaPickerView: View {
     public var body: some View {
         VStack(spacing: 0) {
             header.momentsHeaderBar(scrollProgress: scrollProgress)
+                .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
                 .zIndex(1)
 
             ScrollView {
@@ -65,21 +66,29 @@ public struct MediaPickerView: View {
                         .padding(.horizontal, MomentsSpacing.lg)
                         .padding(.top, MomentsSpacing.lg)
                         .trackScrollOffset(in: "media-picker-scroll")
+                        .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
 
                     titleField
                         .padding(.horizontal, MomentsSpacing.lg)
 
                     pickerLauncher
                         .padding(.horizontal, MomentsSpacing.lg)
+                        .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
 
                     selectionGrid
                         .padding(.horizontal, MomentsSpacing.lg)
                         .padding(.top, MomentsSpacing.sm)
+                        .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
                 }
                 .padding(.bottom, MomentsSpacing.xxxl)
             }
             .coordinateSpace(name: "media-picker-scroll")
             .scrollDismissesKeyboard(.interactively)
+            .background(
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { dismissTitleKeyboard() }
+            )
             .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
                 let p = max(0, min(1, offset / 8))
                 if abs(p - scrollProgress) > 0.01 {
@@ -88,6 +97,7 @@ public struct MediaPickerView: View {
             }
 
             bottomActionArea
+                .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
         }
         .momentsScreen()
         .onChange(of: selectedItems) { _, newItems in
@@ -107,6 +117,7 @@ public struct MediaPickerView: View {
     private var header: some View {
         HStack {
             Button {
+                dismissTitleKeyboard()
                 router.pop()
             } label: {
                 HStack(spacing: 2) {
@@ -132,9 +143,10 @@ public struct MediaPickerView: View {
             Spacer()
 
             Button {
+                dismissTitleKeyboard()
                 confirmSelection()
             } label: {
-                if isResolving || isPreparingTimelineMedia {
+                if isResolving || isPreparingPhotoLibraryMedia {
                     ProgressView().controlSize(.small).tint(MomentsColor.coral)
                 } else {
                     Text("다음")
@@ -144,7 +156,7 @@ public struct MediaPickerView: View {
             }
             .buttonStyle(.plain)
             .momentsHitTarget()
-            .accessibilityLabel(isResolving || isPreparingTimelineMedia ? "미디어 준비 중" : "다음")
+            .accessibilityLabel(isResolving || isPreparingPhotoLibraryMedia ? "미디어 준비 중" : "다음")
             .accessibilityHint(confirmAccessibilityHint)
             .disabled(!canProceed || isResolving)
         }
@@ -183,6 +195,7 @@ public struct MediaPickerView: View {
                     .font(MomentsTypography.krBody(15))
                     .foregroundColor(MomentsColor.taupe.opacity(0.6))
             )
+            .textFieldStyle(.plain)
             .font(MomentsTypography.krBody(16, weight: .medium))
             .foregroundColor(MomentsColor.ink)
             .submitLabel(.done)
@@ -193,6 +206,7 @@ public struct MediaPickerView: View {
             .accessibilityLabel("이번 필름의 제목")
             .padding(.horizontal, MomentsSpacing.md)
             .padding(.vertical, MomentsSpacing.sm + 2)
+            .frame(minHeight: MomentsSpacing.minimumHitTarget + MomentsSpacing.xs)
             .background(
                 RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
                     .fill(Color.white)
@@ -206,7 +220,6 @@ public struct MediaPickerView: View {
                         lineWidth: 1
                     )
             )
-            .animation(.easeInOut(duration: 0.15), value: isTitleFocused)
 
             Text("비워두면 나중에 자동으로 채워져요.")
                 .font(MomentsTypography.krBody(12))
@@ -339,7 +352,7 @@ public struct MediaPickerView: View {
                 }
                 if let photoLibraryStatusMessage {
                     HStack(spacing: MomentsSpacing.xs) {
-                        if isPreparingTimelineMedia {
+                        if isPreparingPhotoLibraryMedia {
                             ProgressView()
                                 .controlSize(.small)
                                 .tint(MomentsColor.coral)
@@ -407,6 +420,7 @@ public struct MediaPickerView: View {
                     ForEach(Array(devAssets.enumerated()), id: \.element.id) { idx, asset in
                         let isSelected = selectedDevAssetIDs.contains(asset.id)
                         Button {
+                            dismissTitleKeyboard()
                             toggleDevAsset(asset.id)
                         } label: {
                             DevMediaAssetCard(
@@ -511,6 +525,7 @@ public struct MediaPickerView: View {
         GlassEffectContainer(spacing: MomentsSpacing.xs) {
             HStack(spacing: MomentsSpacing.xs) {
                 Button {
+                    dismissTitleKeyboard()
                     router.pop()
                 } label: {
                     Text("취소")
@@ -521,6 +536,7 @@ public struct MediaPickerView: View {
                 .frame(maxWidth: .infinity)
 
                 Button {
+                    dismissTitleKeyboard()
                     confirmSelection()
                 } label: {
                     confirmBottomLabel
@@ -541,6 +557,7 @@ public struct MediaPickerView: View {
     private var momentsBottomBar: some View {
         HStack(spacing: MomentsSpacing.xs) {
             Button {
+                dismissTitleKeyboard()
                 router.pop()
             } label: {
                 Text("취소")
@@ -550,6 +567,7 @@ public struct MediaPickerView: View {
             .frame(maxWidth: .infinity)
 
             Button {
+                dismissTitleKeyboard()
                 confirmSelection()
             } label: {
                 confirmBottomLabel
@@ -566,7 +584,7 @@ public struct MediaPickerView: View {
 
     private var confirmBottomLabel: some View {
         HStack(spacing: 6) {
-            if isResolving || isPreparingTimelineMedia {
+            if isResolving || isPreparingPhotoLibraryMedia {
                 ProgressView().controlSize(.small).tint(MomentsColor.ink)
             } else {
                 MomentsIcon(.check, size: 14)
@@ -588,19 +606,19 @@ public struct MediaPickerView: View {
         }
     }
 
-    private var isPreparingTimelineMedia: Bool {
+    private var isPreparingPhotoLibraryMedia: Bool {
         guard case .photoLibrary = source, !selectedItems.isEmpty else { return false }
-        return !canProceed && !hasUnavailableTimelineMedia
+        return !canProceed && !hasUnavailablePhotoLibraryMedia
     }
 
-    private var hasUnavailableTimelineMedia: Bool {
+    private var hasUnavailablePhotoLibraryMedia: Bool {
         guard case .photoLibrary = source else { return false }
         return selectedItems.contains { item in
-            media[item]?.videoFailed == true
+            media[item]?.didFailTimelinePreparation == true
         }
     }
 
-    private var readyTimelineMediaCount: Int {
+    private var readyPhotoLibraryMediaCount: Int {
         selectedItems.reduce(into: 0) { count, item in
             if media[item]?.isReadyForTimeline == true {
                 count += 1
@@ -610,17 +628,17 @@ public struct MediaPickerView: View {
 
     private var photoLibraryStatusMessage: String? {
         guard case .photoLibrary = source, !selectedItems.isEmpty else { return nil }
-        if hasUnavailableTimelineMedia {
-            return "iCloud 원본을 불러오지 못한 항목이 있어요. 다시 선택해 주세요."
+        if hasUnavailablePhotoLibraryMedia {
+            return "iCloud 원본을 모두 불러오지 못했어요. 다시 선택해 주세요."
         }
-        if readyTimelineMediaCount < selectedItems.count {
-            return "iCloud 원본 다운로드 중 · \(readyTimelineMediaCount)/\(selectedItems.count)"
+        if readyPhotoLibraryMediaCount < selectedItems.count {
+            return "사진 로딩 중 · \(readyPhotoLibraryMediaCount)/\(selectedItems.count)"
         }
         return nil
     }
 
     private var photoLibraryStatusColor: Color {
-        hasUnavailableTimelineMedia ? MomentsColor.coral : MomentsColor.taupe
+        hasUnavailablePhotoLibraryMedia ? MomentsColor.coral : MomentsColor.taupe
     }
 
     private var confirmButtonTitle: String {
@@ -628,11 +646,11 @@ public struct MediaPickerView: View {
             return "선택 후 다음"
         }
         if case .photoLibrary = source {
-            if hasUnavailableTimelineMedia {
+            if hasUnavailablePhotoLibraryMedia {
                 return "원본 확인 필요"
             }
             if !canProceed {
-                return "iCloud 다운로드 중"
+                return "사진 로딩 중"
             }
         }
         return "Timeline으로 (\(selectedCount))"
@@ -647,11 +665,11 @@ public struct MediaPickerView: View {
             if selectedItems.isEmpty {
                 return "미디어를 선택하면 다음 단계로 이동할 수 있습니다."
             }
-            if hasUnavailableTimelineMedia {
-                return "iCloud 원본을 불러오지 못한 항목이 있어 타임라인으로 이동할 수 없습니다."
+            if hasUnavailablePhotoLibraryMedia {
+                return "iCloud 원본을 모두 불러오지 못해 타임라인으로 이동할 수 없습니다."
             }
             if !canProceed {
-                return "iCloud 원본 다운로드가 모두 끝나면 타임라인으로 이동할 수 있습니다."
+                return "선택한 모든 사진과 영상 로딩이 끝나면 타임라인으로 이동할 수 있습니다."
             }
             return "선택한 미디어로 타임라인을 만듭니다."
         case .devFixtures:
@@ -666,6 +684,10 @@ public struct MediaPickerView: View {
         case .devFixtures:
             return selectedDevAssetIDs.count
         }
+    }
+
+    private func dismissTitleKeyboard() {
+        isTitleFocused = false
     }
 
     private var liveCount: Int {
@@ -724,7 +746,7 @@ public struct MediaPickerView: View {
 
         for item in newItems where media[item] == nil {
             let initialKind = Self.classify(item)
-            media[item] = MediaLoadState(kind: initialKind)
+            media[item] = MediaLoadState(kind: initialKind, isLoading: true)
 
             Task {
                 async let thumbnail: Data? = Self.loadThumbnail(for: item, kind: initialKind)
@@ -746,6 +768,7 @@ public struct MediaPickerView: View {
                     state.duration = dur
                     state.capturedAt = captured
                     state.displaySize = size
+                    state.isLoading = false
                     media[item] = state
                 }
             }
@@ -1066,11 +1089,20 @@ private struct MediaLoadState {
     var duration: TimeInterval? = nil
     var capturedAt: Date? = nil
     var displaySize: CGSize? = nil
+    var isLoading: Bool = false
     var thumbnailFailed: Bool = false
     var videoFailed: Bool = false
 
     var isFullyLoaded: Bool {
-        (thumbnail != nil || thumbnailFailed) && (videoURL != nil || videoFailed)
+        !isLoading && (thumbnail != nil || thumbnailFailed) && (videoURL != nil || videoFailed)
+    }
+
+    var isReadyForTimeline: Bool {
+        !isLoading && thumbnail != nil && videoURL != nil
+    }
+
+    var didFailTimelinePreparation: Bool {
+        !isLoading && (thumbnail == nil || videoURL == nil)
     }
 
     var isReadyForTimeline: Bool {

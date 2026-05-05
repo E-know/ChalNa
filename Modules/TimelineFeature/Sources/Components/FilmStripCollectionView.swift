@@ -201,35 +201,32 @@ final class FilmStripVC: UIViewController,
 
     func update(model: TimelineModel, session: EditSession, onTapClip: @escaping (Int) -> Void) {
         let previousItems = dataSource.snapshot().itemIdentifiers
-        let previousClips = clips
         let previousCurrentClipID = currentClipID
         let previousIsPlaying = isPlaying
         let previousRotationByClipID = rotationByClipID
-        let nextClips = model.clips
-        let nextCurrentClipID = nextClips.indices.contains(model.currentIndex) ? nextClips[model.currentIndex].id : nil
-        let nextItems = Self.items(for: nextClips)
 
         self.model = model
         self.session = session
         self.clips = nextClips
         self.currentClipID = nextCurrentClipID
         self.isPlaying = model.isPlaying
-        self.rotationByClipID = Self.rotationByClipID(for: nextClips, session: session)
+        self.rotationByClipID = Self.rotationByClipID(for: clips, session: session)
         self.onTapClip = onTapClip
 
+        let nextItems = Self.items(for: clips)
         if previousItems != nextItems {
-            applySnapshot(animated: true, reconfigureRetainedItems: true)
-        } else {
-            reconfigureItems(
-                itemsNeedingReconfiguration(
-                    in: nextItems,
-                    previousClips: previousClips,
-                    previousCurrentClipID: previousCurrentClipID,
-                    previousIsPlaying: previousIsPlaying,
-                    previousRotationByClipID: previousRotationByClipID
-                )
-            )
+            applySnapshot(animated: true)
+            return
         }
+
+        let itemsToRefresh = itemsNeedingRefresh(
+            in: nextItems,
+            previousCurrentClipID: previousCurrentClipID,
+            previousIsPlaying: previousIsPlaying,
+            previousRotationByClipID: previousRotationByClipID
+        )
+        reconfigureSnapshotItems(itemsToRefresh)
+        refreshVisibleCells(matching: Set(itemsToRefresh))
     }
 
     private func applySnapshot(animated: Bool, reconfigureRetainedItems: Bool = false) {
@@ -238,28 +235,28 @@ final class FilmStripVC: UIViewController,
 
         var snapshot = NSDiffableDataSourceSnapshot<Int, FilmStripItem>()
         snapshot.appendSections([0])
-        snapshot.appendItems(items, toSection: 0)
-
-        if reconfigureRetainedItems {
-            let retainedItems = items.filter { previousItems.contains($0) }
-            if !retainedItems.isEmpty {
-                snapshot.reconfigureItems(retainedItems)
-            }
+        snapshot.appendItems(Self.items(for: clips), toSection: 0)
+        dataSource.apply(snapshot, animatingDifferences: animated) { [weak self] in
+            self?.refreshVisibleCells(matching: nil)
         }
-
-        dataSource.apply(snapshot, animatingDifferences: animated)
     }
 
-    private static func items(for clips: [Clip]) -> [FilmStripItem] {
+    static func items(for clips: [Clip]) -> [FilmStripItem] {
         var items: [FilmStripItem] = []
         var occurrence: [String: Int] = [:]
-        for (dayKey, dayClips) in clips.groupedByDay() {
-            let occ = occurrence[dayKey, default: 0]
-            occurrence[dayKey] = occ + 1
-            items.append(.daySprocket(occurrenceIndex: occ, dayKey: dayKey))
-            for clip in dayClips {
-                items.append(.clip(clip.id))
+        var previousDayKey: String?
+        let df = DateFormatter()
+        df.dateFormat = "MM.dd"
+
+        for clip in clips {
+            let dayKey = df.string(from: clip.capturedAt)
+            if dayKey != previousDayKey {
+                let occ = occurrence[dayKey, default: 0]
+                occurrence[dayKey] = occ + 1
+                items.append(.daySprocket(occurrenceIndex: occ, dayKey: dayKey))
+                previousDayKey = dayKey
             }
+            items.append(.clip(clip.id))
         }
         return items
     }
@@ -273,9 +270,8 @@ final class FilmStripVC: UIViewController,
         })
     }
 
-    private func itemsNeedingReconfiguration(
+    private func itemsNeedingRefresh(
         in items: [FilmStripItem],
-        previousClips: [Clip],
         previousCurrentClipID: Clip.ID?,
         previousIsPlaying: Bool,
         previousRotationByClipID: [Clip.ID: ClipRotation]
@@ -294,12 +290,7 @@ final class FilmStripVC: UIViewController,
             }
         }
 
-        let previousClipByID = Dictionary(uniqueKeysWithValues: previousClips.map { ($0.id, $0) })
         for clip in clips {
-            if previousClipByID[clip.id] != clip {
-                clipIDs.insert(clip.id)
-            }
-
             let previousRotation = previousRotationByClipID[clip.id] ?? .r0
             let currentRotation = rotationByClipID[clip.id] ?? .r0
             if previousRotation != currentRotation {
@@ -307,27 +298,42 @@ final class FilmStripVC: UIViewController,
             }
         }
 
-        let shouldReconfigureDaySprockets = previousIsPlaying || isPlaying
+        let daySprocketNeedsRefresh = isPlaying && previousCurrentClipID != currentClipID
         return items.filter { item in
             switch item {
             case .clip(let id):
                 return clipIDs.contains(id)
             case .daySprocket:
-                return shouldReconfigureDaySprockets && previousCurrentClipID != currentClipID
+                return daySprocketNeedsRefresh
             }
         }
     }
 
-    private func reconfigureItems(_ items: [FilmStripItem]) {
+    private func reconfigureSnapshotItems(_ items: [FilmStripItem]) {
         guard !items.isEmpty else { return }
 
         var snapshot = dataSource.snapshot()
-        let currentItems = Set(snapshot.itemIdentifiers)
-        let retainedItems = items.filter { currentItems.contains($0) }
+        let visibleItems = Set(snapshot.itemIdentifiers)
+        let retainedItems = items.filter { visibleItems.contains($0) }
         guard !retainedItems.isEmpty else { return }
 
         snapshot.reconfigureItems(retainedItems)
         dataSource.apply(snapshot, animatingDifferences: false)
+    }
+
+    private func refreshVisibleCells(matching items: Set<FilmStripItem>?) {
+        for indexPath in collectionView.indexPathsForVisibleItems {
+            guard let item = dataSource.itemIdentifier(for: indexPath),
+                  items?.contains(item) ?? true,
+                  let cell = collectionView.cellForItem(at: indexPath) else { continue }
+
+            switch item {
+            case .clip(let id):
+                configureClipCell(cell, clipID: id)
+            case .daySprocket:
+                configureDayCell(cell, item: item)
+            }
+        }
     }
 
     // MARK: - UICollectionViewDelegate (tap)
@@ -336,6 +342,13 @@ final class FilmStripVC: UIViewController,
         guard let item = dataSource.itemIdentifier(for: indexPath),
               case .clip(let clipID) = item,
               let flat = clips.firstIndex(where: { $0.id == clipID }) else { return }
+        let previousClipID = currentClipID
+        currentClipID = clipID
+        let itemsToRefresh = [previousClipID, currentClipID]
+            .compactMap { $0 }
+            .map(FilmStripItem.clip)
+        reconfigureSnapshotItems(itemsToRefresh)
+        refreshVisibleCells(matching: Set(itemsToRefresh))
         onTapClip?(flat)
     }
 
