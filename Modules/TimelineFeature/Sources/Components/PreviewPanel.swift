@@ -3,7 +3,7 @@ import AppCore
 import Models
 import DesignSystem
 
-/// 고정 크기 영상 프리뷰 패널. Idle(큰 플레이) · Playing(큰 일시정지 + 외부 스크럽바) · Reordering(디밍 + 배너).
+/// 고정 크기 영상 프리뷰 패널. Idle(큰 플레이 + 외부 스크럽바) · Playing(큰 일시정지 + 외부 스크럽바).
 /// 콘텐츠 비율과 무관하게 박스 크기는 항상 같고, 내부 사진/영상은 letterbox 로 fit.
 struct PreviewPanel: View {
     /// Figma 노드 `39:81` 기준 고정 높이.
@@ -21,13 +21,10 @@ struct PreviewPanel: View {
     }
 
     var body: some View {
-        VStack(spacing: model.isPlaying ? MomentsSpacing.xs : 0) {
+        VStack(spacing: MomentsSpacing.xs) {
             previewCard
-
-            if model.isPlaying {
-                externalScrubBar
-                    .padding(.horizontal, MomentsSpacing.sm)
-            }
+            externalScrubBar
+                .padding(.horizontal, MomentsSpacing.sm)
         }
     }
 
@@ -92,9 +89,6 @@ struct PreviewPanel: View {
         ZStack {
             topRightClipIndex
             playPauseButton
-            if !model.isPlaying {
-                idleTimecodePill
-            }
         }
     }
 
@@ -177,52 +171,20 @@ struct PreviewPanel: View {
     @ViewBuilder
     private var externalScrubBar: some View {
         ScrubBar(
-            currentLabel: model.playheadLabel,
+            currentLabel: scrubCurrentLabel,
             totalLabel: model.totalClockLabel,
             progress: scrubProgress,
             style: .liquidGlass
         )
     }
 
+    private var scrubCurrentLabel: String {
+        model.isPlaying ? model.playheadLabel : "00:00"
+    }
+
     private var scrubProgress: Double {
-        min(1.0, max(0.0, model.playheadSeconds / max(model.totalDuration, 0.001)))
-    }
-
-    @ViewBuilder
-    private var idleTimecodePill: some View {
-        if #available(iOS 26.0, *) {
-            Text(timecodeIdleAttributed(foreground: MomentsColor.ink, tail: MomentsColor.taupe))
-                .font(MomentsTypography.monoFallback(11, weight: .semibold))
-                .foregroundColor(MomentsColor.ink)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .glassEffect(
-                    .regular.tint(MomentsColor.ivory.opacity(0.3)),
-                    in: RoundedRectangle(cornerRadius: 6, style: .continuous)
-                )
-                .padding(.horizontal, MomentsSpacing.sm)
-                .padding(.bottom, MomentsSpacing.sm)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        } else {
-            Text(timecodeIdleAttributed(foreground: .white, tail: .white.opacity(0.65)))
-                .font(MomentsTypography.monoFallback(11, weight: .semibold))
-                .foregroundColor(.white)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 2)
-                .background(RoundedRectangle(cornerRadius: 4).fill(Color.black.opacity(0.55)))
-                .padding(.horizontal, MomentsSpacing.sm)
-                .padding(.bottom, MomentsSpacing.sm)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
-    private func timecodeIdleAttributed(foreground: Color, tail tailColor: Color) -> AttributedString {
-        var s = AttributedString("00:00 ")
-        s.foregroundColor = foreground
-        var tail = AttributedString("/ \(model.totalClockLabel)")
-        tail.foregroundColor = tailColor
-        s.append(tail)
-        return s
+        guard model.isPlaying else { return 0 }
+        return min(1.0, max(0.0, model.playheadSeconds / max(model.totalDuration, 0.001)))
     }
 
     // MARK: - Glow (coral ring when playing)
@@ -238,7 +200,7 @@ struct PreviewPanel: View {
     }
 }
 
-// MARK: - Scrub bar (재생 중)
+// MARK: - Scrub bar
 
 private enum ScrubBarStyle {
     case paper
