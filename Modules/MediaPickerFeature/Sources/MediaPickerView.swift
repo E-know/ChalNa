@@ -346,7 +346,46 @@ public struct MediaPickerView: View {
 
     // MARK: - Bottom bar
 
+    @ViewBuilder
     private var bottomBar: some View {
+        if #available(iOS 26.0, *) {
+            liquidGlassBottomBar
+        } else {
+            momentsBottomBar
+        }
+    }
+
+    @available(iOS 26.0, *)
+    private var liquidGlassBottomBar: some View {
+        GlassEffectContainer(spacing: MomentsSpacing.xs) {
+            HStack(spacing: MomentsSpacing.xs) {
+                Button {
+                    router.pop()
+                } label: {
+                    Text("취소")
+                        .foregroundStyle(MomentsColor.ink)
+                        .frame(maxWidth: .infinity, minHeight: MomentsSpacing.minimumHitTarget)
+                }
+                .buttonStyle(.glass)
+                .frame(maxWidth: .infinity)
+
+                Button {
+                    confirmSelection()
+                } label: {
+                    confirmBottomLabel(progressTint: MomentsColor.ink)
+                        .foregroundStyle(MomentsColor.ink)
+                        .frame(maxWidth: .infinity, minHeight: MomentsSpacing.minimumHitTarget)
+                }
+                .buttonStyle(.glassProminent)
+                .tint(MomentsColor.coral)
+                .frame(maxWidth: .infinity)
+                .disabled(!canProceed || isResolving)
+                .opacity(canProceed ? 1 : 0.5)
+            }
+        }
+    }
+
+    private var momentsBottomBar: some View {
         HStack(spacing: MomentsSpacing.xs) {
             Button("취소") { router.pop() }
                 .buttonStyle(.momentsOutline)
@@ -355,19 +394,23 @@ public struct MediaPickerView: View {
             Button {
                 confirmSelection()
             } label: {
-                HStack(spacing: 6) {
-                    if isResolving {
-                        ProgressView().controlSize(.small).tint(.white)
-                    } else {
-                        MomentsIcon(.check, size: 14)
-                    }
-                    Text(selectedItems.isEmpty ? "선택 후 다음" : "Timeline으로 (\(selectedItems.count))")
-                }
+                confirmBottomLabel(progressTint: .white)
             }
             .buttonStyle(.momentsCoral)
             .frame(maxWidth: .infinity)
             .disabled(!canProceed || isResolving)
             .opacity(canProceed ? 1 : 0.5)
+        }
+    }
+
+    private func confirmBottomLabel(progressTint: Color) -> some View {
+        HStack(spacing: 6) {
+            if isResolving {
+                ProgressView().controlSize(.small).tint(progressTint)
+            } else {
+                MomentsIcon(.check, size: 14)
+            }
+            Text(selectedItems.isEmpty ? "선택 후 다음" : "Timeline으로 (\(selectedItems.count))")
         }
     }
 
