@@ -51,6 +51,7 @@ final class FilmStripVC: UIViewController,
     private weak var session: EditSession?
     private var currentClipID: Clip.ID?
     private var isPlaying: Bool = false
+    private var rotationByClipID: [Clip.ID: ClipRotation] = [:]
     private var onTapClip: ((Int) -> Void)?
 
     // MARK: - Lifecycle
@@ -199,19 +200,57 @@ final class FilmStripVC: UIViewController,
     // MARK: - Update from SwiftUI
 
     func update(model: TimelineModel, session: EditSession, onTapClip: @escaping (Int) -> Void) {
+        let previousItems = dataSource.snapshot().itemIdentifiers
+        let previousClips = clips
+        let previousCurrentClipID = currentClipID
+        let previousIsPlaying = isPlaying
+        let previousRotationByClipID = rotationByClipID
+        let nextClips = model.clips
+        let nextCurrentClipID = nextClips.indices.contains(model.currentIndex) ? nextClips[model.currentIndex].id : nil
+        let nextItems = Self.items(for: nextClips)
+
         self.model = model
         self.session = session
-        self.clips = model.clips
-        self.currentClipID = clips.indices.contains(model.currentIndex) ? clips[model.currentIndex].id : nil
+        self.clips = nextClips
+        self.currentClipID = nextCurrentClipID
         self.isPlaying = model.isPlaying
+        self.rotationByClipID = Self.rotationByClipID(for: nextClips, session: session)
         self.onTapClip = onTapClip
-        applySnapshot(animated: true)
+
+        if previousItems != nextItems {
+            applySnapshot(animated: true, reconfigureRetainedItems: true)
+        } else {
+            reconfigureItems(
+                itemsNeedingReconfiguration(
+                    in: nextItems,
+                    previousClips: previousClips,
+                    previousCurrentClipID: previousCurrentClipID,
+                    previousIsPlaying: previousIsPlaying,
+                    previousRotationByClipID: previousRotationByClipID
+                )
+            )
+        }
     }
 
-    private func applySnapshot(animated: Bool) {
+    private func applySnapshot(animated: Bool, reconfigureRetainedItems: Bool = false) {
+        let previousItems = Set(dataSource.snapshot().itemIdentifiers)
+        let items = Self.items(for: clips)
+
         var snapshot = NSDiffableDataSourceSnapshot<Int, FilmStripItem>()
         snapshot.appendSections([0])
+        snapshot.appendItems(items, toSection: 0)
 
+        if reconfigureRetainedItems {
+            let retainedItems = items.filter { previousItems.contains($0) }
+            if !retainedItems.isEmpty {
+                snapshot.reconfigureItems(retainedItems)
+            }
+        }
+
+        dataSource.apply(snapshot, animatingDifferences: animated)
+    }
+
+    private static func items(for clips: [Clip]) -> [FilmStripItem] {
         var items: [FilmStripItem] = []
         var occurrence: [String: Int] = [:]
         for (dayKey, dayClips) in clips.groupedByDay() {
@@ -222,8 +261,73 @@ final class FilmStripVC: UIViewController,
                 items.append(.clip(clip.id))
             }
         }
-        snapshot.appendItems(items, toSection: 0)
-        dataSource.apply(snapshot, animatingDifferences: animated)
+        return items
+    }
+
+    private static func rotationByClipID(
+        for clips: [Clip],
+        session: EditSession
+    ) -> [Clip.ID: ClipRotation] {
+        Dictionary(uniqueKeysWithValues: clips.map { clip in
+            (clip.id, session.rotation(for: clip.id))
+        })
+    }
+
+    private func itemsNeedingReconfiguration(
+        in items: [FilmStripItem],
+        previousClips: [Clip],
+        previousCurrentClipID: Clip.ID?,
+        previousIsPlaying: Bool,
+        previousRotationByClipID: [Clip.ID: ClipRotation]
+    ) -> [FilmStripItem] {
+        if previousIsPlaying != isPlaying {
+            return items
+        }
+
+        var clipIDs = Set<Clip.ID>()
+        if previousCurrentClipID != currentClipID {
+            if let previousCurrentClipID {
+                clipIDs.insert(previousCurrentClipID)
+            }
+            if let currentClipID {
+                clipIDs.insert(currentClipID)
+            }
+        }
+
+        let previousClipByID = Dictionary(uniqueKeysWithValues: previousClips.map { ($0.id, $0) })
+        for clip in clips {
+            if previousClipByID[clip.id] != clip {
+                clipIDs.insert(clip.id)
+            }
+
+            let previousRotation = previousRotationByClipID[clip.id] ?? .r0
+            let currentRotation = rotationByClipID[clip.id] ?? .r0
+            if previousRotation != currentRotation {
+                clipIDs.insert(clip.id)
+            }
+        }
+
+        let shouldReconfigureDaySprockets = previousIsPlaying || isPlaying
+        return items.filter { item in
+            switch item {
+            case .clip(let id):
+                return clipIDs.contains(id)
+            case .daySprocket:
+                return shouldReconfigureDaySprockets && previousCurrentClipID != currentClipID
+            }
+        }
+    }
+
+    private func reconfigureItems(_ items: [FilmStripItem]) {
+        guard !items.isEmpty else { return }
+
+        var snapshot = dataSource.snapshot()
+        let currentItems = Set(snapshot.itemIdentifiers)
+        let retainedItems = items.filter { currentItems.contains($0) }
+        guard !retainedItems.isEmpty else { return }
+
+        snapshot.reconfigureItems(retainedItems)
+        dataSource.apply(snapshot, animatingDifferences: false)
     }
 
     // MARK: - UICollectionViewDelegate (tap)

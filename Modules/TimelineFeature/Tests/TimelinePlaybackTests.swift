@@ -6,6 +6,23 @@ import TimelineFeature
 
 struct TimelinePlaybackTests {
 
+    @Test func testSelectClip_UpdatesCurrentIndexAndPlayhead() {
+        let clips = SampleData.jejuTimeline
+        let model = TimelineModel(
+            title: "Test Film",
+            clips: clips,
+            currentIndex: 0,
+            state: .idle
+        )
+
+        model.select(clipAt: 3)
+
+        let expectedPlayhead = clips.prefix(3).reduce(0) { $0 + $1.duration }
+        #expect(model.currentIndex == 3, "Selected clip index should become currentIndex")
+        #expect(model.currentClip?.id == clips[3].id, "Current clip should match the selected clip")
+        #expect(model.playheadSeconds == expectedPlayhead, "Playhead should jump to the selected clip start")
+    }
+
     /// Test A: Verify that currentIndex auto-advances during simulated playback
     @Test func testAdvancePlayheadSimulated_UpdatesCurrentIndex() async throws {
         let model = TimelineModel(

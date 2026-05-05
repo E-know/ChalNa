@@ -136,3 +136,25 @@
 - Removed the bottom action row from the root `safeAreaInset` overlay and placed it as a real sibling below the `ScrollView`.
 - The bottom action row is now fixed vertically, so keyboard safe-area changes shrink the `ScrollView` instead of letting content sit behind the buttons.
 - Verification: `OneSecMovie` simulator build/run passed. With the title field focused, bottom buttons ended at y=776 while the keyboard toolbar began at y=792, confirming the scrollable area is above the buttons.
+
+---
+
+# Project file cleanup
+
+## Plan
+
+- [x] Inspect tracked, untracked, and ignored files before deletion.
+- [x] Classify safe deletion candidates using `.gitignore` and generated-cache evidence.
+- [x] Delete only local generated files, OS metadata, and user-specific Xcode state.
+- [x] Verify the working tree after cleanup.
+
+## Notes
+
+- Safe deletion scope: `.DS_Store`, ignored `xcuserdata`, ignored `WorkspaceSettings.xcsettings`, `Tuist/.build`, and local `Derived/XcodeBuild`.
+- Do not delete tracked source files, Tuist manifests, `Derived/InfoPlists`, or the generated-but-tracked Xcode project because the current project references them and some already contain unrelated local changes.
+
+## Review
+
+- Removed local `.DS_Store` files from root, `.agents`, `.claude`, `Modules`, and `OneSecMovie` paths.
+- Removed ignored Xcode/Tuist local state: `OneSecMovie.xcodeproj/xcuserdata`, `OneSecMovie.xcworkspace/xcuserdata`, `OneSecMovie.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings`, `Tuist/.build`, `Tuist/.swiftpm/xcode/package.xcworkspace/xcuserdata`, and `Derived/XcodeBuild`.
+- Verification: targeted `find` checks now return no matching cleanup candidates, and `git status --short --ignored` no longer lists ignored cleanup files.
