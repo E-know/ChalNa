@@ -372,7 +372,7 @@ public struct MediaPickerView: View {
                 Button {
                     confirmSelection()
                 } label: {
-                    confirmBottomLabel
+                    confirmBottomLabel(progressTint: MomentsColor.ink)
                         .foregroundStyle(MomentsColor.ink)
                         .frame(maxWidth: .infinity, minHeight: MomentsSpacing.minimumHitTarget)
                 }
@@ -394,7 +394,7 @@ public struct MediaPickerView: View {
             Button {
                 confirmSelection()
             } label: {
-                confirmBottomLabel
+                confirmBottomLabel(progressTint: .white)
             }
             .buttonStyle(.momentsCoral)
             .frame(maxWidth: .infinity)
@@ -403,10 +403,10 @@ public struct MediaPickerView: View {
         }
     }
 
-    private var confirmBottomLabel: some View {
+    private func confirmBottomLabel(progressTint: Color) -> some View {
         HStack(spacing: 6) {
             if isResolving {
-                ProgressView().controlSize(.small).tint(MomentsColor.ink)
+                ProgressView().controlSize(.small).tint(progressTint)
             } else {
                 MomentsIcon(.check, size: 14)
             }
