@@ -37,11 +37,15 @@ public struct PolaroidCard<Content: View>: View {
     }
 
     public var body: some View {
+        let mediaWidth = width - 24
+        let mediaHeight = mediaWidth * 5 / 4
+
         ZStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 8) {
                 content()
                     .aspectRatio(4/5, contentMode: .fill)
-                    .frame(width: width - 24)
+                    .frame(width: mediaWidth, height: mediaHeight)
+                    .clipped()
                     .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
 
                 if let caption {

@@ -108,6 +108,9 @@ struct PreviewPanel: View {
             }
         }
         .buttonStyle(.plain)
+        .momentsHitTarget(minSize: 64)
+        .accessibilityLabel(model.isPlaying ? "일시정지" : "재생")
+        .accessibilityHint("타임라인 미리보기 재생 상태를 전환합니다.")
     }
 
     // MARK: - Bottom controls

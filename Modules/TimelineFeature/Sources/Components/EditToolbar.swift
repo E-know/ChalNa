@@ -16,7 +16,7 @@ struct EditToolbar: View {
         HStack(spacing: 0) {
             item(icon: .rotate, label: "회전", action: onRotate, dotIndicator: rotationActive)
             item(icon: .scissors, label: "자르기", action: onTrim)
-            item(icon: .trash, label: "삭제", action: onDelete)
+            item(icon: .trash, label: "삭제", action: onDelete, tone: .destructive)
             item(icon: .music, label: "음악", action: onMusic)
         }
         .padding(.vertical, MomentsSpacing.sm)
@@ -32,19 +32,22 @@ struct EditToolbar: View {
                 : nil
         )
         .opacity(dimmed ? 0.85 : 1)
+        .allowsHitTesting(!dimmed)
+        .accessibilityHidden(dimmed)
     }
 
     private func item(
         icon: MomentsIconKind,
         label: String,
         action: @escaping () -> Void,
-        dotIndicator: Bool = false
+        dotIndicator: Bool = false,
+        tone: ToolbarItemTone = .normal
     ) -> some View {
         Button(action: action) {
             VStack(spacing: 4) {
                 ZStack(alignment: .topTrailing) {
                     MomentsIcon(icon, size: 20)
-                        .foregroundColor(MomentsColor.ink)
+                        .foregroundColor(tone.foregroundColor)
                     if dotIndicator {
                         Circle()
                             .fill(MomentsColor.coral)
@@ -55,12 +58,35 @@ struct EditToolbar: View {
                 if !dimmed {
                     Text(label)
                         .font(MomentsTypography.krBody(10, weight: .medium))
-                        .foregroundColor(MomentsColor.ink)
+                        .foregroundColor(tone.foregroundColor)
                 }
             }
             .opacity(dimmed ? 0.45 : 1)
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.plain)
+        .momentsHitTarget()
+        .disabled(dimmed)
+        .accessibilityLabel(label)
+        .accessibilityHint(tone.accessibilityHint)
+    }
+}
+
+private enum ToolbarItemTone {
+    case normal
+    case destructive
+
+    var foregroundColor: Color {
+        switch self {
+        case .normal:      return MomentsColor.ink
+        case .destructive: return MomentsColor.coral
+        }
+    }
+
+    var accessibilityHint: String {
+        switch self {
+        case .normal:      return ""
+        case .destructive: return "선택한 클립을 삭제합니다."
+        }
     }
 }

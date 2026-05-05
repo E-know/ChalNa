@@ -2,6 +2,7 @@ import SwiftUI
 import AppCore
 import Models
 import DesignSystem
+import PhotosService
 import PhotosUI
 import Photos
 import AVFoundation
@@ -21,6 +22,11 @@ fileprivate enum MediaKind {
     var hasMotion: Bool { self == .video || self == .livePhoto }
 }
 
+public enum MediaPickerSource: Sendable {
+    case photoLibrary
+    case devFixtures(any DevMediaSourcing)
+}
+
 /// Live Photo + 영상을 여러 장 선택하고 Timeline으로 넘기는 화면.
 /// 선택 시 (a) 썸네일 JPEG Data와 (b) 실제 비디오 파일 URL을 병렬로 로드한다.
 /// Live Photo는 PhotosPicker의 Transferable에서 paired video가 안 나올 수 있어
@@ -31,6 +37,9 @@ public struct MediaPickerView: View {
 
     @State private var selectedItems: [PhotosPickerItem] = []
     @State private var media: [PhotosPickerItem: MediaLoadState] = [:]
+    @State private var devAssets: [DevMediaAsset] = []
+    @State private var selectedDevAssetIDs: [DevMediaAsset.ID] = []
+    @State private var devErrorMessage: String?
     @State private var isResolving = false
     @State private var scrollProgress: Double = 0
     @State private var titleInput: String = ""
@@ -39,7 +48,11 @@ public struct MediaPickerView: View {
     // photoLibrary 파라미터로 동일한 라이브러리를 명시해야 한다 (iOS 17+).
     @State private var photoLibrary = PHPhotoLibrary.shared()
 
-    public init() {}
+    private let source: MediaPickerSource
+
+    public init(source: MediaPickerSource = .photoLibrary) {
+        self.source = source
+    }
 
     public var body: some View {
         VStack(spacing: 0) {
@@ -73,26 +86,19 @@ public struct MediaPickerView: View {
                     withAnimation(.easeInOut(duration: 0.15)) { scrollProgress = p }
                 }
             }
+
+            bottomActionArea
         }
         .momentsScreen()
-        .safeAreaInset(edge: .bottom) {
-            bottomBar
-                .padding(.horizontal, MomentsSpacing.md)
-                .padding(.bottom, MomentsSpacing.md)
-        }
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("완료") { isTitleFocused = false }
-                    .foregroundColor(MomentsColor.coral)
-            }
-        }
         .onChange(of: selectedItems) { _, newItems in
             // 항목 선택 시점에 Photos 권한을 lazy 요청 — Live Photo paired video 추출에 필수.
             if newItems.contains(where: { media[$0] == nil }) {
                 Task { _ = await Self.ensurePhotoAuthorization() }
             }
             syncMedia(for: newItems)
+        }
+        .task {
+            await loadDevAssetsIfNeeded()
         }
     }
 
@@ -110,6 +116,8 @@ public struct MediaPickerView: View {
                 .foregroundColor(MomentsColor.taupe)
             }
             .buttonStyle(.plain)
+            .momentsHitTarget()
+            .accessibilityLabel("뒤로")
 
             Spacer()
 
@@ -131,10 +139,13 @@ public struct MediaPickerView: View {
                 } else {
                     Text("다음")
                         .font(MomentsTypography.krSemibold(14))
-                        .foregroundColor(canProceed ? MomentsColor.coral : MomentsColor.taupe.opacity(0.5))
+                        .foregroundColor(canProceed ? MomentsColor.ink : MomentsColor.taupe.opacity(0.5))
                 }
             }
             .buttonStyle(.plain)
+            .momentsHitTarget()
+            .accessibilityLabel(isResolving ? "미디어 준비 중" : "다음")
+            .accessibilityHint(canProceed ? "선택한 미디어로 타임라인을 만듭니다." : "미디어를 선택하면 다음 단계로 이동할 수 있습니다.")
             .disabled(!canProceed || isResolving)
         }
     }
@@ -175,7 +186,11 @@ public struct MediaPickerView: View {
             .font(MomentsTypography.krBody(16, weight: .medium))
             .foregroundColor(MomentsColor.ink)
             .submitLabel(.done)
+            .onSubmit { isTitleFocused = false }
+            .autocorrectionDisabled(true)
+            .textInputAutocapitalization(.never)
             .focused($isTitleFocused)
+            .accessibilityLabel("이번 필름의 제목")
             .padding(.horizontal, MomentsSpacing.md)
             .padding(.vertical, MomentsSpacing.sm + 2)
             .background(
@@ -201,7 +216,17 @@ public struct MediaPickerView: View {
 
     // MARK: - Picker launcher
 
+    @ViewBuilder
     private var pickerLauncher: some View {
+        switch source {
+        case .photoLibrary:
+            photoLibraryPickerLauncher
+        case .devFixtures:
+            devFixtureLauncher
+        }
+    }
+
+    private var photoLibraryPickerLauncher: some View {
         PhotosPicker(
             selection: $selectedItems,
             maxSelectionCount: 0,
@@ -236,12 +261,61 @@ public struct MediaPickerView: View {
                                   style: .init(lineWidth: 1.2, dash: selectedItems.isEmpty ? [5, 3] : []))
             )
         }
+        .accessibilityLabel(selectedItems.isEmpty ? "사진 보관함 열기" : "선택 다시 고르기")
+        .accessibilityHint("Live Photo와 영상을 선택합니다.")
+    }
+
+    private var devFixtureLauncher: some View {
+        VStack(alignment: .leading, spacing: MomentsSpacing.xs) {
+            HStack(spacing: MomentsSpacing.sm) {
+                MomentsIcon(.film, size: 18)
+                    .foregroundColor(MomentsColor.coral)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Dev 미디어 소스")
+                        .font(MomentsTypography.krSemibold(15))
+                        .foregroundColor(MomentsColor.ink)
+                    Text(selectedDevAssetIDs.isEmpty ? "번들 fixture로 실제 export까지 확인"
+                                                     : "\(selectedDevAssetIDs.count)개 fixture 선택됨")
+                        .font(MomentsTypography.krBody(12))
+                        .foregroundColor(MomentsColor.taupe)
+                }
+                Spacer()
+                StampBadge("DEV", angle: 6)
+            }
+            .padding(MomentsSpacing.md)
+            .background(
+                RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
+                    .fill(Color.white)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
+                    .strokeBorder(MomentsColor.coral.opacity(0.45), lineWidth: 1.2)
+            )
+
+            if let devErrorMessage {
+                Text(devErrorMessage)
+                    .font(MomentsTypography.krBody(12))
+                    .foregroundColor(MomentsColor.coral)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Dev 미디어 소스")
     }
 
     // MARK: - Selection grid / empty
 
     @ViewBuilder
     private var selectionGrid: some View {
+        switch source {
+        case .photoLibrary:
+            photoLibrarySelectionGrid
+        case .devFixtures:
+            devFixtureSelectionGrid
+        }
+    }
+
+    @ViewBuilder
+    private var photoLibrarySelectionGrid: some View {
         if selectedItems.isEmpty {
             VStack(alignment: .leading, spacing: MomentsSpacing.sm) {
                 Text("SELECTED · 0")
@@ -276,6 +350,53 @@ public struct MediaPickerView: View {
                             thumbnailContent(for: item)
                         }
                         .frame(maxWidth: .infinity)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(thumbnailAccessibilityLabel(for: item, index: idx))
+                    }
+                }
+                .padding(.vertical, MomentsSpacing.sm)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var devFixtureSelectionGrid: some View {
+        VStack(alignment: .leading, spacing: MomentsSpacing.sm) {
+            HStack(spacing: MomentsSpacing.xs) {
+                Text("DEV FIXTURES · \(selectedDevAssetIDs.count)")
+                    .tagLabel()
+                Spacer()
+                if devLiveCount > 0 {
+                    MomentsChip("\(devLiveCount) LIVE", variant: .live)
+                }
+                if devVideoCount > 0 {
+                    MomentsChip("\(devVideoCount) VIDEO", variant: .video, icon: .film)
+                }
+            }
+
+            if devAssets.isEmpty {
+                HandNoteRow("Dev 미디어를 준비하고 있어요 ✦",
+                            tone: .muted, size: 17, alignment: .leading)
+                    .padding(.vertical, MomentsSpacing.lg)
+            } else {
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), spacing: MomentsSpacing.sm), count: 2),
+                    spacing: MomentsSpacing.md
+                ) {
+                    ForEach(Array(devAssets.enumerated()), id: \.element.id) { idx, asset in
+                        let isSelected = selectedDevAssetIDs.contains(asset.id)
+                        Button {
+                            toggleDevAsset(asset.id)
+                        } label: {
+                            DevMediaAssetCard(
+                                asset: asset,
+                                isSelected: isSelected,
+                                rotationDegrees: rotation(for: idx)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(asset.title), \(asset.kind == .live ? "라이브 포토" : "비디오")")
+                        .accessibilityHint(isSelected ? "선택됨. 두 번 탭하면 선택을 해제합니다." : "두 번 탭하면 선택합니다.")
                     }
                 }
                 .padding(.vertical, MomentsSpacing.sm)
@@ -342,9 +463,18 @@ public struct MediaPickerView: View {
             MomentsColor.ivory
             MomentsIcon(.close, size: 14).foregroundColor(MomentsColor.taupe)
         }
+        .accessibilityHidden(true)
     }
 
     // MARK: - Bottom bar
+
+    private var bottomActionArea: some View {
+        bottomBar
+            .padding(.horizontal, MomentsSpacing.md)
+            .padding(.top, MomentsSpacing.xs)
+            .padding(.bottom, MomentsSpacing.md)
+            .fixedSize(horizontal: false, vertical: true)
+    }
 
     @ViewBuilder
     private var bottomBar: some View {
@@ -372,7 +502,7 @@ public struct MediaPickerView: View {
                 Button {
                     confirmSelection()
                 } label: {
-                    confirmBottomLabel(progressTint: MomentsColor.ink)
+                    confirmBottomLabel
                         .foregroundStyle(MomentsColor.ink)
                         .frame(maxWidth: .infinity, minHeight: MomentsSpacing.minimumHitTarget)
                 }
@@ -387,14 +517,20 @@ public struct MediaPickerView: View {
 
     private var momentsBottomBar: some View {
         HStack(spacing: MomentsSpacing.xs) {
-            Button("취소") { router.pop() }
-                .buttonStyle(.momentsOutline)
-                .frame(maxWidth: .infinity)
+            Button {
+                router.pop()
+            } label: {
+                Text("취소")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.momentsOutline)
+            .frame(maxWidth: .infinity)
 
             Button {
                 confirmSelection()
             } label: {
-                confirmBottomLabel(progressTint: .white)
+                confirmBottomLabel
+                    .frame(maxWidth: .infinity)
             }
             .buttonStyle(.momentsCoral)
             .frame(maxWidth: .infinity)
@@ -403,21 +539,35 @@ public struct MediaPickerView: View {
         }
     }
 
-    private func confirmBottomLabel(progressTint: Color) -> some View {
+    private var confirmBottomLabel: some View {
         HStack(spacing: 6) {
             if isResolving {
-                ProgressView().controlSize(.small).tint(progressTint)
+                ProgressView().controlSize(.small).tint(MomentsColor.ink)
             } else {
                 MomentsIcon(.check, size: 14)
             }
-            Text(selectedItems.isEmpty ? "선택 후 다음" : "Timeline으로 (\(selectedItems.count))")
+            Text(selectedCount == 0 ? "선택 후 다음" : "Timeline으로 (\(selectedCount))")
         }
     }
 
     // MARK: - Derived
 
     private var canProceed: Bool {
-        !selectedItems.isEmpty
+        switch source {
+        case .photoLibrary:
+            return !selectedItems.isEmpty
+        case .devFixtures:
+            return !selectedDevAssetIDs.isEmpty
+        }
+    }
+
+    private var selectedCount: Int {
+        switch source {
+        case .photoLibrary:
+            return selectedItems.count
+        case .devFixtures:
+            return selectedDevAssetIDs.count
+        }
     }
 
     private var liveCount: Int {
@@ -429,6 +579,42 @@ public struct MediaPickerView: View {
     private var videoCount: Int {
         selectedItems.reduce(into: 0) { acc, item in
             if media[item]?.kind == .video { acc += 1 }
+        }
+    }
+
+    private var devLiveCount: Int {
+        devAssets.reduce(into: 0) { acc, asset in
+            if selectedDevAssetIDs.contains(asset.id), asset.kind == .live { acc += 1 }
+        }
+    }
+
+    private var devVideoCount: Int {
+        devAssets.reduce(into: 0) { acc, asset in
+            if selectedDevAssetIDs.contains(asset.id), asset.kind == .video { acc += 1 }
+        }
+    }
+
+    private func thumbnailAccessibilityLabel(for item: PhotosPickerItem, index: Int) -> String {
+        let state = media[item] ?? MediaLoadState()
+        var parts = ["\(index + 1)번째 선택한 미디어", accessibilityLabel(for: state.kind)]
+        if !state.isFullyLoaded {
+            parts.append("불러오는 중")
+        }
+        if state.thumbnailFailed {
+            parts.append("썸네일 불러오기 실패")
+        }
+        if state.videoFailed {
+            parts.append("영상 추출 실패")
+        }
+        return parts.joined(separator: ", ")
+    }
+
+    private func accessibilityLabel(for kind: MediaKind) -> String {
+        switch kind {
+        case .video:     return "비디오"
+        case .livePhoto: return "라이브 포토"
+        case .image:     return "사진"
+        case .unknown:   return "종류 확인 중"
         }
     }
 
@@ -465,6 +651,23 @@ public struct MediaPickerView: View {
                     media[item] = state
                 }
             }
+        }
+    }
+
+    private func loadDevAssetsIfNeeded() async {
+        guard case .devFixtures(let mediaSource) = source else { return }
+        let assets = await mediaSource.availableAssets()
+        await MainActor.run {
+            devAssets = assets
+        }
+    }
+
+    private func toggleDevAsset(_ id: DevMediaAsset.ID) {
+        devErrorMessage = nil
+        if let index = selectedDevAssetIDs.firstIndex(of: id) {
+            selectedDevAssetIDs.remove(at: index)
+        } else {
+            selectedDevAssetIDs.append(id)
         }
     }
 
@@ -660,6 +863,15 @@ public struct MediaPickerView: View {
     // MARK: - Confirm
 
     private func confirmSelection() {
+        switch source {
+        case .photoLibrary:
+            confirmPhotoLibrarySelection()
+        case .devFixtures(let source):
+            confirmDevFixtureSelection(source)
+        }
+    }
+
+    private func confirmPhotoLibrarySelection() {
         guard canProceed, !isResolving else { return }
         isResolving = true
 
@@ -704,6 +916,33 @@ public struct MediaPickerView: View {
                 let trimmed = titleInput.trimmingCharacters(in: .whitespacesAndNewlines)
                 session.replace(clips: orderedClips, title: trimmed)
                 router.push(.timeline)
+            }
+        }
+    }
+
+    private func confirmDevFixtureSelection(_ source: any DevMediaSourcing) {
+        guard canProceed, !isResolving else { return }
+        isResolving = true
+        devErrorMessage = nil
+
+        let ids = selectedDevAssetIDs
+        Task {
+            do {
+                let clips = try await source.resolve(assetIDs: ids)
+                let orderedClips = clips.sorted { $0.capturedAt < $1.capturedAt }
+
+                await MainActor.run {
+                    isResolving = false
+                    guard !orderedClips.isEmpty else { return }
+                    let trimmed = titleInput.trimmingCharacters(in: .whitespacesAndNewlines)
+                    session.replace(clips: orderedClips, title: trimmed)
+                    router.push(.timeline)
+                }
+            } catch {
+                await MainActor.run {
+                    isResolving = false
+                    devErrorMessage = error.localizedDescription
+                }
             }
         }
     }
@@ -756,4 +995,88 @@ private struct VideoPayload: Transferable {
     MediaPickerView()
         .environment(AppRouter())
         .environment(EditSession())
+}
+
+#Preview("MediaPicker — Dev") {
+    MediaPickerView(source: .devFixtures(BundledDevMediaSource()))
+        .environment(AppRouter())
+        .environment(EditSession())
+}
+
+private struct DevMediaAssetCard: View {
+    let asset: DevMediaAsset
+    let isSelected: Bool
+    let rotationDegrees: Double
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: MomentsSpacing.xs) {
+            ClipThumbCard(
+                state: isSelected ? .selected : .normal,
+                rotationDegrees: rotationDegrees,
+                size: CGSize(width: 112, height: 142)
+            ) {
+                ZStack {
+                    asset.preset.view()
+                    LinearGradient(
+                        colors: [.clear, MomentsColor.ink.opacity(0.5)],
+                        startPoint: .center,
+                        endPoint: .bottom
+                    )
+                    kindChip
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .padding(4)
+                    if asset.kind == .video {
+                        Circle()
+                            .fill(Color.white.opacity(0.92))
+                            .frame(width: 24, height: 24)
+                            .overlay(
+                                MomentsIcon(.play, size: 10)
+                                    .foregroundColor(MomentsColor.ink)
+                                    .offset(x: 1)
+                            )
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(asset.title)
+                    .font(MomentsTypography.krSemibold(13))
+                    .foregroundColor(MomentsColor.ink)
+                    .lineLimit(1)
+                Text(asset.locationNote ?? asset.durationLabel)
+                    .font(MomentsTypography.krBody(11))
+                    .foregroundColor(MomentsColor.taupe)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(MomentsSpacing.xs)
+        .background(
+            RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
+                .fill(Color.white.opacity(isSelected ? 1 : 0.72))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
+                .strokeBorder(isSelected ? MomentsColor.coral : MomentsColor.taupe.opacity(0.16), lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder
+    private var kindChip: some View {
+        switch asset.kind {
+        case .live:
+            MomentsChip("LIVE", variant: .live)
+                .scaleEffect(0.72, anchor: .topLeading)
+        case .video:
+            MomentsChip("VIDEO", variant: .video, icon: .film)
+                .scaleEffect(0.72, anchor: .topLeading)
+        }
+    }
+}
+
+private extension DevMediaAsset {
+    var durationLabel: String {
+        String(format: "%.1fs", duration)
+    }
 }

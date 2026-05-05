@@ -7,6 +7,7 @@ public enum Module {
     public static func framework(
         name: String,
         hasResources: Bool = false,
+        isDynamic: Bool = false,
         dependencies: [TargetDependency] = []
     ) -> Target {
         var folders: [BuildableFolder] = [.folder(.relativeToManifest("Modules/\(name)/Sources"))]
@@ -16,7 +17,7 @@ public enum Module {
         return .target(
             name: name,
             destinations: .iOS,
-            product: .staticFramework,
+            product: isDynamic ? .framework : .staticFramework,
             bundleId: "\(bundleIdPrefix).\(name)",
             deploymentTargets: deploymentTargets,
             buildableFolders: folders,
@@ -28,7 +29,8 @@ public enum Module {
     /// 이름은 자동으로 `<name>Tests`. 의존성은 자기 모듈 + 명시한 추가 모듈.
     public static func unitTests(
         for moduleName: String,
-        dependencies: [TargetDependency] = []
+        dependencies: [TargetDependency] = [],
+        additionalBuildableFolders: [BuildableFolder] = []
     ) -> Target {
         return .target(
             name: "\(moduleName)Tests",
@@ -36,7 +38,7 @@ public enum Module {
             product: .unitTests,
             bundleId: "\(bundleIdPrefix).\(moduleName)Tests",
             deploymentTargets: deploymentTargets,
-            buildableFolders: [.folder(.relativeToManifest("Modules/\(moduleName)/Tests"))],
+            buildableFolders: [.folder(.relativeToManifest("Modules/\(moduleName)/Tests"))] + additionalBuildableFolders,
             dependencies: [.target(name: moduleName)] + dependencies
         )
     }

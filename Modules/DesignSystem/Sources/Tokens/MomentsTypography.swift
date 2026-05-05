@@ -9,6 +9,9 @@ public enum MomentsTypography {
         static let caveat           = "Caveat"
         static let jetbrainsMono    = "JetBrains Mono"
         static let bradleyHand      = "Bradley Hand"
+        static let systemSerif      = "Georgia"
+        static let systemSerifItalic = "Georgia-Italic"
+        static let systemMono       = "SF Mono"
     }
 
     // MARK: - Display EN (Fraunces, italic light preferred)
@@ -19,49 +22,60 @@ public enum MomentsTypography {
         weight: Font.Weight = .light
     ) -> Font {
         let custom = italic ? FontName.frauncesItalic : FontName.fraunces
-        return Font.custom(custom, size: size)
+        return Font.custom(custom, size: size, relativeTo: textStyle(for: size))
             .weight(weight)
             // fallback: system serif with .italic() 스타일은 캡처 모디파이어에서 처리
     }
 
     public static func serifFallback(_ size: CGFloat, italic: Bool = true) -> Font {
-        var f = Font.system(size: size, design: .serif)
-        if italic { f = f.italic() }
-        return f
+        let custom = italic ? FontName.systemSerifItalic : FontName.systemSerif
+        return Font.custom(custom, size: size, relativeTo: textStyle(for: size))
     }
 
     // MARK: - Display KR (Pretendard 700)
 
     public static func displayKR(_ size: CGFloat, weight: Font.Weight = .bold) -> Font {
-        Font.custom(FontName.pretendard, size: size).weight(weight)
+        Font.custom(FontName.pretendard, size: size, relativeTo: textStyle(for: size)).weight(weight)
     }
 
     public static func krSemibold(_ size: CGFloat) -> Font {
-        Font.custom(FontName.pretendard, size: size).weight(.semibold)
+        Font.custom(FontName.pretendard, size: size, relativeTo: textStyle(for: size)).weight(.semibold)
     }
 
     public static func krBody(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        Font.custom(FontName.pretendard, size: size).weight(weight)
+        Font.custom(FontName.pretendard, size: size, relativeTo: textStyle(for: size)).weight(weight)
     }
 
     // MARK: - Handwriting (Caveat / Bradley Hand fallback)
 
     public static func hand(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        Font.custom(FontName.caveat, size: size).weight(weight)
+        Font.custom(FontName.caveat, size: size, relativeTo: textStyle(for: size)).weight(weight)
     }
 
     public static func handFallback(_ size: CGFloat) -> Font {
-        Font.custom(FontName.bradleyHand, size: size)
+        Font.custom(FontName.bradleyHand, size: size, relativeTo: textStyle(for: size))
     }
 
     // MARK: - Mono (JetBrains Mono / SF Mono fallback)
 
     public static func mono(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        Font.custom(FontName.jetbrainsMono, size: size).weight(weight)
+        Font.custom(FontName.jetbrainsMono, size: size, relativeTo: textStyle(for: size)).weight(weight)
     }
 
     public static func monoFallback(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        Font.system(size: size, weight: weight, design: .monospaced)
+        Font.custom(FontName.systemMono, size: size, relativeTo: textStyle(for: size)).weight(weight)
+    }
+
+    private static func textStyle(for size: CGFloat) -> Font.TextStyle {
+        switch size {
+        case ..<12: return .caption2
+        case ..<15: return .caption
+        case ..<18: return .body
+        case ..<23: return .title3
+        case ..<30: return .title2
+        case ..<44: return .title
+        default: return .largeTitle
+        }
     }
 
     // MARK: - Scale

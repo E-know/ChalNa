@@ -6,7 +6,8 @@ let project = Project(
     targets: [
         Module.framework(
             name: "DesignSystem",
-            hasResources: true
+            hasResources: true,
+            isDynamic: true
         ),
         Module.framework(
             name: "FileStorage"
@@ -21,6 +22,7 @@ let project = Project(
         ),
         Module.framework(
             name: "PhotosService",
+            hasResources: true,
             dependencies: [.target(name: "Models")]
         ),
         Module.framework(
@@ -41,6 +43,7 @@ let project = Project(
                 .target(name: "AppCore"),
                 .target(name: "Models"),
                 .target(name: "DesignSystem"),
+                .target(name: "PhotosService"),
             ]
         ),
         Module.framework(
@@ -75,11 +78,13 @@ let project = Project(
                     ],
                     "NSPhotoLibraryUsageDescription": "Live Photo 내부의 영상을 불러와 Vlog로 이어 붙이기 위해 사진 보관함 접근이 필요해요.",
                     "NSPhotoLibraryAddUsageDescription": "완성한 Vlog를 사진 보관함에 저장하려면 권한이 필요해요.",
+                    "UIUserInterfaceStyle": "Light",
                 ]
             ),
             buildableFolders: [
                 "OneSecMovie/Sources",
                 "OneSecMovie/Resources",
+                "Modules/PhotosService/Resources",
             ],
             dependencies: [
                 .target(name: "DesignSystem"),
@@ -103,11 +108,35 @@ let project = Project(
             dependencies: [.target(name: "Models")]
         ),
         Module.unitTests(
+            for: "PhotosService",
+            dependencies: [
+                .target(name: "CompositionService"),
+                .target(name: "Models"),
+            ],
+            additionalBuildableFolders: [
+                .folder(.relativeToManifest("Modules/PhotosService/Resources")),
+            ]
+        ),
+        Module.unitTests(
             for: "TimelineFeature",
             dependencies: [
                 .target(name: "Models"),
                 .target(name: "CompositionService"),
             ]
+        ),
+    ],
+    schemes: [
+        .scheme(
+            name: "OneSecMovie Dev",
+            shared: true,
+            buildAction: .buildAction(targets: ["OneSecMovie"]),
+            runAction: .runAction(
+                configuration: .debug,
+                executable: "OneSecMovie",
+                arguments: .arguments(environmentVariables: [
+                    "MOMENTS_APP_MODE": "devMock",
+                ])
+            )
         ),
     ]
 )

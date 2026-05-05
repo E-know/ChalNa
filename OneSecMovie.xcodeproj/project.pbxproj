@@ -16,12 +16,15 @@
 		31355CF764EF04BC8647A5D4 /* Models.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
 		482B3828B4B7F47573A227EC /* Models.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
 		4914FA721B5F72D586668FCB /* Models.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
+		4B84B4DA534508636A7E98A0 /* DesignSystem.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		53443BC0E8493D1EA717CED4 /* FileStorage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1C9BA791DAE952197A445963 /* FileStorage.framework */; };
+		54F7DDE7C22CB420E7F7B626 /* Models.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
 		555DDF8EA5DA02FF9F38187C /* TimelineFeature.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F52FB1AF3C9DDB84A3098B94 /* TimelineFeature.framework */; };
 		569BCFAFADC8F6A8A9758A67 /* Models.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
 		5DA27826300A45E703A8264A /* Models.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
 		6140A41BADF58AFFAAB514F7 /* AppCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D93A356B9B154D8BF13144DF /* AppCore.framework */; };
 		6F4897D5A84F44D33D86F5BB /* Models.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
+		70CF080F70F6514E7B6A3B4D /* PhotosService.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 92D881F5F93C60DB8AFAEEE1 /* PhotosService.framework */; };
 		73F365A1D8E3387CAB0F9F79 /* CompositionService.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 73EE856BA54833874C9E8D77 /* CompositionService.framework */; };
 		76131AE5578E535DF3C42F6E /* AppCore.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = D93A356B9B154D8BF13144DF /* AppCore.framework */; };
 		76B46796332097F86EB38074 /* Models.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
@@ -31,21 +34,24 @@
 		94D9FAE4C44CFD0206927764 /* ExportFeature.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 62BF7AD70026589502EA6C44 /* ExportFeature.framework */; };
 		96EAAF2FD0E2A3881C525B7E /* PhotosService.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 92D881F5F93C60DB8AFAEEE1 /* PhotosService.framework */; };
 		9D8CEA5907E96384299F1FE2 /* HomeFeature.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1FA5D7C2553BA8FBF763650E /* HomeFeature.framework */; };
-		A95ACAA4DBC4FEC8CE64438E /* DesignSystem.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */; };
+		9FB19EB3F2CA9F567DAD2546 /* FileStorage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1C9BA791DAE952197A445963 /* FileStorage.framework */; };
+		AA2391EB722697F9AFF0AAFC /* DesignSystem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */; };
+		ACB5F8E5E791D70D255B85EF /* DesignSystem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */; };
+		B257624D8982630E8B079647 /* PhotosService.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 92D881F5F93C60DB8AFAEEE1 /* PhotosService.framework */; };
 		B71BC743982F62909260A9FB /* Models.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
 		BBD11678D07A7EEACECE184B /* AppCore.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = D93A356B9B154D8BF13144DF /* AppCore.framework */; };
 		BC7A8316FBD2FD6ED46B1B28 /* FileStorage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1C9BA791DAE952197A445963 /* FileStorage.framework */; };
 		BF9EEC2C2768056133355C36 /* AppCore.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = D93A356B9B154D8BF13144DF /* AppCore.framework */; };
 		C3861E8A86BD09D02893A546 /* Models.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
-		C7034C7FEDE3D1FF110034E1 /* DesignSystem.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */; };
 		CB074F163EE94478A93B7AFD /* DesignSystem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */; };
+		D9A70AC59E25A128A6FCFE76 /* DesignSystem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */; };
 		DFFAC38B387B8E4E78D0D362 /* AppCore.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = D93A356B9B154D8BF13144DF /* AppCore.framework */; };
-		E5CE52863E6E1CA4350AB39A /* DesignSystem.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */; };
 		ED3C17BF6461A0B139AB80E5 /* FileStorage.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 1C9BA791DAE952197A445963 /* FileStorage.framework */; };
 		ED72B2DCD37FF49CDF61B8FF /* FileStorage.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 1C9BA791DAE952197A445963 /* FileStorage.framework */; };
-		F4BE3E0EB8EA625681175BE9 /* DesignSystem.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */; };
+		F18FD50CFB6A7B78C248F00B /* DesignSystem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 57F2B00EB01CB6C69A8607A5 /* DesignSystem.framework */; };
 		F6DC5144422B5F8F4FD08831 /* AppCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D93A356B9B154D8BF13144DF /* AppCore.framework */; };
 		F6E29140C5948C3658CBE2EA /* Models.framework in Dependencies */ = {isa = PBXBuildFile; fileRef = 824B7A5A74F90EECAF3AB4A9 /* Models.framework */; };
+		F90FE32186F7C37BB6BF4374 /* CompositionService.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 73EE856BA54833874C9E8D77 /* CompositionService.framework */; };
 		FEB10A8E63B4DBB8C447899E /* FileStorage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1C9BA791DAE952197A445963 /* FileStorage.framework */; };
 /* End PBXBuildFile section */
 
@@ -63,6 +69,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 160C110EDE7E5A077FC6DB2E;
 			remoteInfo = AppCore;
+		};
+		20449B15F9343EDFC408C6FB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 34F9DC660203F3C7E8635D0B;
+			remoteInfo = PhotosService;
 		};
 		22755727B3A463171D5FC567 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -155,12 +168,26 @@
 			remoteGlobalIDString = 160C110EDE7E5A077FC6DB2E;
 			remoteInfo = AppCore;
 		};
+		612980E4B4245B602D0F8D23 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 34F9DC660203F3C7E8635D0B;
+			remoteInfo = PhotosService;
+		};
 		6264127C7A970FF6BA7FBBB4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = C83623DBA74DFE03F4163AB7;
 			remoteInfo = ExportFeature;
+		};
+		6A9D1ED8A3453CDB990CF771 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8355DD3A6CB5718A43CF1585;
+			remoteInfo = Models;
 		};
 		6B13D0B4D41DCB96BB4BB1E6 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -267,6 +294,13 @@
 			remoteGlobalIDString = 3E173F911A34131A70260F03;
 			remoteInfo = MediaPickerFeature;
 		};
+		D5BBA4ECA5F8B4AD06A0D807 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 702E5B0F1CCEBE75D92E029B;
+			remoteInfo = CompositionService;
+		};
 		D5D6BB154152376F9A7FA703 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = F247CFAF0835F983E189BDDE /* Project object */;
@@ -314,7 +348,6 @@
 			dstSubfolderSpec = 16;
 			files = (
 				DFFAC38B387B8E4E78D0D362 /* AppCore.framework in Dependencies */,
-				C7034C7FEDE3D1FF110034E1 /* DesignSystem.framework in Dependencies */,
 				6F4897D5A84F44D33D86F5BB /* Models.framework in Dependencies */,
 			);
 			name = Dependencies;
@@ -326,6 +359,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
+				4B84B4DA534508636A7E98A0 /* DesignSystem.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -336,8 +370,8 @@
 			dstSubfolderSpec = 16;
 			files = (
 				BBD11678D07A7EEACECE184B /* AppCore.framework in Dependencies */,
-				E5CE52863E6E1CA4350AB39A /* DesignSystem.framework in Dependencies */,
 				31355CF764EF04BC8647A5D4 /* Models.framework in Dependencies */,
+				70CF080F70F6514E7B6A3B4D /* PhotosService.framework in Dependencies */,
 			);
 			name = Dependencies;
 			runOnlyForDeploymentPostprocessing = 1;
@@ -438,11 +472,20 @@
 			dstSubfolderSpec = 16;
 			files = (
 				76131AE5578E535DF3C42F6E /* AppCore.framework in Dependencies */,
-				A95ACAA4DBC4FEC8CE64438E /* DesignSystem.framework in Dependencies */,
 				76B46796332097F86EB38074 /* Models.framework in Dependencies */,
 			);
 			name = Dependencies;
 			runOnlyForDeploymentPostprocessing = 1;
+		};
+		A560731D103DF48A1F26FE0E /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		A8FCDA74CB7A3CD27F30A700 /* Dependencies */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -501,7 +544,6 @@
 			files = (
 				BF9EEC2C2768056133355C36 /* AppCore.framework in Dependencies */,
 				73F365A1D8E3387CAB0F9F79 /* CompositionService.framework in Dependencies */,
-				F4BE3E0EB8EA625681175BE9 /* DesignSystem.framework in Dependencies */,
 				ED72B2DCD37FF49CDF61B8FF /* FileStorage.framework in Dependencies */,
 				4914FA721B5F72D586668FCB /* Models.framework in Dependencies */,
 			);
@@ -531,6 +573,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		10544360A7A44BD6FDC0A9BC /* PhotosServiceTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "PhotosServiceTests-Info.plist"; sourceTree = "<group>"; };
 		1B1488DE2FCE0220D6A572B6 /* ExportFeature-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "ExportFeature-Info.plist"; sourceTree = "<group>"; };
 		1C9BA791DAE952197A445963 /* FileStorage.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = FileStorage.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		1FA5D7C2553BA8FBF763650E /* HomeFeature.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = HomeFeature.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -559,6 +602,7 @@
 		F6B79B102CFF785D685BD018 /* AppCoreTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "AppCoreTests-Info.plist"; sourceTree = "<group>"; };
 		FD33A23C9E0ECCD08ED08C5D /* AppCore-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "AppCore-Info.plist"; sourceTree = "<group>"; };
 		FDAD4E341265D520D92C467B /* AppCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AppCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FE5714928AD8045467B5D7CF /* PhotosServiceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PhotosServiceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -596,6 +640,15 @@
 			explicitFolders = (
 			);
 			path = Sources;
+			sourceTree = "<group>";
+		};
+		4231971B50C9325A2336B9A0 /* Tests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Tests;
 			sourceTree = "<group>";
 		};
 		4766E03484B86DA8C0074C65 /* Sources */ = {
@@ -650,6 +703,15 @@
 			explicitFolders = (
 			);
 			path = Sources;
+			sourceTree = "<group>";
+		};
+		A5E45AAE87E415D7DA1A13E9 /* Resources */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 		B5FF46487548F2059F1B0294 /* Sources */ = {
@@ -746,6 +808,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F18FD50CFB6A7B78C248F00B /* DesignSystem.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -753,6 +816,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D9A70AC59E25A128A6FCFE76 /* DesignSystem.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -812,6 +876,18 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ACB5F8E5E791D70D255B85EF /* DesignSystem.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DB47FF9894DB7240C499BFFF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F90FE32186F7C37BB6BF4374 /* CompositionService.framework in Frameworks */,
+				9FB19EB3F2CA9F567DAD2546 /* FileStorage.framework in Frameworks */,
+				54F7DDE7C22CB420E7F7B626 /* Models.framework in Frameworks */,
+				B257624D8982630E8B079647 /* PhotosService.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -819,6 +895,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA2391EB722697F9AFF0AAFC /* DesignSystem.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -896,6 +973,7 @@
 				824B7A5A74F90EECAF3AB4A9 /* Models.framework */,
 				3EC304501189983E7B1142E7 /* OneSecMovie.app */,
 				92D881F5F93C60DB8AFAEEE1 /* PhotosService.framework */,
+				FE5714928AD8045467B5D7CF /* PhotosServiceTests.xctest */,
 				F52FB1AF3C9DDB84A3098B94 /* TimelineFeature.framework */,
 				86A6EDB843237359D2DCD1BE /* TimelineFeatureTests.xctest */,
 			);
@@ -922,7 +1000,9 @@
 		78F9B6EFCB08DF9E892DE257 /* PhotosService */ = {
 			isa = PBXGroup;
 			children = (
+				A5E45AAE87E415D7DA1A13E9 /* Resources */,
 				B5FF46487548F2059F1B0294 /* Sources */,
+				4231971B50C9325A2336B9A0 /* Tests */,
 			);
 			path = PhotosService;
 			sourceTree = "<group>";
@@ -987,6 +1067,7 @@
 				B5C3558DFF49B851298D584F /* Models-Info.plist */,
 				F35DA14C8D1B7A3F106611DE /* OneSecMovie-Info.plist */,
 				E2F522F79C80B8145409F880 /* PhotosService-Info.plist */,
+				10544360A7A44BD6FDC0A9BC /* PhotosServiceTests-Info.plist */,
 				38863D49378D4FE1A7842F24 /* TimelineFeature-Info.plist */,
 				4CE1BA50EC60A756A99F4155 /* TimelineFeatureTests-Info.plist */,
 			);
@@ -1080,6 +1161,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				B5FF46487548F2059F1B0294 /* Sources */,
+				A5E45AAE87E415D7DA1A13E9 /* Resources */,
 			);
 			name = PhotosService;
 			packageProductDependencies = (
@@ -1104,6 +1186,7 @@
 				FF582435587E6A3ABB39A5A1 /* PBXTargetDependency */,
 				777B8A6217B62AF682F9F9A6 /* PBXTargetDependency */,
 				ED6BEE3674CCE99A289D85E3 /* PBXTargetDependency */,
+				D5AB5B3677FC2AB73B04EBA7 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				E6E2071E9363445CC3A755B7 /* Sources */,
@@ -1268,6 +1351,33 @@
 			productReference = 1C9BA791DAE952197A445963 /* FileStorage.framework */;
 			productType = "com.apple.product-type.framework";
 		};
+		B61C8038C8072DE33C4178CB /* PhotosServiceTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F5ED1BA5785FFF8F9143B47E /* Build configuration list for PBXNativeTarget "PhotosServiceTests" */;
+			buildPhases = (
+				924741D0D72A3F51992AF035 /* Sources */,
+				A8284A21D2327F3877153568 /* Resources */,
+				DB47FF9894DB7240C499BFFF /* Frameworks */,
+				A560731D103DF48A1F26FE0E /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				94F409F378D8FB2C07D8A48B /* PBXTargetDependency */,
+				4ADFA39B1FC2261C2CE41EC7 /* PBXTargetDependency */,
+				9CBE36766C97357AD06085FA /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				4231971B50C9325A2336B9A0 /* Tests */,
+				A5E45AAE87E415D7DA1A13E9 /* Resources */,
+			);
+			name = PhotosServiceTests;
+			packageProductDependencies = (
+			);
+			productName = PhotosServiceTests;
+			productReference = FE5714928AD8045467B5D7CF /* PhotosServiceTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		C83623DBA74DFE03F4163AB7 /* ExportFeature */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 0BD04A3DFBC8ECB2FA73918D /* Build configuration list for PBXNativeTarget "ExportFeature" */;
@@ -1372,6 +1482,7 @@
 			fileSystemSynchronizedGroups = (
 				5F4B60E9FE54CC28B55AE7AC /* Sources */,
 				EE7D7CF8D7F38DF53E3AC1EE /* Resources */,
+				A5E45AAE87E415D7DA1A13E9 /* Resources */,
 			);
 			name = OneSecMovie;
 			packageProductDependencies = (
@@ -1415,6 +1526,7 @@
 				8355DD3A6CB5718A43CF1585 /* Models */,
 				FC862C46CD92758A6708929D /* OneSecMovie */,
 				34F9DC660203F3C7E8635D0B /* PhotosService */,
+				B61C8038C8072DE33C4178CB /* PhotosServiceTests */,
 				B00630A201BED90159F3F88F /* TimelineFeature */,
 				B105E306DD23502260AF89B0 /* TimelineFeatureTests */,
 			);
@@ -1499,6 +1611,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A8284A21D2327F3877153568 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		ABEA89A1DA1286C12A74864D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1573,6 +1692,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		91FF0F411F71736B4B47EA08 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		924741D0D72A3F51992AF035 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -1696,6 +1822,12 @@
 			target = EB5B7FF744703184FB3FD043 /* DesignSystem */;
 			targetProxy = 6CEFA1096DC18407E03A82FB /* PBXContainerItemProxy */;
 		};
+		4ADFA39B1FC2261C2CE41EC7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = Models;
+			target = 8355DD3A6CB5718A43CF1585 /* Models */;
+			targetProxy = 6A9D1ED8A3453CDB990CF771 /* PBXContainerItemProxy */;
+		};
 		5BA660B5C6051DB6393A34A2 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = AppCore;
@@ -1744,11 +1876,23 @@
 			target = 702E5B0F1CCEBE75D92E029B /* CompositionService */;
 			targetProxy = 48C8B6879903760961E27924 /* PBXContainerItemProxy */;
 		};
+		94F409F378D8FB2C07D8A48B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = CompositionService;
+			target = 702E5B0F1CCEBE75D92E029B /* CompositionService */;
+			targetProxy = D5BBA4ECA5F8B4AD06A0D807 /* PBXContainerItemProxy */;
+		};
 		9AE49C0843FD3DC0C42C1343 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = TimelineFeature;
 			target = B00630A201BED90159F3F88F /* TimelineFeature */;
 			targetProxy = 51C885A4BBE511D2BDADE313 /* PBXContainerItemProxy */;
+		};
+		9CBE36766C97357AD06085FA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = PhotosService;
+			target = 34F9DC660203F3C7E8635D0B /* PhotosService */;
+			targetProxy = 612980E4B4245B602D0F8D23 /* PBXContainerItemProxy */;
 		};
 		A27B562866D9E1EF6900894B /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1779,6 +1923,12 @@
 			name = Models;
 			target = 8355DD3A6CB5718A43CF1585 /* Models */;
 			targetProxy = 286EEC11B385D448241DCB74 /* PBXContainerItemProxy */;
+		};
+		D5AB5B3677FC2AB73B04EBA7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = PhotosService;
+			target = 34F9DC660203F3C7E8635D0B /* PhotosService */;
+			targetProxy = 20449B15F9343EDFC408C6FB /* PBXContainerItemProxy */;
 		};
 		E231757B0BAD1433F3438960 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -2130,7 +2280,6 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MACH_O_TYPE = staticlib;
 				PRODUCT_BUNDLE_IDENTIFIER = ios.inho.OneSecMovie.DesignSystem;
 				PRODUCT_NAME = DesignSystem;
 				SDKROOT = iphoneos;
@@ -2502,6 +2651,30 @@
 			};
 			name = Release;
 		};
+		B14C99B3C04B8D48174A6D55 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = "Derived/InfoPlists/PhotosServiceTests-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ios.inho.OneSecMovie.PhotosServiceTests;
+				PRODUCT_NAME = PhotosServiceTests;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		B40F2EDCB063253EE2A303D8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2625,6 +2798,34 @@
 			};
 			name = Debug;
 		};
+		C6F11237F2B3B39AA33BB4BB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = "Derived/InfoPlists/PhotosServiceTests-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ios.inho.OneSecMovie.PhotosServiceTests;
+				PRODUCT_NAME = PhotosServiceTests;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = (
+					"$(inherited)",
+					DEBUG,
+				);
+				SWIFT_COMPILATION_MODE = singlefile;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 		CE0F9BA659926E507655F23C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2706,7 +2907,6 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MACH_O_TYPE = staticlib;
 				PRODUCT_BUNDLE_IDENTIFIER = ios.inho.OneSecMovie.DesignSystem;
 				PRODUCT_NAME = DesignSystem;
 				SDKROOT = iphoneos;
@@ -3015,6 +3215,15 @@
 			buildConfigurations = (
 				640F5A09B47A2A9C0F20D78C /* Debug */,
 				FE732A95E39A027E09779219 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F5ED1BA5785FFF8F9143B47E /* Build configuration list for PBXNativeTarget "PhotosServiceTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C6F11237F2B3B39AA33BB4BB /* Debug */,
+				B14C99B3C04B8D48174A6D55 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
