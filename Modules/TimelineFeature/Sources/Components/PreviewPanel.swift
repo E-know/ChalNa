@@ -3,7 +3,7 @@ import AppCore
 import Models
 import DesignSystem
 
-/// 고정 크기 영상 프리뷰 패널. Idle(큰 플레이) · Playing(큰 일시정지 + 스크럽바) · Reordering(디밍 + 배너).
+/// 고정 크기 영상 프리뷰 패널. Idle(큰 플레이) · Playing(큰 일시정지 + 외부 스크럽바) · Reordering(디밍 + 배너).
 /// 콘텐츠 비율과 무관하게 박스 크기는 항상 같고, 내부 사진/영상은 letterbox 로 fit.
 struct PreviewPanel: View {
     /// Figma 노드 `39:81` 기준 고정 높이.
@@ -21,6 +21,17 @@ struct PreviewPanel: View {
     }
 
     var body: some View {
+        VStack(spacing: model.isPlaying ? MomentsSpacing.xs : 0) {
+            previewCard
+
+            if model.isPlaying {
+                externalScrubBar
+                    .padding(.horizontal, MomentsSpacing.sm)
+            }
+        }
+    }
+
+    private var previewCard: some View {
         ZStack {
             // letterbox 베이스 — 가로/세로 비율이 다른 콘텐츠에서 띠 영역의 색.
             MomentsColor.ink
@@ -81,7 +92,9 @@ struct PreviewPanel: View {
         ZStack {
             topRightClipIndex
             playPauseButton
-            bottomControls
+            if !model.isPlaying {
+                idleTimecodePill
+            }
         }
     }
 
@@ -159,22 +172,20 @@ struct PreviewPanel: View {
         }
     }
 
-    // MARK: - Bottom controls
+    // MARK: - External scrub bar
 
     @ViewBuilder
-    private var bottomControls: some View {
-        if model.isPlaying {
-            ScrubBar(
-                currentLabel: model.playheadLabel,
-                totalLabel: model.totalClockLabel,
-                progress: min(1.0, max(0.0, model.playheadSeconds / max(model.totalDuration, 0.001))),
-                style: .liquidGlass
-            )
-            .padding(.horizontal, MomentsSpacing.sm)
-            .padding(.bottom, 10)
-        } else {
-            idleTimecodePill
-        }
+    private var externalScrubBar: some View {
+        ScrubBar(
+            currentLabel: model.playheadLabel,
+            totalLabel: model.totalClockLabel,
+            progress: scrubProgress,
+            style: .liquidGlass
+        )
+    }
+
+    private var scrubProgress: Double {
+        min(1.0, max(0.0, model.playheadSeconds / max(model.totalDuration, 0.001)))
     }
 
     @ViewBuilder
@@ -251,10 +262,17 @@ private struct ScrubBar: View {
 
     private var paperBody: some View {
         scrubContent(
-            textColor: .white,
-            secondaryTextColor: .white.opacity(0.7),
-            trackColor: .white.opacity(0.3),
-            knobColor: .white
+            textColor: MomentsColor.ink,
+            secondaryTextColor: MomentsColor.taupe,
+            trackColor: MomentsColor.ink.opacity(0.16),
+            knobColor: MomentsColor.ivory
+        )
+        .padding(.horizontal, MomentsSpacing.sm)
+        .padding(.vertical, MomentsSpacing.xs)
+        .background(
+            RoundedRectangle(cornerRadius: MomentsRadius.button, style: .continuous)
+                .fill(MomentsColor.ivory.opacity(0.92))
+                .momentsShadow(MomentsShadow.sm)
         )
     }
 
