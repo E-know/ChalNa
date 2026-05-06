@@ -380,48 +380,75 @@ final class FilmStripVC: UIViewController,
         guard let drop = coordinator.items.first,
               let clipID = drop.dragItem.localObject as? Clip.ID else { return }
 
-        // destination이 nil인 경우 (drop이 collection view 밖에서 끝남) → 끝 슬롯으로.
-        let destination = coordinator.destinationIndexPath
-            ?? IndexPath(item: max(0, dataSource.snapshot().numberOfItems - 1), section: 0)
-
-        let targetClipIndex = clipsIndex(for: destination)
         guard let from = clips.firstIndex(where: { $0.id == clipID }) else { return }
+        let insertionOffset = clipInsertionOffset(
+            for: coordinator.destinationIndexPath,
+            dropLocation: coordinator.session.location(in: collectionView)
+        )
 
-        // SwiftUI Array.move 의미와 맞추기 — destination이 from보다 뒤면 -1 보정.
-        let adjusted = targetClipIndex > from ? targetClipIndex - 1 : targetClipIndex
-        let clamped = max(0, min(adjusted, clips.count - 1))
-        guard from != clamped else {
-            coordinator.drop(drop.dragItem, toItemAt: destination)
+        guard let target = Self.resolvedDropTargetIndex(
+            insertionOffset: insertionOffset,
+            movingFrom: from,
+            clipCount: clips.count
+        ) else { return }
+        let currentDestination = indexPath(forClipID: clipID)
+            ?? coordinator.destinationIndexPath
+            ?? IndexPath(item: max(0, dataSource.snapshot().numberOfItems - 1), section: 0)
+        guard from != target else {
+            coordinator.drop(drop.dragItem, toItemAt: currentDestination)
             return
         }
 
         // 1) local clips 즉시 갱신
         let clip = clips.remove(at: from)
-        clips.insert(clip, at: clamped)
+        clips.insert(clip, at: target)
 
         // 2) snapshot 동기 적용 — 1프레임 flicker 방지
         applySnapshot(animated: false)
 
         // 3) SwiftUI model 통보 — onChange(of: model.clips) 가 EditSession 동기화
-        model?.move(clipID: clipID, toIndex: clamped)
+        model?.move(clipID: clipID, toIndex: target)
 
         // 4) UIKit drop settle 애니메이션
-        let newDestination = indexPath(forClipID: clipID) ?? destination
+        let fallbackDestination = coordinator.destinationIndexPath ?? currentDestination
+        let newDestination = indexPath(forClipID: clipID) ?? fallbackDestination
         coordinator.drop(drop.dragItem, toItemAt: newDestination)
     }
 
     // MARK: - Helpers
 
-    /// IndexPath(섞인 items 기준) → flat clip index 변환.
-    private func clipsIndex(for ip: IndexPath) -> Int {
+    /// Drop 위치를 원본 clips 배열 기준 insertion offset(0...count)으로 변환.
+    private func clipInsertionOffset(for destination: IndexPath?, dropLocation: CGPoint) -> Int {
+        guard let destination else { return clips.count }
+
         let snapshot = dataSource.snapshot()
         let allItems = snapshot.itemIdentifiers(inSection: 0)
+        guard destination.item < allItems.count else { return clips.count }
+
         var clipCount = 0
         for (idx, item) in allItems.enumerated() {
-            if idx >= ip.item { break }
+            if idx >= destination.item { break }
             if case .clip = item { clipCount += 1 }
         }
-        return clipCount
+
+        guard case .clip = allItems[destination.item] else { return clipCount }
+        let itemIndexPath = IndexPath(item: destination.item, section: destination.section)
+        guard let attributes = collectionView.layoutAttributesForItem(at: itemIndexPath) else {
+            return clipCount
+        }
+        return dropLocation.x > attributes.frame.midX ? clipCount + 1 : clipCount
+    }
+
+    /// 원본 배열 기준 insertion offset을 remove 이후 최종 index로 변환.
+    static func resolvedDropTargetIndex(
+        insertionOffset: Int,
+        movingFrom sourceIndex: Int,
+        clipCount: Int
+    ) -> Int? {
+        guard clipCount > 0, (0..<clipCount).contains(sourceIndex) else { return nil }
+        let boundedOffset = max(0, min(insertionOffset, clipCount))
+        let adjustedIndex = boundedOffset > sourceIndex ? boundedOffset - 1 : boundedOffset
+        return max(0, min(adjustedIndex, clipCount - 1))
     }
 
     /// flat index → mixed-items IndexPath 역변환.

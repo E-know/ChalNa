@@ -39,6 +39,36 @@ struct TimelineReorderTests {
         #expect(model.clips.last?.id == firstID, "첫 클립이 마지막 자리로 이동해야 함")
     }
 
+    /// CollectionView drop에서 마지막 셀 뒤 슬롯은 최종 마지막 index로 해석해야 한다.
+    @Test func testDropTargetIndex_FirstToTrailingSlot() {
+        let count = SampleData.jejuTimeline.count
+        let target = FilmStripVC.resolvedDropTargetIndex(
+            insertionOffset: count,
+            movingFrom: 0,
+            clipCount: count
+        )
+
+        #expect(target == count - 1, "첫 클립을 마지막 뒤 슬롯에 drop하면 최종 마지막 index가 되어야 함")
+    }
+
+    /// 마지막 셀 앞/뒤는 서로 다른 drop 위치다.
+    @Test func testDropTargetIndex_DistinguishesBeforeAndAfterLastClip() {
+        let count = SampleData.jejuTimeline.count
+        let beforeLast = FilmStripVC.resolvedDropTargetIndex(
+            insertionOffset: count - 1,
+            movingFrom: 0,
+            clipCount: count
+        )
+        let afterLast = FilmStripVC.resolvedDropTargetIndex(
+            insertionOffset: count,
+            movingFrom: 0,
+            clipCount: count
+        )
+
+        #expect(beforeLast == count - 2, "마지막 셀 앞 drop은 마지막 바로 앞 index가 되어야 함")
+        #expect(afterLast == count - 1, "마지막 셀 뒤 drop은 마지막 index가 되어야 함")
+    }
+
     /// 동일 위치 이동 → no-op.
     @Test func testMove_SameIndex_IsNoOp() {
         let model = TimelineModel(clips: SampleData.jejuTimeline)
