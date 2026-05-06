@@ -225,7 +225,6 @@ final class FilmStripVC: UIViewController,
             previousIsPlaying: previousIsPlaying,
             previousRotationByClipID: previousRotationByClipID
         )
-        reconfigureSnapshotItems(itemsToRefresh)
         refreshVisibleCells(matching: Set(itemsToRefresh))
     }
 
@@ -309,18 +308,6 @@ final class FilmStripVC: UIViewController,
         }
     }
 
-    private func reconfigureSnapshotItems(_ items: [FilmStripItem]) {
-        guard !items.isEmpty else { return }
-
-        var snapshot = dataSource.snapshot()
-        let visibleItems = Set(snapshot.itemIdentifiers)
-        let retainedItems = items.filter { visibleItems.contains($0) }
-        guard !retainedItems.isEmpty else { return }
-
-        snapshot.reconfigureItems(retainedItems)
-        dataSource.apply(snapshot, animatingDifferences: false)
-    }
-
     private func refreshVisibleCells(matching items: Set<FilmStripItem>?) {
         for indexPath in collectionView.indexPathsForVisibleItems {
             guard let item = dataSource.itemIdentifier(for: indexPath),
@@ -347,7 +334,6 @@ final class FilmStripVC: UIViewController,
         let itemsToRefresh = [previousClipID, currentClipID]
             .compactMap { $0 }
             .map(FilmStripItem.clip)
-        reconfigureSnapshotItems(itemsToRefresh)
         refreshVisibleCells(matching: Set(itemsToRefresh))
         onTapClip?(flat)
     }
