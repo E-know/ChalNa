@@ -6,7 +6,22 @@
       "mcp__plugin_figma_figma__use_figma",
       "Bash(curl -sS -o /tmp/film.png \"https://www.figma.com/api/mcp/asset/83f419ba-b3cc-4a2c-ac4c-cb60b641216b\")",
       "Read(//Users/inhochoi/.claude/plugins/**)",
-      "Read(//Users/inhochoi/.claude/**)"
+      "Read(//Users/inhochoi/.claude/**)",
+      "Bash(bun --version)",
+      "Bash(pnpm --version)",
+      "Bash(yarn --version)",
+      "Bash(npm --version)",
+      "Bash(mkdir -p /Users/inhochoi/Documents/2026Code/OneSecMovie/marketing/raw-screens)",
+      "Bash(mv /tmp/home_oneSec.png /Users/inhochoi/Documents/2026Code/OneSecMovie/marketing/raw-screens/home.png)",
+      "Bash(sips -g pixelWidth -g pixelHeight /Users/inhochoi/Documents/2026Code/OneSecMovie/marketing/raw-screens/home.png)",
+      "Bash(mkdir -p marketing)",
+      "Bash(bunx create-next-app@latest screenshots --typescript --tailwind --app --src-dir --no-eslint --import-alias \"@/*\" --yes)",
+      "Bash(cp /Users/inhochoi/.claude/skills/app-store-screenshots/mockup.png marketing/screenshots/public/mockup.png)",
+      "Bash(sips -s format png OneSecMovie/Resources/Assets.xcassets/AppIcon.appiconset/icon.jpg --out marketing/screenshots/public/app-icon.png)",
+      "Bash(curl -fsSL -o marketing/screenshots/public/fonts/PretendardVariable.woff2 https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/woff2/PretendardVariable.woff2)",
+      "Bash(curl -fsSL -o marketing/screenshots/public/fonts/PretendardVariable.woff2 https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/public/variable/PretendardVariable.woff2)",
+      "Bash(curl -sL \"https://api.github.com/repos/orioncactus/pretendard/contents/packages/pretendard/dist/web/variable\")",
+      "Bash(curl -sL \"https://api.github.com/repos/orioncactus/pretendard/contents/packages/pretendard/dist/web/variable/woff2\")"
     ]
   }
 }
