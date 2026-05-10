@@ -204,16 +204,18 @@ final class FilmStripVC: UIViewController,
         let previousCurrentClipID = currentClipID
         let previousIsPlaying = isPlaying
         let previousRotationByClipID = rotationByClipID
+        let nextClips = model.clips
+        let nextCurrentClipID = nextClips.indices.contains(model.currentIndex) ? nextClips[model.currentIndex].id : nil
+        let nextItems = Self.items(for: nextClips)
 
         self.model = model
         self.session = session
         self.clips = nextClips
         self.currentClipID = nextCurrentClipID
         self.isPlaying = model.isPlaying
-        self.rotationByClipID = Self.rotationByClipID(for: clips, session: session)
+        self.rotationByClipID = Self.rotationByClipID(for: nextClips, session: session)
         self.onTapClip = onTapClip
 
-        let nextItems = Self.items(for: clips)
         if previousItems != nextItems {
             applySnapshot(animated: true)
             return
@@ -228,10 +230,7 @@ final class FilmStripVC: UIViewController,
         refreshVisibleCells(matching: Set(itemsToRefresh))
     }
 
-    private func applySnapshot(animated: Bool, reconfigureRetainedItems: Bool = false) {
-        let previousItems = Set(dataSource.snapshot().itemIdentifiers)
-        let items = Self.items(for: clips)
-
+    private func applySnapshot(animated: Bool) {
         var snapshot = NSDiffableDataSourceSnapshot<Int, FilmStripItem>()
         snapshot.appendSections([0])
         snapshot.appendItems(Self.items(for: clips), toSection: 0)

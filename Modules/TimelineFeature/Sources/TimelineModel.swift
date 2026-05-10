@@ -152,29 +152,36 @@ public final class TimelineModel {
         while isPlaying {
             try? await Task.sleep(nanoseconds: UInt64(tick * 1_000_000_000))
             if !isPlaying { return }
-            playheadSeconds = min(playheadSeconds + tick, totalDuration)
+            advancePlayhead(by: tick)
+        }
+    }
 
-            var cumulative: TimeInterval = 0
-            var newIndex = currentIndex
-            for (idx, clip) in clips.enumerated() {
-                let clipEnd = cumulative + clip.duration
-                if playheadSeconds < clipEnd {
-                    newIndex = idx
-                    break
-                }
-                cumulative = clipEnd
+    func advancePlayhead(by deltaSeconds: TimeInterval) {
+        guard isPlaying else { return }
+        playheadSeconds = min(playheadSeconds + deltaSeconds, totalDuration)
+        syncCurrentIndexForPlayhead()
+
+        if playheadSeconds >= totalDuration {
+            state = .idle
+            playheadSeconds = 0
+            currentIndex = 0
+        }
+    }
+
+    private func syncCurrentIndexForPlayhead() {
+        var cumulative: TimeInterval = 0
+        var newIndex = currentIndex
+        for (idx, clip) in clips.enumerated() {
+            let clipEnd = cumulative + clip.duration
+            if playheadSeconds < clipEnd {
                 newIndex = idx
+                break
             }
-            if newIndex != currentIndex {
-                currentIndex = newIndex
-            }
-
-            if playheadSeconds >= totalDuration {
-                state = .idle
-                playheadSeconds = 0
-                currentIndex = 0
-                return
-            }
+            cumulative = clipEnd
+            newIndex = idx
+        }
+        if newIndex != currentIndex {
+            currentIndex = newIndex
         }
     }
 }

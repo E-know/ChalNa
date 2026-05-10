@@ -2,7 +2,7 @@ import Foundation
 import Testing
 import Models
 import CompositionService
-import TimelineFeature
+@testable import TimelineFeature
 
 struct TimelinePlaybackTests {
 
@@ -24,7 +24,7 @@ struct TimelinePlaybackTests {
     }
 
     /// Test A: Verify that currentIndex auto-advances during simulated playback
-    @Test func testAdvancePlayheadSimulated_UpdatesCurrentIndex() async throws {
+    @Test func testAdvancePlayheadSimulated_UpdatesCurrentIndex() {
         let model = TimelineModel(
             title: "Test Film",
             clips: SampleData.jejuTimeline,
@@ -39,23 +39,17 @@ struct TimelinePlaybackTests {
         model.togglePlay()
         #expect(model.isPlaying, "Model should be in playing state")
 
-        let advanceTask = Task {
-            await model.advancePlayheadSimulated()
-        }
-
-        try? await Task.sleep(nanoseconds: UInt64(3.5 * 1_000_000_000))
+        model.advancePlayhead(by: 3.25)
 
         #expect(model.currentIndex == 1, "Should advance to clip 1 after ~3 seconds")
         #expect(model.playheadSeconds > 3.0, "Playhead should be past 3 seconds")
 
-        try? await Task.sleep(nanoseconds: UInt64(3.5 * 1_000_000_000))
+        model.advancePlayhead(by: 3.25)
 
         #expect(model.currentIndex == 2, "Should advance to clip 2 after ~6 seconds")
         #expect(model.playheadSeconds > 6.0, "Playhead should be past 6 seconds")
 
         model.togglePlay()
-        try? await Task.sleep(nanoseconds: 500_000_000)
-        advanceTask.cancel()
     }
 
     /// Test B: Verify export service responds appropriately when no video clips are available
