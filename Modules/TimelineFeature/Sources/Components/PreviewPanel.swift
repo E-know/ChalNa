@@ -38,11 +38,6 @@ struct PreviewPanel: View {
         .frame(maxWidth: .infinity)
         .frame(height: Self.previewHeight)
         .clipShape(RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
-                .stroke(glowStrokeColor, lineWidth: glowStrokeWidth)
-        )
-        .shadow(color: glowColor, radius: 18, x: 0, y: 10)
         .momentsShadow(MomentsShadow.md)
     }
 
@@ -61,15 +56,6 @@ struct PreviewPanel: View {
                 }
             } else {
                 MomentsColor.ivory
-            }
-            // Playing 상태에서 하단 코랄 글로우 워시
-            if model.isPlaying {
-                RadialGradient(
-                    colors: [MomentsColor.coral.opacity(0.25), .clear],
-                    center: UnitPoint(x: 0.5, y: 1.0),
-                    startRadius: 0,
-                    endRadius: 260
-                )
             }
         }
     }
@@ -185,18 +171,6 @@ struct PreviewPanel: View {
     private var scrubProgress: Double {
         guard model.isPlaying else { return 0 }
         return min(1.0, max(0.0, model.playheadSeconds / max(model.totalDuration, 0.001)))
-    }
-
-    // MARK: - Glow (coral ring when playing)
-
-    private var glowStrokeColor: Color {
-        model.isPlaying ? MomentsColor.coral.opacity(0.35) : .clear
-    }
-    private var glowStrokeWidth: CGFloat {
-        model.isPlaying ? 2 : 0
-    }
-    private var glowColor: Color {
-        model.isPlaying ? MomentsColor.coral.opacity(0.35) : .clear
     }
 }
 
