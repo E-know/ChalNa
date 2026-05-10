@@ -36,7 +36,7 @@ public struct HomeView: View {
                         .padding(.horizontal, MomentsSpacing.lg)
                         .padding(.top, MomentsSpacing.xl)
 
-                    ctaStack
+                    ctaStack // cta == Call To Action
                         .padding(.horizontal, MomentsSpacing.lg)
                         .padding(.top, MomentsSpacing.xl)
                         .padding(.bottom, MomentsSpacing.xxxl)
@@ -137,8 +137,8 @@ public struct HomeView: View {
     /// 없으면 안전한 fallback 으로 ThumbnailPreset 의 그라데이션을 사용한다.
     @ViewBuilder
     private func filmCoverContent(for film: Film, index: Int) -> some View {
-        if let data = film.thumbnailData, let ui = UIImage(data: data) {
-            Image(uiImage: ui)
+        if let data = film.thumbnailData, let image = UIImage(data: data) {
+            Image(uiImage: image)
                 .resizable()
                 .scaledToFill()
         } else {
