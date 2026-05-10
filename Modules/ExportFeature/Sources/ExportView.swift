@@ -32,7 +32,7 @@ public struct ExportView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            header.momentsHeaderBar()
+            header.momentsHeaderBar(scrollProgress: 1)
 
             GeometryReader { proxy in
                 VStack(spacing: 0) {
@@ -203,8 +203,7 @@ public struct ExportView: View {
             }
             .foregroundColor(MomentsColor.taupe)
         }
-        .buttonStyle(.plain)
-        .momentsHitTarget()
+        .buttonStyle(.momentsHeaderAction)
         .accessibilityLabel("편집으로")
         .accessibilityHint(phase == .exporting ? "내보내기 중에는 편집 화면으로 돌아갈 수 없습니다." : "타임라인 편집 화면으로 돌아갑니다.")
         .disabled(phase == .exporting)

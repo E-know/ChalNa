@@ -56,48 +56,51 @@ public struct MediaPickerView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
+            // Header 전체가 아니라 개별 버튼에만 Glass Effect를 부여해야 한다.
             header.momentsHeaderBar(scrollProgress: scrollProgress)
                 .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
                 .zIndex(1)
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: MomentsSpacing.lg) {
-                    intro
-                        .padding(.horizontal, MomentsSpacing.lg)
-                        .padding(.top, MomentsSpacing.lg)
-                        .trackScrollOffset(in: "media-picker-scroll")
-                        .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
+            ZStack(alignment: .bottom) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: MomentsSpacing.lg) {
+                        intro
+                            .padding(.horizontal, MomentsSpacing.lg)
+                            .padding(.top, MomentsSpacing.lg)
+                            .trackScrollOffset(in: "media-picker-scroll")
+                            .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
 
-                    titleField
-                        .padding(.horizontal, MomentsSpacing.lg)
+                        titleField
+                            .padding(.horizontal, MomentsSpacing.lg)
 
-                    pickerLauncher
-                        .padding(.horizontal, MomentsSpacing.lg)
-                        .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
+                        pickerLauncher
+                            .padding(.horizontal, MomentsSpacing.lg)
+                            .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
 
-                    selectionGrid
-                        .padding(.horizontal, MomentsSpacing.lg)
-                        .padding(.top, MomentsSpacing.sm)
-                        .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
+                        selectionGrid
+                            .padding(.horizontal, MomentsSpacing.lg)
+                            .padding(.top, MomentsSpacing.sm)
+                            .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
+                    }
+                    .padding(.bottom, MomentsSpacing.huge)
                 }
-                .padding(.bottom, MomentsSpacing.xxxl)
-            }
-            .coordinateSpace(name: "media-picker-scroll")
-            .scrollDismissesKeyboard(.interactively)
-            .background(
-                Color.clear
-                    .contentShape(Rectangle())
-                    .onTapGesture { dismissTitleKeyboard() }
-            )
-            .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
-                let p = max(0, min(1, offset / 8))
-                if abs(p - scrollProgress) > 0.01 {
-                    withAnimation(.easeInOut(duration: 0.15)) { scrollProgress = p }
+                .coordinateSpace(name: "media-picker-scroll")
+                .scrollDismissesKeyboard(.interactively)
+                .background(
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture { dismissTitleKeyboard() }
+                )
+                .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
+                    let p = max(0, min(1, offset / 8))
+                    if abs(p - scrollProgress) > 0.01 {
+                        withAnimation(.easeInOut(duration: 0.15)) { scrollProgress = p }
+                    }
                 }
-            }
 
-            bottomActionArea
-                .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
+                bottomActionArea
+                    .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
+            }
         }
         .momentsScreen()
         .onChange(of: selectedItems) { _, newItems in
@@ -126,8 +129,7 @@ public struct MediaPickerView: View {
                 }
                 .foregroundColor(MomentsColor.taupe)
             }
-            .buttonStyle(.plain)
-            .momentsHitTarget()
+            .buttonStyle(.momentsHeaderAction)
             .accessibilityLabel("뒤로")
 
             Spacer()
@@ -154,8 +156,7 @@ public struct MediaPickerView: View {
                         .foregroundColor(canProceed ? MomentsColor.ink : MomentsColor.taupe.opacity(0.5))
                 }
             }
-            .buttonStyle(.plain)
-            .momentsHitTarget()
+            .buttonStyle(.momentsHeaderPrimaryAction)
             .accessibilityLabel(isResolving || isPreparingPhotoLibraryMedia ? "미디어 준비 중" : "다음")
             .accessibilityHint(confirmAccessibilityHint)
             .disabled(!canProceed || isResolving)
@@ -1103,10 +1104,6 @@ private struct MediaLoadState {
 
     var didFailTimelinePreparation: Bool {
         !isLoading && (thumbnail == nil || videoURL == nil)
-    }
-
-    var isReadyForTimeline: Bool {
-        (thumbnail != nil || thumbnailFailed) && videoURL != nil
     }
 }
 

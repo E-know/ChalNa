@@ -20,7 +20,7 @@ public struct TimelineView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            header.momentsHeaderBar()
+            header.momentsHeaderBar(scrollProgress: 1)
 
             preview
                 .padding(.horizontal, MomentsSpacing.md)
@@ -154,8 +154,7 @@ public struct TimelineView: View {
                 }
                 .foregroundColor(MomentsColor.taupe)
             }
-            .buttonStyle(.plain)
-            .momentsHitTarget()
+            .buttonStyle(.momentsHeaderAction)
             .accessibilityLabel("뒤로")
 
             Spacer()
@@ -178,8 +177,7 @@ public struct TimelineView: View {
                     .font(MomentsTypography.krSemibold(14))
                     .foregroundColor(canSave ? MomentsColor.ink : MomentsColor.taupe.opacity(0.5))
             }
-            .buttonStyle(.plain)
-            .momentsHitTarget()
+            .buttonStyle(.momentsHeaderPrimaryAction)
             .accessibilityLabel("저장")
             .accessibilityHint(canSave ? "완성된 영상을 내보냅니다." : "클립이 있으면 저장할 수 있습니다.")
             .disabled(!canSave)
