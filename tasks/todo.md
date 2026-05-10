@@ -158,3 +158,27 @@
 - Removed local `.DS_Store` files from root, `.agents`, `.claude`, `Modules`, and `OneSecMovie` paths.
 - Removed ignored Xcode/Tuist local state: `OneSecMovie.xcodeproj/xcuserdata`, `OneSecMovie.xcworkspace/xcuserdata`, `OneSecMovie.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings`, `Tuist/.build`, `Tuist/.swiftpm/xcode/package.xcworkspace/xcuserdata`, and `Derived/XcodeBuild`.
 - Verification: targeted `find` checks now return no matching cleanup candidates, and `git status --short --ignored` no longer lists ignored cleanup files.
+
+---
+
+# Custom NavigationBar Liquid Glass
+
+## Plan
+
+- [x] Move the shared custom header surface to native Liquid Glass on iOS 26 with material fallback for iOS 18-25.
+- [x] Add DesignSystem header action button styles for standard and primary navigation actions.
+- [x] Apply the styles to MediaPicker, Timeline, and Export custom NavigationBar buttons while leaving Home static header content non-interactive.
+- [x] Regenerate Tuist project files and verify with build/tests where possible.
+
+## Notes
+
+- Preserve `momentsHeaderBar(scrollProgress:)` signature and existing `NavigationStack` / hidden system toolbar flow.
+- Do not revert existing dirty working-tree changes in `MediaPickerView.swift` or `FilmStripCollectionView.swift`.
+
+## Review
+
+- Shared header surface now uses iOS 26 Liquid Glass through `GlassEffectContainer` and falls back to `.ultraThinMaterial` with Moments cream tint on iOS 18-25.
+- Added standard and primary Moments header action button styles, then applied them to MediaPicker, Timeline, and Export headers.
+- Timeline and Export call `momentsHeaderBar(scrollProgress: 1)` so the glass header is visible immediately.
+- Fixed the flaky timeline playback test by extracting deterministic playhead advancement for direct Swift Testing coverage.
+- Verification passed: `tuist generate`, `OneSecMovie` build, `OneSecMovie-Workspace` full test run, and iPhone 17 Pro simulator screenshots for Home and MediaPicker headers.
