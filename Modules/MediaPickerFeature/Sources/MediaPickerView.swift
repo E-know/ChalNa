@@ -45,6 +45,7 @@ public struct MediaPickerView: View {
     @State private var isResolving = false
     @State private var isPhotoPickerPresented = false
     @State private var isPhotoPermissionAlertPresented = false
+    @State private var isLimitedLibraryExpansionAlertPresented = false
     @State private var scrollProgress: Double = 0
     @State private var titleInput: String = ""
     @FocusState private var isTitleFocused: Bool
@@ -114,6 +115,17 @@ public struct MediaPickerView: View {
         } message: {
             Text("Live Photo를 영상으로 사용하려면 사진 보관함 접근 권한이 필요해요.")
         }
+        .alert("선택한 Live Photo 권한이 필요해요", isPresented: $isLimitedLibraryExpansionAlertPresented) {
+            Button("권한 목록 추가") {
+                openLimitedPhotoLibraryPicker()
+            }
+            Button("설정 열기") {
+                openPhotoSettings()
+            }
+            Button("취소", role: .cancel) {}
+        } message: {
+            Text("방금 고른 Live Photo가 현재 허용된 사진 목록에 없어 동영상을 가져올 수 없어요. 선택한 Live Photo를 권한 목록에 추가해 주세요.")
+        }
         .onChange(of: selectedItems) { _, newItems in
             syncMedia(for: newItems)
         }
@@ -152,21 +164,20 @@ public struct MediaPickerView: View {
             Spacer()
 
             Button {
-                dismissTitleKeyboard()
-                confirmSelection()
+                handlePrimaryAction()
             } label: {
                 if isResolving || isPreparingPhotoLibraryMedia {
                     ProgressView().controlSize(.small).tint(MomentsColor.coral)
                 } else {
                     Text("다음")
                         .font(MomentsTypography.krSemibold(14))
-                        .foregroundColor(canProceed ? MomentsColor.ink : MomentsColor.taupe.opacity(0.5))
+                        .foregroundColor(canUsePrimaryAction ? MomentsColor.ink : MomentsColor.taupe.opacity(0.5))
                 }
             }
             .buttonStyle(.momentsHeaderPrimaryAction)
             .accessibilityLabel(isResolving || isPreparingPhotoLibraryMedia ? "미디어 준비 중" : "다음")
             .accessibilityHint(confirmAccessibilityHint)
-            .disabled(!canProceed || isResolving)
+            .disabled(!canUsePrimaryAction || isResolving)
         }
     }
 
@@ -550,8 +561,7 @@ public struct MediaPickerView: View {
                 .frame(maxWidth: .infinity)
 
                 Button {
-                    dismissTitleKeyboard()
-                    confirmSelection()
+                    handlePrimaryAction()
                 } label: {
                     confirmBottomLabel
                         .foregroundStyle(MomentsColor.ink)
@@ -560,8 +570,8 @@ public struct MediaPickerView: View {
                 .buttonStyle(.glassProminent)
                 .tint(MomentsColor.coral)
                 .frame(maxWidth: .infinity)
-                .disabled(!canProceed || isResolving)
-                .opacity(canProceed ? 1 : 0.5)
+                .disabled(!canUsePrimaryAction || isResolving)
+                .opacity(canUsePrimaryAction ? 1 : 0.5)
                 .accessibilityLabel(confirmButtonTitle)
                 .accessibilityHint(confirmAccessibilityHint)
             }
@@ -581,16 +591,15 @@ public struct MediaPickerView: View {
             .frame(maxWidth: .infinity)
 
             Button {
-                dismissTitleKeyboard()
-                confirmSelection()
+                handlePrimaryAction()
             } label: {
                 confirmBottomLabel
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.momentsCoral)
             .frame(maxWidth: .infinity)
-            .disabled(!canProceed || isResolving)
-            .opacity(canProceed ? 1 : 0.5)
+            .disabled(!canUsePrimaryAction || isResolving)
+            .opacity(canUsePrimaryAction ? 1 : 0.5)
             .accessibilityLabel(confirmButtonTitle)
             .accessibilityHint(confirmAccessibilityHint)
         }
@@ -620,6 +629,10 @@ public struct MediaPickerView: View {
         }
     }
 
+    private var canUsePrimaryAction: Bool {
+        canProceed || needsLimitedLibraryExpansion || needsLivePhotoAuthorization
+    }
+
     private var isPreparingPhotoLibraryMedia: Bool {
         guard case .photoLibrary = source, !selectedItems.isEmpty else { return false }
         return !canProceed && !hasUnavailablePhotoLibraryMedia
@@ -640,6 +653,13 @@ public struct MediaPickerView: View {
         }
     }
 
+    private var needsLimitedLibraryExpansion: Bool {
+        guard case .photoLibrary = source else { return false }
+        return selectedItems.contains { item in
+            media[item]?.needsLimitedLibraryExpansion == true
+        }
+    }
+
     private var readyPhotoLibraryMediaCount: Int {
         selectedItems.reduce(into: 0) { count, item in
             if media[item]?.isReadyForTimeline == true {
@@ -650,6 +670,9 @@ public struct MediaPickerView: View {
 
     private var photoLibraryStatusMessage: String? {
         guard case .photoLibrary = source, !selectedItems.isEmpty else { return nil }
+        if needsLimitedLibraryExpansion {
+            return "선택한 Live Photo를 권한 목록에 추가해야 해요."
+        }
         if needsLivePhotoAuthorization {
             return "Live Photo를 영상으로 사용하려면 사진 권한이 필요해요."
         }
@@ -671,6 +694,9 @@ public struct MediaPickerView: View {
             return "선택 후 다음"
         }
         if case .photoLibrary = source {
+            if needsLimitedLibraryExpansion {
+                return "권한 추가"
+            }
             if needsLivePhotoAuthorization {
                 return "권한 필요"
             }
@@ -692,6 +718,9 @@ public struct MediaPickerView: View {
         case .photoLibrary:
             if selectedItems.isEmpty {
                 return "미디어를 선택하면 다음 단계로 이동할 수 있습니다."
+            }
+            if needsLimitedLibraryExpansion {
+                return "선택한 Live Photo를 권한 목록에 추가해야 타임라인으로 이동할 수 있습니다."
             }
             if needsLivePhotoAuthorization {
                 return "Live Photo 영상 추출을 위해 사진 권한이 필요합니다."
@@ -789,6 +818,7 @@ public struct MediaPickerView: View {
                 async let durTask: TimeInterval? = Self.loadVideoDuration(from: url)
                 async let sizeTask: CGSize? = Self.loadDisplaySize(from: url)
                 let (thumb, captured, dur, size) = await (thumbnail, capturedAt, durTask, sizeTask)
+                let needsExpansion = Self.needsLimitedLibraryExpansion(for: item, kind: initialKind, videoURL: url)
 
                 await MainActor.run {
                     guard var state = media[item] else { return }
@@ -796,13 +826,18 @@ public struct MediaPickerView: View {
                     state.thumbnailFailed = (thumb == nil)
                     state.videoURL = url
                     state.videoFailed = (url == nil)
+                    state.needsLimitedLibraryExpansion = needsExpansion
                     state.duration = dur
                     state.capturedAt = captured
                     state.displaySize = size
                     state.isLoading = false
                     media[item] = state
-                    if initialKind == .livePhoto, url == nil, !Self.hasPhotoAuthorization {
-                        isPhotoPermissionAlertPresented = true
+                    if initialKind == .livePhoto, url == nil {
+                        if needsExpansion {
+                            isLimitedLibraryExpansionAlertPresented = true
+                        } else if !Self.hasPhotoAuthorization {
+                            isPhotoPermissionAlertPresented = true
+                        }
                     }
                 }
             }
@@ -1010,6 +1045,42 @@ public struct MediaPickerView: View {
         openURL(settingsURL)
     }
 
+    private func openLimitedPhotoLibraryPicker() {
+        guard let presenter = Self.activeViewController else {
+            openPhotoSettings()
+            return
+        }
+        PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: presenter) { _ in
+            Task { @MainActor in
+                retryLimitedLibraryExpansionItems()
+            }
+        }
+    }
+
+    @MainActor
+    private func retryLimitedLibraryExpansionItems() {
+        let retryItems = selectedItems.filter { item in
+            media[item]?.needsLimitedLibraryExpansion == true
+        }
+        guard !retryItems.isEmpty else { return }
+        for item in retryItems {
+            media[item] = nil
+        }
+        syncMedia(for: selectedItems)
+    }
+
+    private static var activeViewController: UIViewController? {
+        let activeScene = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first { $0.activationState == .foregroundActive }
+        let root = activeScene?.windows.first { $0.isKeyWindow }?.rootViewController
+        var presenter = root
+        while let presented = presenter?.presentedViewController {
+            presenter = presented
+        }
+        return presenter
+    }
+
     /// 시스템 권한 프롬프트 없이 현재 사진 읽기 권한만 확인한다.
     private static var hasPhotoAuthorization: Bool {
         let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
@@ -1019,6 +1090,22 @@ public struct MediaPickerView: View {
         default:
             return false
         }
+    }
+
+    private static func needsLimitedLibraryExpansion(
+        for item: PhotosPickerItem,
+        kind: MediaKind,
+        videoURL: URL?
+    ) -> Bool {
+        guard kind == .livePhoto,
+              videoURL == nil,
+              PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited,
+              let localID = item.itemIdentifier
+        else {
+            return false
+        }
+        let fetch = PHAsset.fetchAssets(withLocalIdentifiers: [localID], options: nil)
+        return fetch.firstObject == nil
     }
 
     /// Live Photo의 paired video 추출 직전에만 사진 권한을 요청한다.
@@ -1036,6 +1123,19 @@ public struct MediaPickerView: View {
     }
 
     // MARK: - Confirm
+
+    private func handlePrimaryAction() {
+        dismissTitleKeyboard()
+        if needsLimitedLibraryExpansion {
+            isLimitedLibraryExpansionAlertPresented = true
+            return
+        }
+        if needsLivePhotoAuthorization {
+            isPhotoPermissionAlertPresented = true
+            return
+        }
+        confirmSelection()
+    }
 
     private func confirmSelection() {
         switch source {
@@ -1146,6 +1246,7 @@ private struct MediaLoadState {
     var isLoading: Bool = false
     var thumbnailFailed: Bool = false
     var videoFailed: Bool = false
+    var needsLimitedLibraryExpansion: Bool = false
 
     var isFullyLoaded: Bool {
         !isLoading && (thumbnail != nil || thumbnailFailed) && (videoURL != nil || videoFailed)
