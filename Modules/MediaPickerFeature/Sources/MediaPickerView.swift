@@ -8,7 +8,6 @@ import Photos
 import AVFoundation
 import UniformTypeIdentifiers
 import OSLog
-import UIKit
 
 private let mediaLogger = Logger(subsystem: "ios.inho.OneSecMovie", category: "MediaPicker")
 
@@ -33,7 +32,6 @@ public enum MediaPickerSource: Sendable {
 /// Live Photo는 PhotosPicker의 Transferable에서 paired video가 안 나올 수 있어
 /// `PHAssetResourceManager`로 paired video 리소스를 꺼내는 fallback을 둔다.
 public struct MediaPickerView: View {
-    @Environment(\.openURL) private var openURL
     @Environment(AppRouter.self) private var router
     @Environment(EditSession.self) private var session
 
@@ -44,8 +42,6 @@ public struct MediaPickerView: View {
     @State private var devErrorMessage: String?
     @State private var isResolving = false
     @State private var isPhotoPickerPresented = false
-    @State private var isRequestingPhotoAuthorization = false
-    @State private var isPhotoPermissionAlertPresented = false
     @State private var scrollProgress: Double = 0
     @State private var titleInput: String = ""
     @FocusState private var isTitleFocused: Bool
@@ -108,25 +104,7 @@ public struct MediaPickerView: View {
             }
         }
         .momentsScreen()
-        .alert("사진 접근 권한이 필요해요", isPresented: $isPhotoPermissionAlertPresented) {
-            Button("확인") {
-                openPhotoSettings()
-            }
-        } message: {
-            Text("사진 보관함 접근을 허용해야 Live Photo와 영상을 선택할 수 있어요.")
-        }
         .onChange(of: selectedItems) { _, newItems in
-            // 항목 선택 시점에 Photos 권한을 lazy 요청 — Live Photo paired video 추출에 필수.
-            if newItems.contains(where: { media[$0] == nil }) {
-                Task {
-                    let granted = await Self.ensurePhotoAuthorization()
-                    if !granted {
-                        await MainActor.run {
-                            isPhotoPermissionAlertPresented = true
-                        }
-                    }
-                }
-            }
             syncMedia(for: newItems)
         }
         .task {
@@ -262,7 +240,7 @@ public struct MediaPickerView: View {
     private var photoLibraryPickerLauncher: some View {
         Button {
             dismissTitleKeyboard()
-            openPhotoPickerIfAuthorized()
+            isPhotoPickerPresented = true
         } label: {
             HStack(spacing: MomentsSpacing.sm) {
                 MomentsIcon(.plus, size: 18)
@@ -277,14 +255,8 @@ public struct MediaPickerView: View {
                         .foregroundColor(MomentsColor.taupe)
                 }
                 Spacer()
-                if isRequestingPhotoAuthorization {
-                    ProgressView()
-                        .controlSize(.small)
-                        .tint(MomentsColor.coral)
-                } else {
-                    MomentsIcon(.chevronRight, size: 14)
-                        .foregroundColor(MomentsColor.taupe)
-                }
+                MomentsIcon(.chevronRight, size: 14)
+                    .foregroundColor(MomentsColor.taupe)
             }
             .padding(MomentsSpacing.md)
             .background(
@@ -306,9 +278,8 @@ public struct MediaPickerView: View {
             matching: .any(of: [.livePhotos, .videos]),
             photoLibrary: photoLibrary
         )
-        .disabled(isRequestingPhotoAuthorization)
         .accessibilityLabel(selectedItems.isEmpty ? "사진 보관함 열기" : "선택 다시 고르기")
-        .accessibilityHint(isRequestingPhotoAuthorization ? "사진 권한을 확인하는 중입니다." : "Live Photo와 영상을 선택합니다.")
+        .accessibilityHint("Live Photo와 영상을 선택합니다.")
     }
 
     private var devFixtureLauncher: some View {
@@ -662,7 +633,7 @@ public struct MediaPickerView: View {
     private var photoLibraryStatusMessage: String? {
         guard case .photoLibrary = source, !selectedItems.isEmpty else { return nil }
         if hasUnavailablePhotoLibraryMedia {
-            return "iCloud 원본을 모두 불러오지 못했어요. 다시 선택해 주세요."
+            return "선택한 항목을 불러오지 못했어요. 다시 선택해 주세요."
         }
         if readyPhotoLibraryMediaCount < selectedItems.count {
             return "사진 로딩 중 · \(readyPhotoLibraryMediaCount)/\(selectedItems.count)"
@@ -827,11 +798,11 @@ public struct MediaPickerView: View {
 
     // MARK: - Capture date (EXIF / PHAsset.creationDate)
 
-    /// Live Photo / 영상의 실제 촬영 일자를 PHAsset.creationDate 에서 가져온다.
+    /// 이미 사진 읽기 권한이 있으면 실제 촬영 일자를 PHAsset.creationDate 에서 가져온다.
     /// PHAsset.creationDate 는 사진 import 시 EXIF DateTimeOriginal 로 채워지므로
     /// "EXIF 촬영 시각" 과 사실상 동일하다.
     private static func loadCapturedAt(for item: PhotosPickerItem) async -> Date? {
-        guard await ensurePhotoAuthorization() else { return nil }
+        guard hasPhotoAuthorization else { return nil }
         guard let localID = item.itemIdentifier else { return nil }
         let fetch = PHAsset.fetchAssets(withLocalIdentifiers: [localID], options: nil)
         return fetch.firstObject?.creationDate
@@ -927,7 +898,7 @@ public struct MediaPickerView: View {
     // MARK: - Video URL
 
     private static func loadVideoURL(for item: PhotosPickerItem, kind: MediaKind) async -> URL? {
-        // Live Photo: VideoPayload(.movie)로는 paired video를 얻을 수 없으니 곧장 PHAsset 경로로.
+        // Live Photo: 기존 사진 권한이 있으면 paired video를 얻고, 없으면 스틸 클립으로 진행한다.
         if kind == .livePhoto {
             return await loadViaPHAsset(item: item)
         }
@@ -943,12 +914,11 @@ public struct MediaPickerView: View {
         return await loadViaPHAsset(item: item)
     }
 
-    /// `PHAsset.fetchAssets` + `PHAssetResourceManager`로 paired video / 원본 영상을 temp 파일로 내림.
-    /// Photo Library 권한이 필요함 — 없으면 `ensurePhotoAuthorization`이 시스템 프롬프트를 띄움.
+    /// 기존 사진 읽기 권한이 있을 때만 paired video / 원본 영상을 temp 파일로 내림.
     private static func loadViaPHAsset(item: PhotosPickerItem) async -> URL? {
         mediaLogger.debug("loadViaPHAsset start, hasItemID=\(item.itemIdentifier != nil, privacy: .public)")
-        guard await ensurePhotoAuthorization() else {
-            mediaLogger.error("Photo library authorization not granted")
+        guard hasPhotoAuthorization else {
+            mediaLogger.info("Photo library authorization unavailable; continue with picker payload")
             return nil
         }
         guard let localID = item.itemIdentifier else {
@@ -999,38 +969,12 @@ public struct MediaPickerView: View {
         }
     }
 
-    private func openPhotoPickerIfAuthorized() {
-        guard !isRequestingPhotoAuthorization else { return }
-        isRequestingPhotoAuthorization = true
-
-        Task {
-            let granted = await Self.ensurePhotoAuthorization()
-            await MainActor.run {
-                isRequestingPhotoAuthorization = false
-                if granted {
-                    isPhotoPickerPresented = true
-                } else {
-                    isPhotoPermissionAlertPresented = true
-                }
-            }
-        }
-    }
-
-    private func openPhotoSettings() {
-        guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else { return }
-        openURL(settingsURL)
-    }
-
-    /// PhotoLibrary 권한을 보장. 이미 있으면 즉시 true. notDetermined이면 시스템 프롬프트.
-    /// denied/restricted면 false — 이후 PHAsset fetch/resource write가 실패한다.
-    private static func ensurePhotoAuthorization() async -> Bool {
+    /// 시스템 권한 프롬프트 없이 현재 사진 읽기 권한만 확인한다.
+    private static var hasPhotoAuthorization: Bool {
         let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
         switch status {
         case .authorized, .limited:
             return true
-        case .notDetermined:
-            let newStatus = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
-            return newStatus == .authorized || newStatus == .limited
         default:
             return false
         }
@@ -1153,11 +1097,11 @@ private struct MediaLoadState {
     }
 
     var isReadyForTimeline: Bool {
-        !isLoading && thumbnail != nil && videoURL != nil
+        !isLoading && thumbnail != nil
     }
 
     var didFailTimelinePreparation: Bool {
-        !isLoading && (thumbnail == nil || videoURL == nil)
+        !isLoading && thumbnail == nil
     }
 }
 
