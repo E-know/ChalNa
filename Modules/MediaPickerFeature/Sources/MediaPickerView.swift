@@ -6,7 +6,6 @@ import PhotosService
 import PhotosUI
 import Photos
 import AVFoundation
-import UniformTypeIdentifiers
 import OSLog
 import UIKit
 
@@ -29,29 +28,27 @@ public enum MediaPickerSource: Sendable {
 }
 
 /// Live Photo + 영상을 여러 장 선택하고 Timeline으로 넘기는 화면.
-/// 선택 시 (a) 썸네일 JPEG Data와 (b) 실제 비디오 파일 URL을 병렬로 로드한다.
-/// Live Photo는 PhotosPicker의 Transferable에서 paired video가 안 나올 수 있어
-/// `PHAssetResourceManager`로 paired video 리소스를 꺼내는 fallback을 둔다.
+/// 먼저 사진 권한 범위를 확정한 뒤, PhotoKit에서 접근 가능한 asset만 자체 그리드에 표시한다.
+/// Live Photo는 `PHAssetResourceManager`로 paired video 리소스를 꺼낸다.
 public struct MediaPickerView: View {
     @Environment(\.openURL) private var openURL
     @Environment(AppRouter.self) private var router
     @Environment(EditSession.self) private var session
 
-    @State private var selectedItems: [PhotosPickerItem] = []
-    @State private var media: [PhotosPickerItem: MediaLoadState] = [:]
+    @State private var photoAssets: [PhotoLibraryAsset] = []
+    @State private var selectedAssetIDs: [String] = []
+    @State private var media: [String: MediaLoadState] = [:]
+    @State private var assetThumbnails: [String: Data] = [:]
+    @State private var photoAuthorizationStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+    @State private var isPhotoLibraryLoading = false
     @State private var devAssets: [DevMediaAsset] = []
     @State private var selectedDevAssetIDs: [DevMediaAsset.ID] = []
     @State private var devErrorMessage: String?
     @State private var isResolving = false
-    @State private var isPhotoPickerPresented = false
     @State private var isPhotoPermissionAlertPresented = false
-    @State private var isLimitedLibraryExpansionAlertPresented = false
     @State private var scrollProgress: Double = 0
     @State private var titleInput: String = ""
     @FocusState private var isTitleFocused: Bool
-    // PhotosPicker가 PHAsset localIdentifier(itemIdentifier)를 채워 주려면
-    // photoLibrary 파라미터로 동일한 라이브러리를 명시해야 한다 (iOS 17+).
-    @State private var photoLibrary = PHPhotoLibrary.shared()
 
     private let source: MediaPickerSource
 
@@ -115,22 +112,12 @@ public struct MediaPickerView: View {
         } message: {
             Text("Live Photo를 영상으로 사용하려면 사진 보관함 접근 권한이 필요해요.")
         }
-        .alert("선택한 Live Photo 권한이 필요해요", isPresented: $isLimitedLibraryExpansionAlertPresented) {
-            Button("권한 목록 추가") {
-                openLimitedPhotoLibraryPicker()
-            }
-            Button("설정 열기") {
-                openPhotoSettings()
-            }
-            Button("취소", role: .cancel) {}
-        } message: {
-            Text("방금 고른 Live Photo가 현재 허용된 사진 목록에 없어 동영상을 가져올 수 없어요. 선택한 Live Photo를 권한 목록에 추가해 주세요.")
-        }
-        .onChange(of: selectedItems) { _, newItems in
-            syncMedia(for: newItems)
+        .onChange(of: selectedAssetIDs) { _, newIDs in
+            syncMedia(for: newIDs)
         }
         .task {
             await loadDevAssetsIfNeeded()
+            await refreshPhotoLibraryIfAuthorized()
         }
     }
 
@@ -260,18 +247,16 @@ public struct MediaPickerView: View {
 
     private var photoLibraryPickerLauncher: some View {
         Button {
-            dismissTitleKeyboard()
-            isPhotoPickerPresented = true
+            handlePhotoLibraryLauncher()
         } label: {
             HStack(spacing: MomentsSpacing.sm) {
                 MomentsIcon(.plus, size: 18)
                     .foregroundColor(MomentsColor.coral)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(selectedItems.isEmpty ? "사진 보관함 열기" : "선택 다시 고르기")
+                    Text(photoLibraryLauncherTitle)
                         .font(MomentsTypography.krSemibold(15))
                         .foregroundColor(MomentsColor.ink)
-                    Text(selectedItems.isEmpty ? "Live Photo · Video 자유롭게"
-                                               : "\(selectedItems.count)장 선택됨")
+                    Text(photoLibraryLauncherSubtitle)
                         .font(MomentsTypography.krBody(12))
                         .foregroundColor(MomentsColor.taupe)
                 }
@@ -287,20 +272,13 @@ public struct MediaPickerView: View {
             .overlay(
                 RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
                     .strokeBorder(MomentsColor.coral.opacity(0.5),
-                                  style: .init(lineWidth: 1.2, dash: selectedItems.isEmpty ? [5, 3] : []))
+                                  style: .init(lineWidth: 1.2, dash: selectedAssetIDs.isEmpty ? [5, 3] : []))
             )
         }
         .buttonStyle(.plain)
-        .photosPicker(
-            isPresented: $isPhotoPickerPresented,
-            selection: $selectedItems,
-            maxSelectionCount: 0,
-            selectionBehavior: .ordered,
-            matching: .any(of: [.livePhotos, .videos]),
-            photoLibrary: photoLibrary
-        )
-        .accessibilityLabel(selectedItems.isEmpty ? "사진 보관함 열기" : "선택 다시 고르기")
-        .accessibilityHint("Live Photo와 영상을 선택합니다.")
+        .disabled(isPhotoLibraryLoading)
+        .accessibilityLabel(photoLibraryLauncherTitle)
+        .accessibilityHint("사진 권한 범위 안의 Live Photo와 영상을 불러옵니다.")
     }
 
     private var devFixtureLauncher: some View {
@@ -354,63 +332,78 @@ public struct MediaPickerView: View {
 
     @ViewBuilder
     private var photoLibrarySelectionGrid: some View {
-        if selectedItems.isEmpty {
-            VStack(alignment: .leading, spacing: MomentsSpacing.sm) {
-                Text("SELECTED · 0")
+        VStack(alignment: .leading, spacing: MomentsSpacing.sm) {
+            HStack(spacing: MomentsSpacing.xs) {
+                Text("권한 사진 · \(photoAssets.count)")
                     .tagLabel()
-                HandNoteRow("사진을 추가해 필름을 시작해보세요 ✦",
+                Spacer()
+                if selectedLiveCount > 0 {
+                    MomentsChip("\(selectedLiveCount) LIVE", variant: .live)
+                }
+                if selectedVideoCount > 0 {
+                    MomentsChip("\(selectedVideoCount) VIDEO", variant: .video, icon: .film)
+                }
+            }
+
+            if let photoLibraryStatusMessage {
+                HStack(spacing: MomentsSpacing.xs) {
+                    if isPreparingPhotoLibraryMedia || isPhotoLibraryLoading {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(MomentsColor.coral)
+                    } else {
+                        MomentsIcon(.download, size: 12)
+                    }
+                    Text(photoLibraryStatusMessage)
+                        .font(MomentsTypography.krBody(12, weight: .medium))
+                }
+                .foregroundColor(photoLibraryStatusColor)
+                .padding(.horizontal, MomentsSpacing.sm)
+                .padding(.vertical, MomentsSpacing.xs)
+                .background(
+                    RoundedRectangle(cornerRadius: MomentsRadius.button, style: .continuous)
+                        .fill(MomentsColor.ivory.opacity(0.75))
+                )
+                .accessibilityElement(children: .combine)
+            }
+
+            if photoAssets.isEmpty {
+                HandNoteRow(photoLibraryEmptyMessage,
                             tone: .muted, size: 17, alignment: .leading)
                     .padding(.vertical, MomentsSpacing.lg)
-            }
-        } else {
-            VStack(alignment: .leading, spacing: MomentsSpacing.sm) {
-                HStack(spacing: MomentsSpacing.xs) {
-                    Text("SELECTED · \(selectedItems.count)")
-                        .tagLabel()
-                    Spacer()
-                    if liveCount > 0 {
-                        MomentsChip("\(liveCount) LIVE", variant: .live)
-                    }
-                    if videoCount > 0 {
-                        MomentsChip("\(videoCount) VIDEO", variant: .video, icon: .film)
-                    }
-                }
-                if let photoLibraryStatusMessage {
-                    HStack(spacing: MomentsSpacing.xs) {
-                        if isPreparingPhotoLibraryMedia {
-                            ProgressView()
-                                .controlSize(.small)
-                                .tint(MomentsColor.coral)
-                        } else {
-                            MomentsIcon(.download, size: 12)
-                        }
-                        Text(photoLibraryStatusMessage)
-                            .font(MomentsTypography.krBody(12, weight: .medium))
-                    }
-                    .foregroundColor(photoLibraryStatusColor)
-                    .padding(.horizontal, MomentsSpacing.sm)
-                    .padding(.vertical, MomentsSpacing.xs)
-                    .background(
-                        RoundedRectangle(cornerRadius: MomentsRadius.button, style: .continuous)
-                            .fill(MomentsColor.ivory.opacity(0.75))
-                    )
-                    .accessibilityElement(children: .combine)
-                }
+            } else {
                 LazyVGrid(
                     columns: Array(repeating: GridItem(.flexible(), spacing: MomentsSpacing.sm), count: 3),
                     spacing: MomentsSpacing.sm
                 ) {
-                    ForEach(Array(selectedItems.enumerated()), id: \.offset) { idx, item in
-                        ClipThumbCard(
-                            state: .normal,
-                            rotationDegrees: rotation(for: idx),
-                            size: CGSize(width: 84, height: 108)
-                        ) {
-                            thumbnailContent(for: item)
+                    ForEach(Array(photoAssets.enumerated()), id: \.element.id) { idx, asset in
+                        let isSelected = selectedAssetIDs.contains(asset.id)
+                        Button {
+                            dismissTitleKeyboard()
+                            togglePhotoAsset(asset)
+                        } label: {
+                            ClipThumbCard(
+                                state: isSelected ? .selected : .normal,
+                                rotationDegrees: rotation(for: idx),
+                                size: CGSize(width: 84, height: 108)
+                            ) {
+                                thumbnailContent(for: asset)
+                            }
+                            .overlay(alignment: .topTrailing) {
+                                if isSelected {
+                                    Circle()
+                                        .fill(MomentsColor.coral)
+                                        .frame(width: 22, height: 22)
+                                        .overlay(MomentsIcon(.check, size: 10).foregroundColor(.white))
+                                        .padding(2)
+                                }
+                            }
                         }
+                        .buttonStyle(.plain)
                         .frame(maxWidth: .infinity)
                         .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(thumbnailAccessibilityLabel(for: item, index: idx))
+                        .accessibilityLabel(thumbnailAccessibilityLabel(for: asset, index: idx, isSelected: isSelected))
+                        .accessibilityHint(isSelected ? "선택됨. 두 번 탭하면 선택을 해제합니다." : "두 번 탭하면 선택합니다.")
                     }
                 }
                 .padding(.vertical, MomentsSpacing.sm)
@@ -465,10 +458,11 @@ public struct MediaPickerView: View {
     }
 
     @ViewBuilder
-    private func thumbnailContent(for item: PhotosPickerItem) -> some View {
-        let state = media[item] ?? MediaLoadState()
+    private func thumbnailContent(for asset: PhotoLibraryAsset) -> some View {
+        let state = media[asset.id] ?? MediaLoadState(kind: asset.kind)
         ZStack {
-            if let data = state.thumbnail, let ui = UIImage(data: data) {
+            let thumbnail = state.thumbnail ?? assetThumbnails[asset.id]
+            if let data = thumbnail, let ui = UIImage(data: data) {
                 Image(uiImage: ui).resizable().scaledToFill()
             } else if state.thumbnailFailed {
                 failedPlaceholder
@@ -501,6 +495,9 @@ public struct MediaPickerView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                     .padding(4)
             }
+        }
+        .task(id: asset.id) {
+            await loadThumbnailIfNeeded(for: asset)
         }
     }
 
@@ -621,8 +618,8 @@ public struct MediaPickerView: View {
     private var canProceed: Bool {
         switch source {
         case .photoLibrary:
-            return !selectedItems.isEmpty && selectedItems.allSatisfy { item in
-                media[item]?.isReadyForTimeline == true
+            return !selectedAssetIDs.isEmpty && selectedAssetIDs.allSatisfy { id in
+                media[id]?.isReadyForTimeline == true
             }
         case .devFixtures:
             return !selectedDevAssetIDs.isEmpty
@@ -630,63 +627,65 @@ public struct MediaPickerView: View {
     }
 
     private var canUsePrimaryAction: Bool {
-        canProceed || needsLimitedLibraryExpansion || needsLivePhotoAuthorization
+        canProceed
     }
 
     private var isPreparingPhotoLibraryMedia: Bool {
-        guard case .photoLibrary = source, !selectedItems.isEmpty else { return false }
+        guard case .photoLibrary = source, !selectedAssetIDs.isEmpty else { return false }
         return !canProceed && !hasUnavailablePhotoLibraryMedia
     }
 
     private var hasUnavailablePhotoLibraryMedia: Bool {
         guard case .photoLibrary = source else { return false }
-        return selectedItems.contains { item in
-            media[item]?.didFailTimelinePreparation == true
+        return selectedAssetIDs.contains { id in
+            media[id]?.didFailTimelinePreparation == true
         }
     }
 
-    private var needsLivePhotoAuthorization: Bool {
-        guard case .photoLibrary = source, !Self.hasPhotoAuthorization else { return false }
-        return selectedItems.contains { item in
-            let state = media[item]
-            return state?.kind == .livePhoto && state?.videoFailed == true
-        }
+    private var hasPhotoAccess: Bool {
+        photoAuthorizationStatus == .authorized || photoAuthorizationStatus == .limited
     }
 
-    private var needsLimitedLibraryExpansion: Bool {
-        guard case .photoLibrary = source else { return false }
-        return selectedItems.contains { item in
-            media[item]?.needsLimitedLibraryExpansion == true
-        }
+    private var isLimitedPhotoAccess: Bool {
+        photoAuthorizationStatus == .limited
     }
 
     private var readyPhotoLibraryMediaCount: Int {
-        selectedItems.reduce(into: 0) { count, item in
-            if media[item]?.isReadyForTimeline == true {
+        selectedAssetIDs.reduce(into: 0) { count, id in
+            if media[id]?.isReadyForTimeline == true {
                 count += 1
             }
         }
     }
 
     private var photoLibraryStatusMessage: String? {
-        guard case .photoLibrary = source, !selectedItems.isEmpty else { return nil }
-        if needsLimitedLibraryExpansion {
-            return "선택한 Live Photo를 권한 목록에 추가해야 해요."
+        guard case .photoLibrary = source else { return nil }
+        if photoAuthorizationStatus == .denied || photoAuthorizationStatus == .restricted {
+            return "사진 권한을 허용해야 Live Photo 영상을 사용할 수 있어요."
         }
-        if needsLivePhotoAuthorization {
-            return "Live Photo를 영상으로 사용하려면 사진 권한이 필요해요."
+        if photoAuthorizationStatus == .notDetermined {
+            return "먼저 사진 권한 범위를 선택해 주세요."
+        }
+        if isPhotoLibraryLoading {
+            return "권한 사진을 불러오는 중"
+        }
+        if photoAssets.isEmpty {
+            return isLimitedPhotoAccess ? "권한 목록에 Live Photo나 영상이 없어요." : "보관함에 Live Photo나 영상이 없어요."
         }
         if hasUnavailablePhotoLibraryMedia {
             return "선택한 항목을 불러오지 못했어요. 다시 선택해 주세요."
         }
-        if readyPhotoLibraryMediaCount < selectedItems.count {
-            return "사진 로딩 중 · \(readyPhotoLibraryMediaCount)/\(selectedItems.count)"
+        if !selectedAssetIDs.isEmpty, readyPhotoLibraryMediaCount < selectedAssetIDs.count {
+            return "사진 로딩 중 · \(readyPhotoLibraryMediaCount)/\(selectedAssetIDs.count)"
         }
         return nil
     }
 
     private var photoLibraryStatusColor: Color {
-        hasUnavailablePhotoLibraryMedia ? MomentsColor.coral : MomentsColor.taupe
+        if hasUnavailablePhotoLibraryMedia || photoAuthorizationStatus == .denied || photoAuthorizationStatus == .restricted {
+            return MomentsColor.coral
+        }
+        return MomentsColor.taupe
     }
 
     private var confirmButtonTitle: String {
@@ -694,12 +693,6 @@ public struct MediaPickerView: View {
             return "선택 후 다음"
         }
         if case .photoLibrary = source {
-            if needsLimitedLibraryExpansion {
-                return "권한 추가"
-            }
-            if needsLivePhotoAuthorization {
-                return "권한 필요"
-            }
             if hasUnavailablePhotoLibraryMedia {
                 return "원본 확인 필요"
             }
@@ -716,14 +709,8 @@ public struct MediaPickerView: View {
         }
         switch source {
         case .photoLibrary:
-            if selectedItems.isEmpty {
+            if selectedAssetIDs.isEmpty {
                 return "미디어를 선택하면 다음 단계로 이동할 수 있습니다."
-            }
-            if needsLimitedLibraryExpansion {
-                return "선택한 Live Photo를 권한 목록에 추가해야 타임라인으로 이동할 수 있습니다."
-            }
-            if needsLivePhotoAuthorization {
-                return "Live Photo 영상 추출을 위해 사진 권한이 필요합니다."
             }
             if hasUnavailablePhotoLibraryMedia {
                 return "iCloud 원본을 모두 불러오지 못해 타임라인으로 이동할 수 없습니다."
@@ -740,7 +727,7 @@ public struct MediaPickerView: View {
     private var selectedCount: Int {
         switch source {
         case .photoLibrary:
-            return selectedItems.count
+            return selectedAssetIDs.count
         case .devFixtures:
             return selectedDevAssetIDs.count
         }
@@ -750,15 +737,64 @@ public struct MediaPickerView: View {
         isTitleFocused = false
     }
 
-    private var liveCount: Int {
-        selectedItems.reduce(into: 0) { acc, item in
-            if media[item]?.kind == .livePhoto { acc += 1 }
+    private var photoLibraryLauncherTitle: String {
+        if photoAuthorizationStatus == .notDetermined {
+            return "사진 권한 선택"
+        }
+        if photoAuthorizationStatus == .denied || photoAuthorizationStatus == .restricted {
+            return "사진 권한 열기"
+        }
+        if isLimitedPhotoAccess {
+            return "권한 사진 추가/새로고침"
+        }
+        return "사진 보관함 새로고침"
+    }
+
+    private var photoLibraryLauncherSubtitle: String {
+        if photoAuthorizationStatus == .notDetermined {
+            return "먼저 권한 범위를 고른 뒤 선택해요"
+        }
+        if photoAuthorizationStatus == .denied || photoAuthorizationStatus == .restricted {
+            return "설정에서 사진 접근을 허용해 주세요"
+        }
+        if isPhotoLibraryLoading {
+            return "권한 사진을 불러오는 중"
+        }
+        if isLimitedPhotoAccess {
+            return "\(photoAssets.count)개 접근 가능 · \(selectedAssetIDs.count)개 선택됨"
+        }
+        return "\(photoAssets.count)개 접근 가능 · \(selectedAssetIDs.count)개 선택됨"
+    }
+
+    private var photoLibraryEmptyMessage: String {
+        if photoAuthorizationStatus == .notDetermined {
+            return "먼저 사진 권한 범위를 선택해 주세요 ✦"
+        }
+        if photoAuthorizationStatus == .denied || photoAuthorizationStatus == .restricted {
+            return "사진 권한을 허용해야 Live Photo 영상을 만들 수 있어요 ✦"
+        }
+        if isPhotoLibraryLoading {
+            return "권한 사진을 불러오고 있어요 ✦"
+        }
+        if isLimitedPhotoAccess {
+            return "권한 목록에 Live Photo나 영상이 없어요. 권한 사진을 추가해 주세요 ✦"
+        }
+        return "보관함에 Live Photo나 영상이 없어요 ✦"
+    }
+
+    private var selectedLiveCount: Int {
+        selectedAssetIDs.reduce(into: 0) { acc, id in
+            if media[id]?.kind == .livePhoto {
+                acc += 1
+            }
         }
     }
 
-    private var videoCount: Int {
-        selectedItems.reduce(into: 0) { acc, item in
-            if media[item]?.kind == .video { acc += 1 }
+    private var selectedVideoCount: Int {
+        selectedAssetIDs.reduce(into: 0) { acc, id in
+            if media[id]?.kind == .video {
+                acc += 1
+            }
         }
     }
 
@@ -774,17 +810,26 @@ public struct MediaPickerView: View {
         }
     }
 
-    private func thumbnailAccessibilityLabel(for item: PhotosPickerItem, index: Int) -> String {
-        let state = media[item] ?? MediaLoadState()
-        var parts = ["\(index + 1)번째 선택한 미디어", accessibilityLabel(for: state.kind)]
-        if !state.isFullyLoaded {
-            parts.append("불러오는 중")
-        }
-        if state.thumbnailFailed {
-            parts.append("썸네일 불러오기 실패")
-        }
-        if state.videoFailed {
-            parts.append("영상 추출 실패")
+    private func thumbnailAccessibilityLabel(
+        for asset: PhotoLibraryAsset,
+        index: Int,
+        isSelected: Bool
+    ) -> String {
+        let state = media[asset.id] ?? MediaLoadState(kind: asset.kind)
+        var parts = ["\(index + 1)번째 권한 미디어", accessibilityLabel(for: asset.kind)]
+        if isSelected {
+            parts.append("선택됨")
+            if !state.isFullyLoaded {
+                parts.append("불러오는 중")
+            }
+            if state.thumbnailFailed {
+                parts.append("썸네일 불러오기 실패")
+            }
+            if state.videoFailed {
+                parts.append("영상 추출 실패")
+            }
+        } else if assetThumbnails[asset.id] == nil {
+            parts.append("썸네일 불러오는 중")
         }
         return parts.joined(separator: ", ")
     }
@@ -800,48 +845,113 @@ public struct MediaPickerView: View {
 
     // MARK: - Load pipeline
 
-    private func syncMedia(for newItems: [PhotosPickerItem]) {
-        let retained = Set(newItems)
+    private func handlePhotoLibraryLauncher() {
+        dismissTitleKeyboard()
+        Task {
+            if isLimitedPhotoAccess {
+                await MainActor.run {
+                    openLimitedPhotoLibraryPicker()
+                }
+            } else {
+                await preparePhotoLibraryAccess()
+            }
+        }
+    }
+
+    @MainActor
+    private func refreshPhotoLibraryIfAuthorized() async {
+        photoAuthorizationStatus = Self.currentPhotoAuthorizationStatus
+        guard hasPhotoAccess else { return }
+        await loadAuthorizedPhotoAssets()
+    }
+
+    @MainActor
+    private func preparePhotoLibraryAccess() async {
+        switch Self.currentPhotoAuthorizationStatus {
+        case .authorized, .limited:
+            photoAuthorizationStatus = Self.currentPhotoAuthorizationStatus
+            await loadAuthorizedPhotoAssets()
+        case .notDetermined:
+            let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+            photoAuthorizationStatus = status
+            if status == .authorized || status == .limited {
+                await loadAuthorizedPhotoAssets()
+            } else {
+                isPhotoPermissionAlertPresented = true
+            }
+        default:
+            photoAuthorizationStatus = Self.currentPhotoAuthorizationStatus
+            isPhotoPermissionAlertPresented = true
+        }
+    }
+
+    @MainActor
+    private func loadAuthorizedPhotoAssets() async {
+        isPhotoLibraryLoading = true
+        let assets = await Self.fetchAuthorizedPhotoAssets()
+        photoAssets = assets
+
+        let validIDs = Set(assets.map(\.id))
+        selectedAssetIDs.removeAll { !validIDs.contains($0) }
+        media = media.filter { validIDs.contains($0.key) }
+        assetThumbnails = assetThumbnails.filter { validIDs.contains($0.key) }
+        syncMedia(for: selectedAssetIDs)
+        isPhotoLibraryLoading = false
+    }
+
+    private func togglePhotoAsset(_ asset: PhotoLibraryAsset) {
+        if let index = selectedAssetIDs.firstIndex(of: asset.id) {
+            selectedAssetIDs.remove(at: index)
+        } else {
+            selectedAssetIDs.append(asset.id)
+        }
+    }
+
+    private func syncMedia(for newIDs: [String]) {
+        let retained = Set(newIDs)
         media = media.filter { retained.contains($0.key) }
 
-        for item in newItems where media[item] == nil {
-            let initialKind = Self.classify(item)
-            media[item] = MediaLoadState(kind: initialKind, isLoading: true)
+        for id in newIDs where media[id] == nil {
+            let asset = photoAssets.first { $0.id == id }
+            let initialKind = asset?.kind ?? .unknown
+            media[id] = MediaLoadState(kind: initialKind, thumbnail: assetThumbnails[id], isLoading: true)
 
             Task {
-                async let thumbnail: Data? = Self.loadThumbnail(for: item, kind: initialKind)
-                async let videoURLTask: URL? = Self.loadVideoURL(for: item, kind: initialKind)
-                async let capturedAt: Date? = Self.loadCapturedAt(for: item)
+                async let thumbnail: Data? = Self.loadThumbnail(forAssetID: id)
+                async let videoURLTask: URL? = Self.loadVideoURL(forAssetID: id, kind: initialKind)
+                async let capturedAt: Date? = Self.loadCapturedAt(forAssetID: id)
 
                 // duration·displaySize 는 videoURL 이 결정된 뒤에야 읽을 수 있어 직렬 의존.
                 let url = await videoURLTask
                 async let durTask: TimeInterval? = Self.loadVideoDuration(from: url)
                 async let sizeTask: CGSize? = Self.loadDisplaySize(from: url)
-                let (thumb, captured, dur, size) = await (thumbnail, capturedAt, durTask, sizeTask)
-                let needsExpansion = Self.needsLimitedLibraryExpansion(for: item, kind: initialKind, videoURL: url)
+                let (loadedThumb, captured, dur, size) = await (thumbnail, capturedAt, durTask, sizeTask)
 
                 await MainActor.run {
-                    guard var state = media[item] else { return }
+                    guard var state = media[id] else { return }
+                    let thumb = loadedThumb ?? assetThumbnails[id]
                     state.thumbnail = thumb
+                    if let thumb {
+                        assetThumbnails[id] = thumb
+                    }
                     state.thumbnailFailed = (thumb == nil)
                     state.videoURL = url
                     state.videoFailed = (url == nil)
-                    state.needsLimitedLibraryExpansion = needsExpansion
                     state.duration = dur
                     state.capturedAt = captured
                     state.displaySize = size
                     state.isLoading = false
-                    media[item] = state
-                    if initialKind == .livePhoto, url == nil {
-                        if needsExpansion {
-                            isLimitedLibraryExpansionAlertPresented = true
-                        } else if !Self.hasPhotoAuthorization {
-                            isPhotoPermissionAlertPresented = true
-                        }
-                    }
+                    media[id] = state
                 }
             }
         }
+    }
+
+    @MainActor
+    private func loadThumbnailIfNeeded(for asset: PhotoLibraryAsset) async {
+        guard assetThumbnails[asset.id] == nil else { return }
+        guard let data = await Self.loadThumbnail(forAssetID: asset.id) else { return }
+        assetThumbnails[asset.id] = data
     }
 
     private func loadDevAssetsIfNeeded() async {
@@ -861,16 +971,43 @@ public struct MediaPickerView: View {
         }
     }
 
-    // MARK: - Capture date (EXIF / PHAsset.creationDate)
+    // MARK: - PhotoKit loading
 
-    /// 이미 사진 읽기 권한이 있으면 실제 촬영 일자를 PHAsset.creationDate 에서 가져온다.
-    /// PHAsset.creationDate 는 사진 import 시 EXIF DateTimeOriginal 로 채워지므로
-    /// "EXIF 촬영 시각" 과 사실상 동일하다.
-    private static func loadCapturedAt(for item: PhotosPickerItem) async -> Date? {
-        guard hasPhotoAuthorization else { return nil }
-        guard let localID = item.itemIdentifier else { return nil }
-        let fetch = PHAsset.fetchAssets(withLocalIdentifiers: [localID], options: nil)
-        return fetch.firstObject?.creationDate
+    private static var currentPhotoAuthorizationStatus: PHAuthorizationStatus {
+        PHPhotoLibrary.authorizationStatus(for: .readWrite)
+    }
+
+    private static func fetchAuthorizedPhotoAssets() async -> [PhotoLibraryAsset] {
+        await Task.detached(priority: .userInitiated) {
+            var assets: [PhotoLibraryAsset] = []
+
+            let liveOptions = PHFetchOptions()
+            liveOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+            let liveFetch = PHAsset.fetchAssets(with: .image, options: liveOptions)
+            liveFetch.enumerateObjects { asset, _, _ in
+                guard asset.mediaSubtypes.contains(.photoLive) else { return }
+                assets.append(PhotoLibraryAsset(asset: asset, kind: .livePhoto))
+            }
+
+            let videoOptions = PHFetchOptions()
+            videoOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+            let videoFetch = PHAsset.fetchAssets(with: .video, options: videoOptions)
+            videoFetch.enumerateObjects { asset, _, _ in
+                assets.append(PhotoLibraryAsset(asset: asset, kind: .video))
+            }
+
+            return assets.sorted { lhs, rhs in
+                (lhs.capturedAt ?? .distantPast) > (rhs.capturedAt ?? .distantPast)
+            }
+        }.value
+    }
+
+    private static func fetchAsset(with localID: String) -> PHAsset? {
+        PHAsset.fetchAssets(withLocalIdentifiers: [localID], options: nil).firstObject
+    }
+
+    private static func loadCapturedAt(forAssetID localID: String) async -> Date? {
+        fetchAsset(with: localID)?.creationDate
     }
 
     // MARK: - Video duration
@@ -909,95 +1046,51 @@ public struct MediaPickerView: View {
         return CGSize(width: w, height: h)
     }
 
-    // MARK: - Classification
-
-    fileprivate static func classify(_ item: PhotosPickerItem) -> MediaKind {
-        let types = item.supportedContentTypes
-        // livePhoto는 .image와 .movie 양쪽에 conform될 수 있으므로 가장 먼저 검사.
-        if types.contains(where: { $0.conforms(to: .livePhoto) }) { return .livePhoto }
-        if types.contains(where: { $0.conforms(to: .movie) || $0.conforms(to: .audiovisualContent) }) { return .video }
-        // 이 피커는 `.livePhotos`와 `.videos`만 허용한다. PhotosPickerItem이 Live Photo를
-        // `.image`로만 보고하는 경우가 있어, 여기서는 still image가 아니라 Live Photo로 취급한다.
-        if types.contains(where: { $0.conforms(to: .image) }) { return .livePhoto }
-        return .unknown
-    }
-
     // MARK: - Thumbnail
 
-    private static func loadThumbnail(for item: PhotosPickerItem, kind: MediaKind) async -> Data? {
-        // PhotosPicker의 기본 Data는 Live Photo의 경우 스틸 JPEG을 준다. 썸네일로는 그대로 OK.
-        if let data = try? await item.loadTransferable(type: Data.self) {
-            if let ui = UIImage(data: data), let jpeg = ui.jpegData(compressionQuality: 0.75) {
-                return jpeg
+    private static func loadThumbnail(forAssetID localID: String) async -> Data? {
+        guard let asset = fetchAsset(with: localID) else {
+            return nil
+        }
+        return await withCheckedContinuation { continuation in
+            let manager = PHImageManager.default()
+            let options = PHImageRequestOptions()
+            options.deliveryMode = .highQualityFormat
+            options.resizeMode = .fast
+            options.isNetworkAccessAllowed = true
+            final class ResumeBox {
+                var didResume = false
             }
-            // 동영상의 경우 Data는 영상 원본이므로 AVAssetImageGenerator로 프레임 추출.
-            if kind == .video {
-                if let thumb = await videoThumbnailData(from: data) {
-                    return thumb
+            let box = ResumeBox()
+            manager.requestImage(
+                for: asset,
+                targetSize: CGSize(width: 480, height: 620),
+                contentMode: .aspectFill,
+                options: options
+            ) { image, info in
+                guard !box.didResume else { return }
+                if (info?[PHImageResultIsDegradedKey] as? Bool) == true {
+                    return
                 }
+                box.didResume = true
+                continuation.resume(returning: image?.jpegData(compressionQuality: 0.75))
             }
-        }
-        return nil
-    }
-
-    private static func videoThumbnailData(from videoData: Data) async -> Data? {
-        let tmp = FileManager.default.temporaryDirectory
-            .appendingPathComponent("thumb-\(UUID().uuidString).mov")
-        do {
-            try videoData.write(to: tmp)
-        } catch {
-            return nil
-        }
-        defer { try? FileManager.default.removeItem(at: tmp) }
-
-        let asset = AVURLAsset(url: tmp)
-        let gen = AVAssetImageGenerator(asset: asset)
-        gen.appliesPreferredTrackTransform = true
-        gen.maximumSize = CGSize(width: 480, height: 480)
-        do {
-            let cgImage = try await gen.image(at: .zero).image
-            return UIImage(cgImage: cgImage).jpegData(compressionQuality: 0.75)
-        } catch {
-            return nil
         }
     }
 
     // MARK: - Video URL
 
-    private static func loadVideoURL(for item: PhotosPickerItem, kind: MediaKind) async -> URL? {
-        // Live Photo: 피커는 권한 없이 열되, 선택 후에는 paired video 추출을 위해 권한을 요청한다.
-        if kind == .livePhoto {
-            guard await ensurePhotoAuthorization() else {
-                mediaLogger.error("Photo library authorization not granted for Live Photo paired video")
-                return nil
-            }
-            return await loadViaPHAsset(item: item)
+    private static func loadVideoURL(forAssetID localID: String, kind: MediaKind) async -> URL? {
+        guard kind.hasMotion else {
+            return nil
         }
-
-        // 일반 영상: 빠른 경로로 VideoPayload 시도, 실패 시 PHAsset fallback.
-        do {
-            if let payload = try await item.loadTransferable(type: VideoPayload.self) {
-                return payload.url
-            }
-        } catch {
-            mediaLogger.error("VideoPayload transfer failed: \(error.localizedDescription, privacy: .public)")
-        }
-        return await loadViaPHAsset(item: item)
+        return await loadViaPHAsset(localID: localID)
     }
 
     /// 기존 사진 읽기 권한이 있을 때만 paired video / 원본 영상을 temp 파일로 내림.
-    private static func loadViaPHAsset(item: PhotosPickerItem) async -> URL? {
-        mediaLogger.debug("loadViaPHAsset start, hasItemID=\(item.itemIdentifier != nil, privacy: .public)")
-        guard hasPhotoAuthorization else {
-            mediaLogger.info("Photo library authorization unavailable; continue with picker payload")
-            return nil
-        }
-        guard let localID = item.itemIdentifier else {
-            mediaLogger.error("PhotosPickerItem.itemIdentifier was nil — PhotosPicker(photoLibrary:) 누락 여부 점검 필요")
-            return nil
-        }
-        let fetch = PHAsset.fetchAssets(withLocalIdentifiers: [localID], options: nil)
-        guard let asset = fetch.firstObject else {
+    private static func loadViaPHAsset(localID: String) async -> URL? {
+        mediaLogger.debug("loadViaPHAsset start")
+        guard let asset = fetchAsset(with: localID) else {
             mediaLogger.error("PHAsset fetch missed for given identifier")
             return nil
         }
@@ -1052,21 +1145,9 @@ public struct MediaPickerView: View {
         }
         PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: presenter) { _ in
             Task { @MainActor in
-                retryLimitedLibraryExpansionItems()
+                await refreshPhotoLibraryIfAuthorized()
             }
         }
-    }
-
-    @MainActor
-    private func retryLimitedLibraryExpansionItems() {
-        let retryItems = selectedItems.filter { item in
-            media[item]?.needsLimitedLibraryExpansion == true
-        }
-        guard !retryItems.isEmpty else { return }
-        for item in retryItems {
-            media[item] = nil
-        }
-        syncMedia(for: selectedItems)
     }
 
     private static var activeViewController: UIViewController? {
@@ -1081,59 +1162,10 @@ public struct MediaPickerView: View {
         return presenter
     }
 
-    /// 시스템 권한 프롬프트 없이 현재 사진 읽기 권한만 확인한다.
-    private static var hasPhotoAuthorization: Bool {
-        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
-        switch status {
-        case .authorized, .limited:
-            return true
-        default:
-            return false
-        }
-    }
-
-    private static func needsLimitedLibraryExpansion(
-        for item: PhotosPickerItem,
-        kind: MediaKind,
-        videoURL: URL?
-    ) -> Bool {
-        guard kind == .livePhoto,
-              videoURL == nil,
-              PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited,
-              let localID = item.itemIdentifier
-        else {
-            return false
-        }
-        let fetch = PHAsset.fetchAssets(withLocalIdentifiers: [localID], options: nil)
-        return fetch.firstObject == nil
-    }
-
-    /// Live Photo의 paired video 추출 직전에만 사진 권한을 요청한다.
-    private static func ensurePhotoAuthorization() async -> Bool {
-        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
-        switch status {
-        case .authorized, .limited:
-            return true
-        case .notDetermined:
-            let newStatus = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
-            return newStatus == .authorized || newStatus == .limited
-        default:
-            return false
-        }
-    }
-
     // MARK: - Confirm
 
     private func handlePrimaryAction() {
         dismissTitleKeyboard()
-        if needsLimitedLibraryExpansion {
-            isLimitedLibraryExpansionAlertPresented = true
-            return
-        }
-        if needsLivePhotoAuthorization {
-            isPhotoPermissionAlertPresented = true
-            return
-        }
         confirmSelection()
     }
 
@@ -1150,11 +1182,11 @@ public struct MediaPickerView: View {
         guard canProceed, !isResolving else { return }
         isResolving = true
 
-        let items = selectedItems
+        let ids = selectedAssetIDs
 
         Task {
             let latest = await MainActor.run { self.media }
-            guard items.allSatisfy({ latest[$0]?.isReadyForTimeline == true }) else {
+            guard ids.allSatisfy({ latest[$0]?.isReadyForTimeline == true }) else {
                 await MainActor.run {
                     isResolving = false
                 }
@@ -1168,8 +1200,8 @@ public struct MediaPickerView: View {
             // EXIF 시각이 안 잡힌 항목의 fallback (권한 거부 등 예외 케이스).
             let fallback = Date()
 
-            let clips: [Clip] = items.enumerated().map { idx, item in
-                let state = latest[item] ?? MediaLoadState()
+            let clips: [Clip] = ids.enumerated().map { idx, id in
+                let state = latest[id] ?? MediaLoadState()
                 let kind: ClipKind = (state.kind == .video) ? .video : .live
                 return Clip(
                     kind: kind,
@@ -1236,6 +1268,20 @@ public struct MediaPickerView: View {
 
 // MARK: - State & payload
 
+private struct PhotoLibraryAsset: Identifiable, Hashable {
+    let id: String
+    let kind: MediaKind
+    let capturedAt: Date?
+    let pixelSize: CGSize
+
+    init(asset: PHAsset, kind: MediaKind) {
+        self.id = asset.localIdentifier
+        self.kind = kind
+        self.capturedAt = asset.creationDate
+        self.pixelSize = CGSize(width: asset.pixelWidth, height: asset.pixelHeight)
+    }
+}
+
 private struct MediaLoadState {
     var kind: MediaKind = .unknown
     var thumbnail: Data? = nil
@@ -1246,7 +1292,6 @@ private struct MediaLoadState {
     var isLoading: Bool = false
     var thumbnailFailed: Bool = false
     var videoFailed: Bool = false
-    var needsLimitedLibraryExpansion: Bool = false
 
     var isFullyLoaded: Bool {
         !isLoading && (thumbnail != nil || thumbnailFailed) && (videoURL != nil || videoFailed)
@@ -1258,23 +1303,6 @@ private struct MediaLoadState {
 
     var didFailTimelinePreparation: Bool {
         !isLoading && (thumbnail == nil || (kind.hasMotion && videoURL == nil))
-    }
-}
-
-/// `FileRepresentation`을 통해 PhotosPicker에서 동영상 파일 URL을 temp 디렉터리로 복사받는 전송 타입.
-private struct VideoPayload: Transferable {
-    let url: URL
-
-    static var transferRepresentation: some TransferRepresentation {
-        FileRepresentation(contentType: .movie) { payload in
-            SentTransferredFile(payload.url)
-        } importing: { received in
-            let dest = FileManager.default.temporaryDirectory
-                .appendingPathComponent("movie-\(UUID().uuidString).mov")
-            try? FileManager.default.removeItem(at: dest)
-            try FileManager.default.copyItem(at: received.file, to: dest)
-            return VideoPayload(url: dest)
-        }
     }
 }
 

@@ -1,5 +1,29 @@
 # PR preparation
 
+# MediaPicker permission-first PhotoKit selection
+
+## Plan
+
+- [x] Replace system `PhotosPicker` selection with a PhotoKit-backed asset list that only shows currently authorized Live Photo/Video assets.
+- [x] Request or manage photo access before showing selectable assets.
+- [x] Keep Timeline preparation gated on real Live Photo paired-video or video resource extraction.
+- [x] Verify the MediaPicker target and app build.
+- [x] Commit the behavior change separately from unrelated generated files.
+
+## Notes
+
+- The previous picker-first flow could select A/B/C while limited Photos permission allowed D/E/F, which made PHAsset-based Live Photo video extraction impossible.
+- The new flow should make the visible grid and PhotoKit readable asset set identical.
+
+## Review
+
+- Replaced system `PhotosPicker` selection with a PhotoKit-backed asset grid scoped to currently authorized or limited Photos access.
+- Limited access can be expanded through the PhotoKit limited-library picker, then the grid reloads from the readable asset set.
+- Selected Live Photo/Video assets resolve by `PHAsset` local identifier and still require a real video URL before Timeline.
+- Verification: `MediaPickerFeature` and `OneSecMovie` builds succeeded on the iPhone 17 Pro simulator.
+
+---
+
 ## Plan
 
 - [x] Inspect current branch, remotes, and dirty working tree.
