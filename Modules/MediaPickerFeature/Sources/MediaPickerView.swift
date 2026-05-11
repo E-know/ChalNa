@@ -8,6 +8,7 @@ import Photos
 import AVFoundation
 import UniformTypeIdentifiers
 import OSLog
+import UIKit
 
 private let mediaLogger = Logger(subsystem: "ios.inho.OneSecMovie", category: "MediaPicker")
 
@@ -32,6 +33,7 @@ public enum MediaPickerSource: Sendable {
 /// Live Photo는 PhotosPicker의 Transferable에서 paired video가 안 나올 수 있어
 /// `PHAssetResourceManager`로 paired video 리소스를 꺼내는 fallback을 둔다.
 public struct MediaPickerView: View {
+    @Environment(\.openURL) private var openURL
     @Environment(AppRouter.self) private var router
     @Environment(EditSession.self) private var session
 
@@ -41,6 +43,9 @@ public struct MediaPickerView: View {
     @State private var selectedDevAssetIDs: [DevMediaAsset.ID] = []
     @State private var devErrorMessage: String?
     @State private var isResolving = false
+    @State private var isPhotoPickerPresented = false
+    @State private var isRequestingPhotoAuthorization = false
+    @State private var isPhotoPermissionAlertPresented = false
     @State private var scrollProgress: Double = 0
     @State private var titleInput: String = ""
     @FocusState private var isTitleFocused: Bool
@@ -103,10 +108,24 @@ public struct MediaPickerView: View {
             }
         }
         .momentsScreen()
+        .alert("사진 접근 권한이 필요해요", isPresented: $isPhotoPermissionAlertPresented) {
+            Button("확인") {
+                openPhotoSettings()
+            }
+        } message: {
+            Text("사진 보관함 접근을 허용해야 Live Photo와 영상을 선택할 수 있어요.")
+        }
         .onChange(of: selectedItems) { _, newItems in
             // 항목 선택 시점에 Photos 권한을 lazy 요청 — Live Photo paired video 추출에 필수.
             if newItems.contains(where: { media[$0] == nil }) {
-                Task { _ = await Self.ensurePhotoAuthorization() }
+                Task {
+                    let granted = await Self.ensurePhotoAuthorization()
+                    if !granted {
+                        await MainActor.run {
+                            isPhotoPermissionAlertPresented = true
+                        }
+                    }
+                }
             }
             syncMedia(for: newItems)
         }
@@ -241,13 +260,10 @@ public struct MediaPickerView: View {
     }
 
     private var photoLibraryPickerLauncher: some View {
-        PhotosPicker(
-            selection: $selectedItems,
-            maxSelectionCount: 0,
-            selectionBehavior: .ordered,
-            matching: .any(of: [.livePhotos, .videos]),
-            photoLibrary: photoLibrary
-        ) {
+        Button {
+            dismissTitleKeyboard()
+            openPhotoPickerIfAuthorized()
+        } label: {
             HStack(spacing: MomentsSpacing.sm) {
                 MomentsIcon(.plus, size: 18)
                     .foregroundColor(MomentsColor.coral)
@@ -261,8 +277,14 @@ public struct MediaPickerView: View {
                         .foregroundColor(MomentsColor.taupe)
                 }
                 Spacer()
-                MomentsIcon(.chevronRight, size: 14)
-                    .foregroundColor(MomentsColor.taupe)
+                if isRequestingPhotoAuthorization {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(MomentsColor.coral)
+                } else {
+                    MomentsIcon(.chevronRight, size: 14)
+                        .foregroundColor(MomentsColor.taupe)
+                }
             }
             .padding(MomentsSpacing.md)
             .background(
@@ -275,8 +297,18 @@ public struct MediaPickerView: View {
                                   style: .init(lineWidth: 1.2, dash: selectedItems.isEmpty ? [5, 3] : []))
             )
         }
+        .buttonStyle(.plain)
+        .photosPicker(
+            isPresented: $isPhotoPickerPresented,
+            selection: $selectedItems,
+            maxSelectionCount: 0,
+            selectionBehavior: .ordered,
+            matching: .any(of: [.livePhotos, .videos]),
+            photoLibrary: photoLibrary
+        )
+        .disabled(isRequestingPhotoAuthorization)
         .accessibilityLabel(selectedItems.isEmpty ? "사진 보관함 열기" : "선택 다시 고르기")
-        .accessibilityHint("Live Photo와 영상을 선택합니다.")
+        .accessibilityHint(isRequestingPhotoAuthorization ? "사진 권한을 확인하는 중입니다." : "Live Photo와 영상을 선택합니다.")
     }
 
     private var devFixtureLauncher: some View {
@@ -965,6 +997,28 @@ public struct MediaPickerView: View {
                 if let error { cont.resume(throwing: error) } else { cont.resume() }
             }
         }
+    }
+
+    private func openPhotoPickerIfAuthorized() {
+        guard !isRequestingPhotoAuthorization else { return }
+        isRequestingPhotoAuthorization = true
+
+        Task {
+            let granted = await Self.ensurePhotoAuthorization()
+            await MainActor.run {
+                isRequestingPhotoAuthorization = false
+                if granted {
+                    isPhotoPickerPresented = true
+                } else {
+                    isPhotoPermissionAlertPresented = true
+                }
+            }
+        }
+    }
+
+    private func openPhotoSettings() {
+        guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else { return }
+        openURL(settingsURL)
     }
 
     /// PhotoLibrary 권한을 보장. 이미 있으면 즉시 true. notDetermined이면 시스템 프롬프트.
