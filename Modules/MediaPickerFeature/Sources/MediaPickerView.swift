@@ -389,6 +389,9 @@ public struct MediaPickerView: View {
                             ) {
                                 thumbnailContent(for: asset)
                             }
+                            .overlay(alignment: .topLeading) {
+                                floatingKindChip(for: asset.kind)
+                            }
                             .overlay(alignment: .topTrailing) {
                                 if isSelected {
                                     Circle()
@@ -406,7 +409,8 @@ public struct MediaPickerView: View {
                         .accessibilityHint(isSelected ? "선택됨. 두 번 탭하면 선택을 해제합니다." : "두 번 탭하면 선택합니다.")
                     }
                 }
-                .padding(.vertical, MomentsSpacing.sm)
+                .padding(.top, MomentsSpacing.md)
+                .padding(.bottom, MomentsSpacing.sm)
             }
         }
     }
@@ -472,11 +476,6 @@ public struct MediaPickerView: View {
                     .tint(MomentsColor.coral)
             }
 
-            // 좌상단: 미디어 종류 칩 (LIVE / VIDEO)
-            kindChip(for: state.kind)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .padding(4)
-
             // 일반 영상에만 중앙 재생 동그라미. Live Photo는 칩으로만 구분.
             if state.kind == .video {
                 Circle()
@@ -499,6 +498,14 @@ public struct MediaPickerView: View {
         .task(id: asset.id) {
             await loadThumbnailIfNeeded(for: asset)
         }
+    }
+
+    @ViewBuilder
+    private func floatingKindChip(for kind: MediaKind) -> some View {
+        kindChip(for: kind)
+            .fixedSize(horizontal: true, vertical: true)
+            .offset(x: -5, y: -7)
+            .allowsHitTesting(false)
     }
 
     @ViewBuilder
