@@ -8,6 +8,7 @@ import Photos
 import AVFoundation
 import UniformTypeIdentifiers
 import OSLog
+import UIKit
 
 private let mediaLogger = Logger(subsystem: "ios.inho.OneSecMovie", category: "MediaPicker")
 
@@ -32,6 +33,7 @@ public enum MediaPickerSource: Sendable {
 /// Live Photo는 PhotosPicker의 Transferable에서 paired video가 안 나올 수 있어
 /// `PHAssetResourceManager`로 paired video 리소스를 꺼내는 fallback을 둔다.
 public struct MediaPickerView: View {
+    @Environment(\.openURL) private var openURL
     @Environment(AppRouter.self) private var router
     @Environment(EditSession.self) private var session
 
@@ -42,6 +44,7 @@ public struct MediaPickerView: View {
     @State private var devErrorMessage: String?
     @State private var isResolving = false
     @State private var isPhotoPickerPresented = false
+    @State private var isPhotoPermissionAlertPresented = false
     @State private var scrollProgress: Double = 0
     @State private var titleInput: String = ""
     @FocusState private var isTitleFocused: Bool
@@ -104,6 +107,13 @@ public struct MediaPickerView: View {
             }
         }
         .momentsScreen()
+        .alert("Live Photo 권한이 필요해요", isPresented: $isPhotoPermissionAlertPresented) {
+            Button("확인") {
+                openPhotoSettings()
+            }
+        } message: {
+            Text("Live Photo를 영상으로 사용하려면 사진 보관함 접근 권한이 필요해요.")
+        }
         .onChange(of: selectedItems) { _, newItems in
             syncMedia(for: newItems)
         }
@@ -622,6 +632,14 @@ public struct MediaPickerView: View {
         }
     }
 
+    private var needsLivePhotoAuthorization: Bool {
+        guard case .photoLibrary = source, !Self.hasPhotoAuthorization else { return false }
+        return selectedItems.contains { item in
+            let state = media[item]
+            return state?.kind == .livePhoto && state?.videoFailed == true
+        }
+    }
+
     private var readyPhotoLibraryMediaCount: Int {
         selectedItems.reduce(into: 0) { count, item in
             if media[item]?.isReadyForTimeline == true {
@@ -632,6 +650,9 @@ public struct MediaPickerView: View {
 
     private var photoLibraryStatusMessage: String? {
         guard case .photoLibrary = source, !selectedItems.isEmpty else { return nil }
+        if needsLivePhotoAuthorization {
+            return "Live Photo를 영상으로 사용하려면 사진 권한이 필요해요."
+        }
         if hasUnavailablePhotoLibraryMedia {
             return "선택한 항목을 불러오지 못했어요. 다시 선택해 주세요."
         }
@@ -650,6 +671,9 @@ public struct MediaPickerView: View {
             return "선택 후 다음"
         }
         if case .photoLibrary = source {
+            if needsLivePhotoAuthorization {
+                return "권한 필요"
+            }
             if hasUnavailablePhotoLibraryMedia {
                 return "원본 확인 필요"
             }
@@ -668,6 +692,9 @@ public struct MediaPickerView: View {
         case .photoLibrary:
             if selectedItems.isEmpty {
                 return "미디어를 선택하면 다음 단계로 이동할 수 있습니다."
+            }
+            if needsLivePhotoAuthorization {
+                return "Live Photo 영상 추출을 위해 사진 권한이 필요합니다."
             }
             if hasUnavailablePhotoLibraryMedia {
                 return "iCloud 원본을 모두 불러오지 못해 타임라인으로 이동할 수 없습니다."
@@ -774,6 +801,9 @@ public struct MediaPickerView: View {
                     state.displaySize = size
                     state.isLoading = false
                     media[item] = state
+                    if initialKind == .livePhoto, url == nil, !Self.hasPhotoAuthorization {
+                        isPhotoPermissionAlertPresented = true
+                    }
                 }
             }
         }
@@ -898,8 +928,12 @@ public struct MediaPickerView: View {
     // MARK: - Video URL
 
     private static func loadVideoURL(for item: PhotosPickerItem, kind: MediaKind) async -> URL? {
-        // Live Photo: 기존 사진 권한이 있으면 paired video를 얻고, 없으면 스틸 클립으로 진행한다.
+        // Live Photo: 피커는 권한 없이 열되, 선택 후에는 paired video 추출을 위해 권한을 요청한다.
         if kind == .livePhoto {
+            guard await ensurePhotoAuthorization() else {
+                mediaLogger.error("Photo library authorization not granted for Live Photo paired video")
+                return nil
+            }
             return await loadViaPHAsset(item: item)
         }
 
@@ -969,12 +1003,31 @@ public struct MediaPickerView: View {
         }
     }
 
+    private func openPhotoSettings() {
+        guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else { return }
+        openURL(settingsURL)
+    }
+
     /// 시스템 권한 프롬프트 없이 현재 사진 읽기 권한만 확인한다.
     private static var hasPhotoAuthorization: Bool {
         let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
         switch status {
         case .authorized, .limited:
             return true
+        default:
+            return false
+        }
+    }
+
+    /// Live Photo의 paired video 추출 직전에만 사진 권한을 요청한다.
+    private static func ensurePhotoAuthorization() async -> Bool {
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        switch status {
+        case .authorized, .limited:
+            return true
+        case .notDetermined:
+            let newStatus = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+            return newStatus == .authorized || newStatus == .limited
         default:
             return false
         }
@@ -1097,11 +1150,11 @@ private struct MediaLoadState {
     }
 
     var isReadyForTimeline: Bool {
-        !isLoading && thumbnail != nil
+        !isLoading && thumbnail != nil && (!kind.hasMotion || videoURL != nil)
     }
 
     var didFailTimelinePreparation: Bool {
-        !isLoading && thumbnail == nil
+        !isLoading && (thumbnail == nil || (kind.hasMotion && videoURL == nil))
     }
 }
 
