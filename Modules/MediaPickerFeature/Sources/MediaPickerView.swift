@@ -881,7 +881,9 @@ public struct MediaPickerView: View {
         // livePhoto는 .image와 .movie 양쪽에 conform될 수 있으므로 가장 먼저 검사.
         if types.contains(where: { $0.conforms(to: .livePhoto) }) { return .livePhoto }
         if types.contains(where: { $0.conforms(to: .movie) || $0.conforms(to: .audiovisualContent) }) { return .video }
-        if types.contains(where: { $0.conforms(to: .image) }) { return .image }
+        // 이 피커는 `.livePhotos`와 `.videos`만 허용한다. PhotosPickerItem이 Live Photo를
+        // `.image`로만 보고하는 경우가 있어, 여기서는 still image가 아니라 Live Photo로 취급한다.
+        if types.contains(where: { $0.conforms(to: .image) }) { return .livePhoto }
         return .unknown
     }
 
