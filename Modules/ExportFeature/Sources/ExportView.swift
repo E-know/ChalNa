@@ -27,18 +27,18 @@ public struct ExportView: View {
             GeometryReader { proxy in
                 VStack(spacing: 0) {
                     cover(width: coverWidth(forAvailableHeight: proxy.size.height))
-                        .padding(.top, MomentsSpacing.md)
-                        .padding(.horizontal, MomentsSpacing.xl)
+                        .padding(.top, 16)
+                        .padding(.horizontal, 32)
 
                     statusBlock
-                        .padding(.horizontal, MomentsSpacing.lg)
-                        .padding(.top, MomentsSpacing.xl)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 32)
 
-                    Spacer(minLength: MomentsSpacing.md)
+                    Spacer(minLength: 16)
 
                     bottomCTAs
-                        .padding(.horizontal, MomentsSpacing.md)
-                        .padding(.bottom, MomentsSpacing.lg)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 24)
                 }
                 .frame(width: proxy.size.width, height: proxy.size.height)
             }
@@ -62,10 +62,10 @@ public struct ExportView: View {
                 Text(toast)
                     .font(MomentsTypography.krBody(13, weight: .medium))
                     .foregroundColor(.white)
-                    .padding(.horizontal, MomentsSpacing.md)
-                    .padding(.vertical, MomentsSpacing.xs)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
                     .background(Capsule().fill(MomentsColor.ink.opacity(0.9)))
-                    .padding(.bottom, MomentsSpacing.xxxl)
+                    .padding(.bottom, 64)
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
                     .task(id: toast) {
                         try? await Task.sleep(nanoseconds: 2_200_000_000)
@@ -169,7 +169,7 @@ public struct ExportView: View {
     @ViewBuilder
     private func cover(width: CGFloat) -> some View {
         if let clip = session.clips.first {
-            VStack(alignment: .leading, spacing: MomentsSpacing.sm) {
+            VStack(alignment: .leading, spacing: 12) {
                 ZStack(alignment: .topTrailing) {
                     clip.thumbnailView()
                         .frame(width: width, height: width * 9 / 16)
@@ -181,7 +181,7 @@ public struct ExportView: View {
 
                     if store.phase == .done {
                         MomentsChip("DONE", variant: .selected, icon: .check)
-                            .padding(MomentsSpacing.sm)
+                            .padding(12)
                     }
                 }
 
@@ -217,7 +217,7 @@ public struct ExportView: View {
 
     @ViewBuilder
     private var statusBlock: some View {
-        VStack(alignment: .leading, spacing: MomentsSpacing.sm) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text(statusLabelLeft).tagLabel(color: tagColor)
                 Spacer()
@@ -274,7 +274,7 @@ public struct ExportView: View {
     private var bottomCTAs: some View {
         switch store.phase {
         case .idle, .exporting:
-            HStack(spacing: MomentsSpacing.xs) {
+            HStack(spacing: 8) {
                 MomentsIcon(.film, size: 14).foregroundColor(MomentsColor.taupe)
                 Text("잠깐만 기다려주세요")
                     .font(MomentsTypography.krBody(MomentsTypography.Size.body))
@@ -298,9 +298,9 @@ public struct ExportView: View {
     }
 
     private var paperCompletedCTAs: some View {
-        VStack(spacing: MomentsSpacing.sm) {
+        VStack(spacing: 12) {
             if let url = store.exportedURL {
-                HStack(spacing: MomentsSpacing.sm) {
+                HStack(spacing: 12) {
                     ShareLink(item: url) {
                         HStack(spacing: 6) {
                             MomentsIcon(.share, size: 14)
@@ -330,7 +330,7 @@ public struct ExportView: View {
                 }
             }
 
-            HStack(spacing: MomentsSpacing.sm) {
+            HStack(spacing: 12) {
                 Button("다른 영상 만들기") { startAnotherFilm() }
                     .buttonStyle(.momentsOutline)
                     .frame(maxWidth: .infinity)
@@ -347,17 +347,17 @@ public struct ExportView: View {
 
     @available(iOS 26.0, *)
     private var liquidGlassCompletedCTAs: some View {
-        GlassEffectContainer(spacing: MomentsSpacing.sm) {
-            VStack(spacing: MomentsSpacing.sm) {
+        GlassEffectContainer(spacing: 12) {
+            VStack(spacing: 12) {
                 if let url = store.exportedURL {
-                    HStack(spacing: MomentsSpacing.sm) {
+                    HStack(spacing: 12) {
                         ShareLink(item: url) {
                             HStack(spacing: 6) {
                                 MomentsIcon(.share, size: 14)
                                 Text("공유하기")
                             }
                             .foregroundStyle(MomentsColor.ink)
-                            .frame(maxWidth: .infinity, minHeight: MomentsSpacing.minimumHitTarget)
+                            .frame(maxWidth: .infinity, minHeight: 44)
                         }
                         .buttonStyle(.glass)
                         .frame(maxWidth: .infinity)
@@ -374,7 +374,7 @@ public struct ExportView: View {
                                 Text(store.isSaving ? "저장 중…" : "저장하기")
                             }
                             .foregroundStyle(MomentsColor.ink)
-                            .frame(maxWidth: .infinity, minHeight: MomentsSpacing.minimumHitTarget)
+                            .frame(maxWidth: .infinity, minHeight: 44)
                         }
                         .buttonStyle(.glassProminent)
                         .tint(MomentsColor.coral)
@@ -383,13 +383,13 @@ public struct ExportView: View {
                     }
                 }
 
-                HStack(spacing: MomentsSpacing.sm) {
+                HStack(spacing: 12) {
                     Button {
                         startAnotherFilm()
                     } label: {
                         Text("다른 영상 만들기")
                             .foregroundStyle(MomentsColor.ink)
-                            .frame(maxWidth: .infinity, minHeight: MomentsSpacing.minimumHitTarget)
+                            .frame(maxWidth: .infinity, minHeight: 44)
                     }
                     .buttonStyle(.glass)
                     .frame(maxWidth: .infinity)
@@ -400,7 +400,7 @@ public struct ExportView: View {
                     } label: {
                         Text("홈으로 →")
                             .foregroundStyle(MomentsColor.ink)
-                            .frame(maxWidth: .infinity, minHeight: MomentsSpacing.minimumHitTarget)
+                            .frame(maxWidth: .infinity, minHeight: 44)
                     }
                     .buttonStyle(.glass)
                     .frame(maxWidth: .infinity)
@@ -419,7 +419,7 @@ public struct ExportView: View {
     }
 
     private var paperFailedCTAs: some View {
-        VStack(spacing: MomentsSpacing.sm) {
+        VStack(spacing: 12) {
             Button {
                 store.send(.retryTapped(clips: session.clips, rotations: session.rotations))
             } label: {
@@ -439,8 +439,8 @@ public struct ExportView: View {
 
     @available(iOS 26.0, *)
     private var liquidGlassFailedCTAs: some View {
-        GlassEffectContainer(spacing: MomentsSpacing.sm) {
-            VStack(spacing: MomentsSpacing.sm) {
+        GlassEffectContainer(spacing: 12) {
+            VStack(spacing: 12) {
                 Button {
                     store.send(.retryTapped(clips: session.clips, rotations: session.rotations))
                 } label: {
@@ -449,7 +449,7 @@ public struct ExportView: View {
                         Text("다시 시도")
                     }
                     .foregroundStyle(MomentsColor.ink)
-                    .frame(maxWidth: .infinity, minHeight: MomentsSpacing.minimumHitTarget)
+                    .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.glassProminent)
                 .tint(MomentsColor.coral)
@@ -459,7 +459,7 @@ public struct ExportView: View {
                 } label: {
                     Text("편집으로 돌아가기")
                         .foregroundStyle(MomentsColor.ink)
-                        .frame(maxWidth: .infinity, minHeight: MomentsSpacing.minimumHitTarget)
+                        .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.glass)
                 .frame(maxWidth: .infinity)

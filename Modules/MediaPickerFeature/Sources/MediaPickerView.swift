@@ -36,26 +36,26 @@ public struct MediaPickerView: View {
 
             ZStack(alignment: .bottom) {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: MomentsSpacing.lg) {
+                    VStack(alignment: .leading, spacing: 24) {
                         intro
-                            .padding(.horizontal, MomentsSpacing.lg)
-                            .padding(.top, MomentsSpacing.lg)
+                            .padding(.horizontal, 24)
+                            .padding(.top, 24)
                             .trackScrollOffset(in: "media-picker-scroll")
                             .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
 
                         titleField
-                            .padding(.horizontal, MomentsSpacing.lg)
+                            .padding(.horizontal, 24)
 
                         pickerLauncher
-                            .padding(.horizontal, MomentsSpacing.lg)
+                            .padding(.horizontal, 24)
                             .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
 
                         selectionGrid
-                            .padding(.horizontal, MomentsSpacing.lg)
-                            .padding(.top, MomentsSpacing.sm)
+                            .padding(.horizontal, 24)
+                            .padding(.top, 12)
                             .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
                     }
-                    .padding(.bottom, MomentsSpacing.huge)
+                    .padding(.bottom, 96)
                 }
                 .coordinateSpace(name: "media-picker-scroll")
                 .scrollDismissesKeyboard(.interactively)
@@ -147,7 +147,7 @@ public struct MediaPickerView: View {
     // MARK: - Intro
 
     private var intro: some View {
-        VStack(alignment: .leading, spacing: MomentsSpacing.xs) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("PICK · YOUR MOMENTS").tagLabel()
             (Text("여행의 순간을\n").font(MomentsTypography.displayKR(26))
              + Text("천천히 골라보세요.").font(MomentsTypography.krBody(22, weight: .medium)))
@@ -156,14 +156,14 @@ public struct MediaPickerView: View {
             Text("Live Photo와 짧은 영상을 불러올 수 있어요. Live Photo는 내부의 영상 부분을 사용합니다.")
                 .font(MomentsTypography.krBody(13))
                 .foregroundColor(MomentsColor.taupe)
-                .padding(.top, MomentsSpacing.xxs)
+                .padding(.top, 4)
         }
     }
 
     // MARK: - Title field
 
     private var titleField: some View {
-        VStack(alignment: .leading, spacing: MomentsSpacing.xs) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("TITLE · 이번 필름의 제목").tagLabel()
 
             TextField(
@@ -182,9 +182,9 @@ public struct MediaPickerView: View {
             .textInputAutocapitalization(.never)
             .focused($isTitleFocused)
             .accessibilityLabel("이번 필름의 제목")
-            .padding(.horizontal, MomentsSpacing.md)
-            .padding(.vertical, MomentsSpacing.sm + 2)
-            .frame(minHeight: MomentsSpacing.minimumHitTarget + MomentsSpacing.xs)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .frame(minHeight: 52)
             .background(
                 RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
                     .fill(Color.white)
@@ -220,7 +220,7 @@ public struct MediaPickerView: View {
             dismissTitleKeyboard()
             handlePhotoLauncherTap()
         } label: {
-            HStack(spacing: MomentsSpacing.sm) {
+            HStack(spacing: 12) {
                 MomentsIcon(.plus, size: 18).foregroundColor(MomentsColor.coral)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(photoLauncherTitle)
@@ -233,7 +233,7 @@ public struct MediaPickerView: View {
                 Spacer()
                 MomentsIcon(.chevronRight, size: 14).foregroundColor(MomentsColor.taupe)
             }
-            .padding(MomentsSpacing.md)
+            .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
                     .fill(Color.white)
@@ -251,8 +251,8 @@ public struct MediaPickerView: View {
     }
 
     private var devLauncher: some View {
-        VStack(alignment: .leading, spacing: MomentsSpacing.xs) {
-            HStack(spacing: MomentsSpacing.sm) {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
                 MomentsIcon(.film, size: 18).foregroundColor(MomentsColor.coral)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Dev 미디어 소스")
@@ -267,7 +267,7 @@ public struct MediaPickerView: View {
                 Spacer()
                 MomentsChip("DEV", variant: .dashed)
             }
-            .padding(MomentsSpacing.md)
+            .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
                     .fill(Color.white)
@@ -297,8 +297,8 @@ public struct MediaPickerView: View {
 
     @ViewBuilder
     private var photoGrid: some View {
-        VStack(alignment: .leading, spacing: MomentsSpacing.sm) {
-            HStack(spacing: MomentsSpacing.xs) {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
                 Text("권한 사진 · \(store.photoAssets.count)").tagLabel()
                 Spacer()
                 if selectedLiveCount > 0 {
@@ -310,7 +310,7 @@ public struct MediaPickerView: View {
             }
 
             if let statusMessage = photoStatusMessage {
-                HStack(spacing: MomentsSpacing.xs) {
+                HStack(spacing: 8) {
                     if isPreparingMedia || store.isPhotoLibraryLoading {
                         ProgressView().controlSize(.small).tint(MomentsColor.coral)
                     } else {
@@ -320,8 +320,8 @@ public struct MediaPickerView: View {
                         .font(MomentsTypography.krBody(12, weight: .medium))
                 }
                 .foregroundColor(photoStatusColor)
-                .padding(.horizontal, MomentsSpacing.sm)
-                .padding(.vertical, MomentsSpacing.xs)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: MomentsRadius.button, style: .continuous)
                         .fill(MomentsColor.ivory.opacity(0.75))
@@ -333,11 +333,11 @@ public struct MediaPickerView: View {
                     .font(MomentsTypography.krBody(MomentsTypography.Size.body))
                     .foregroundColor(MomentsColor.taupe)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, MomentsSpacing.lg)
+                    .padding(.vertical, 24)
             } else {
                 LazyVGrid(
-                    columns: Array(repeating: GridItem(.flexible(), spacing: MomentsSpacing.sm), count: 3),
-                    spacing: MomentsSpacing.sm
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3),
+                    spacing: 12
                 ) {
                     ForEach(Array(store.photoAssets.enumerated()), id: \.element.id) { idx, asset in
                         let isSelected = store.selectedAssetIDs.contains(asset.id)
@@ -373,16 +373,16 @@ public struct MediaPickerView: View {
                         .accessibilityLabel(thumbnailAccessibilityLabel(for: asset, index: idx, isSelected: isSelected))
                     }
                 }
-                .padding(.top, MomentsSpacing.md)
-                .padding(.bottom, MomentsSpacing.sm)
+                .padding(.top, 16)
+                .padding(.bottom, 12)
             }
         }
     }
 
     @ViewBuilder
     private var devGrid: some View {
-        VStack(alignment: .leading, spacing: MomentsSpacing.sm) {
-            HStack(spacing: MomentsSpacing.xs) {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
                 Text("DEV FIXTURES · \(store.selectedDevAssetIDs.count)").tagLabel()
                 Spacer()
                 if devLiveCount > 0 {
@@ -398,11 +398,11 @@ public struct MediaPickerView: View {
                     .font(MomentsTypography.krBody(MomentsTypography.Size.body))
                     .foregroundColor(MomentsColor.taupe)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, MomentsSpacing.lg)
+                    .padding(.vertical, 24)
             } else {
                 LazyVGrid(
-                    columns: Array(repeating: GridItem(.flexible(), spacing: MomentsSpacing.sm), count: 2),
-                    spacing: MomentsSpacing.md
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2),
+                    spacing: 16
                 ) {
                     ForEach(store.devAssets) { asset in
                         let isSelected = store.selectedDevAssetIDs.contains(asset.id)
@@ -416,7 +416,7 @@ public struct MediaPickerView: View {
                         .accessibilityLabel("\(asset.title), \(asset.kind == .live ? "라이브 포토" : "비디오")")
                     }
                 }
-                .padding(.vertical, MomentsSpacing.sm)
+                .padding(.vertical, 12)
             }
         }
     }
@@ -470,9 +470,9 @@ public struct MediaPickerView: View {
 
     private var bottomActionArea: some View {
         bottomBar
-            .padding(.horizontal, MomentsSpacing.md)
-            .padding(.top, MomentsSpacing.xs)
-            .padding(.bottom, MomentsSpacing.md)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 16)
             .fixedSize(horizontal: false, vertical: true)
     }
 
@@ -487,8 +487,8 @@ public struct MediaPickerView: View {
 
     @available(iOS 26.0, *)
     private var liquidGlassBottomBar: some View {
-        GlassEffectContainer(spacing: MomentsSpacing.xs) {
-            HStack(spacing: MomentsSpacing.xs) {
+        GlassEffectContainer(spacing: 8) {
+            HStack(spacing: 8) {
                 Button {
                     dismissTitleKeyboard()
                     store.send(.dismissTapped)
@@ -496,7 +496,7 @@ public struct MediaPickerView: View {
                 } label: {
                     Text("취소")
                         .foregroundStyle(MomentsColor.ink)
-                        .frame(maxWidth: .infinity, minHeight: MomentsSpacing.minimumHitTarget)
+                        .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.glass)
                 .frame(maxWidth: .infinity)
@@ -506,7 +506,7 @@ public struct MediaPickerView: View {
                 } label: {
                     confirmBottomLabel
                         .foregroundStyle(MomentsColor.ink)
-                        .frame(maxWidth: .infinity, minHeight: MomentsSpacing.minimumHitTarget)
+                        .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.glassProminent)
                 .tint(MomentsColor.coral)
@@ -518,7 +518,7 @@ public struct MediaPickerView: View {
     }
 
     private var momentsBottomBar: some View {
-        HStack(spacing: MomentsSpacing.xs) {
+        HStack(spacing: 8) {
             Button {
                 dismissTitleKeyboard()
                 store.send(.dismissTapped)
@@ -767,7 +767,7 @@ private struct DevMediaAssetCard: View {
     let isSelected: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: MomentsSpacing.xs) {
+        VStack(alignment: .leading, spacing: 8) {
             ClipThumbCard(
                 state: isSelected ? .selected : .normal,
                 size: CGSize(width: 112, height: 142)
@@ -808,7 +808,7 @@ private struct DevMediaAssetCard: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(MomentsSpacing.xs)
+        .padding(8)
         .background(
             RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
                 .fill(Color.white.opacity(isSelected ? 1 : 0.72))

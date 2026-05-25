@@ -28,8 +28,8 @@ public enum MomentsButtonSize {
 
     fileprivate var horizontalPadding: CGFloat {
         switch self {
-        case .xl, .lg, .md: return MomentsSpacing.md   // 16pt (다나와 권장 최소)
-        case .sm:           return MomentsSpacing.sm   // 12pt
+        case .xl, .lg, .md: return 16   // 16pt (다나와 권장 최소)
+        case .sm:           return 12   // 12pt
         }
     }
 

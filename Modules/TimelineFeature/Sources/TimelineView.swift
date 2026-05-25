@@ -22,15 +22,15 @@ public struct TimelineView: View {
             header.momentsHeaderBar(scrollProgress: 1)
 
             preview
-                .padding(.horizontal, MomentsSpacing.md)
-                .padding(.top, MomentsSpacing.md)
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
 
             dateSticker
-                .padding(.top, MomentsSpacing.md)
+                .padding(.top, 16)
 
             labelRow
-                .padding(.horizontal, MomentsSpacing.md + 4)
-                .padding(.top, MomentsSpacing.md + 4)
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
 
             FilmStripCollectionView(
                 store: store,
@@ -38,12 +38,12 @@ public struct TimelineView: View {
                 onTapClip: { store.send(.clipTapped(index: $0)) }
             )
             .frame(height: 104)
-            .padding(.horizontal, MomentsSpacing.md)
-            .padding(.top, MomentsSpacing.xs)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
 
             hintRow
-                .padding(.horizontal, MomentsSpacing.md + 4)
-                .padding(.top, MomentsSpacing.md)
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
 
             if store.isPlaying {
                 TransportControls(
@@ -52,13 +52,13 @@ public struct TimelineView: View {
                     onToggle: { store.send(.togglePlay) },
                     onNext: { store.send(.nextTapped) }
                 )
-                .padding(.top, MomentsSpacing.md)
+                .padding(.top, 16)
             }
 
             Spacer(minLength: 0)
         }
         .momentsScreen()
-        .safeAreaInset(edge: .bottom) { bottomBar.padding(.horizontal, MomentsSpacing.md) }
+        .safeAreaInset(edge: .bottom) { bottomBar.padding(.horizontal, 16) }
         .onAppear {
             syncFromSessionIfNeeded()
             wirePlaybackControllerIfNeeded()
@@ -186,15 +186,15 @@ public struct TimelineView: View {
     @ViewBuilder
     private var dateSticker: some View {
         if let clip = store.currentClip {
-            HStack(spacing: MomentsSpacing.xxs) {
+            HStack(spacing: 4) {
                 MomentsIcon(.calendar, size: 12)
                     .foregroundColor(MomentsColor.taupe)
                 Text(dateStickerText(for: clip))
                     .font(MomentsTypography.monoFallback(MomentsTypography.Size.small, weight: .medium))
                     .foregroundColor(MomentsColor.taupe)
             }
-            .padding(.horizontal, MomentsSpacing.sm)
-            .padding(.vertical, MomentsSpacing.xxs + 2)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
             .background(Capsule(style: .continuous).fill(MomentsColor.ivory))
         }
     }
@@ -260,14 +260,14 @@ public struct TimelineView: View {
     private var bottomBar: some View {
         if store.isPlaying {
             EditToolbar(dimmed: true, rotationActive: currentRotationActive)
-                .padding(.bottom, MomentsSpacing.md)
+                .padding(.bottom, 16)
         } else {
             EditToolbar(
                 rotationActive: currentRotationActive,
                 onRotate: { rotateCurrentClip() },
                 onDelete: { store.send(.deleteCurrentRequested) }
             )
-            .padding(.bottom, MomentsSpacing.md)
+            .padding(.bottom, 16)
         }
     }
 

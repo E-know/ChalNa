@@ -24,17 +24,17 @@ public struct HomeView: View {
                 .zIndex(1)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: MomentsSpacing.xl) {
+                VStack(alignment: .leading, spacing: 32) {
                     hero
-                        .padding(.horizontal, MomentsSpacing.lg)
-                        .padding(.top, MomentsSpacing.md)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 16)
                         .trackScrollOffset(in: "home-scroll")
 
                     primaryAction
-                        .padding(.horizontal, MomentsSpacing.lg)
+                        .padding(.horizontal, 24)
 
                     recentFilmsSection
-                        .padding(.bottom, MomentsSpacing.xxxl)
+                        .padding(.bottom, 64)
                 }
             }
             .coordinateSpace(name: "home-scroll")
@@ -46,6 +46,7 @@ public struct HomeView: View {
             }
         }
         .momentsScreen()
+        .onAppear { store.send(.onAppear) }
     }
 
     // MARK: - Header
@@ -70,7 +71,7 @@ public struct HomeView: View {
     // MARK: - Hero
 
     private var hero: some View {
-        VStack(alignment: .leading, spacing: MomentsSpacing.sm) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("오늘의 순간들")
                 .font(MomentsTypography.title(MomentsTypography.Size.h1, weight: .bold))
                 .foregroundColor(MomentsColor.ink)
@@ -89,7 +90,7 @@ public struct HomeView: View {
             // 임시: navigation 은 여전히 router 가 처리. Step 6 에서 AppFeature.StackState 로 통합 예정.
             router.push(.mediaPicker)
         } label: {
-            HStack(spacing: MomentsSpacing.xs) {
+            HStack(spacing: 8) {
                 MomentsIcon(.plus, size: 16)
                 Text("새 Vlog 만들기")
             }
@@ -101,7 +102,7 @@ public struct HomeView: View {
     // MARK: - Recent films
 
     private var recentFilmsSection: some View {
-        VStack(alignment: .leading, spacing: MomentsSpacing.md) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .firstTextBaseline) {
                 Text("최근 필름")
                     .font(MomentsTypography.title(MomentsTypography.Size.h2, weight: .semibold))
@@ -111,24 +112,24 @@ public struct HomeView: View {
                     .font(MomentsTypography.krBody(MomentsTypography.Size.small))
                     .foregroundColor(MomentsColor.taupe)
             }
-            .padding(.horizontal, MomentsSpacing.lg)
+            .padding(.horizontal, 24)
 
             if films.isEmpty {
                 emptyState
-                    .padding(.horizontal, MomentsSpacing.lg)
+                    .padding(.horizontal, 24)
             } else {
-                LazyVStack(spacing: MomentsSpacing.sm) {
+                LazyVStack(spacing: 12) {
                     ForEach(Array(films.enumerated()), id: \.element.id) { idx, film in
                         FilmRow(film: film, fallbackIndex: idx)
                     }
                 }
-                .padding(.horizontal, MomentsSpacing.lg)
+                .padding(.horizontal, 24)
             }
         }
     }
 
     private var emptyState: some View {
-        VStack(alignment: .leading, spacing: MomentsSpacing.xs) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("아직 만든 필름이 없어요.")
                 .font(MomentsTypography.krBody(MomentsTypography.Size.body, weight: .medium))
                 .foregroundColor(MomentsColor.ink)
@@ -137,7 +138,7 @@ public struct HomeView: View {
                 .foregroundColor(MomentsColor.taupe)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(MomentsSpacing.md)
+        .padding(16)
         .background(
             RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
                 .fill(MomentsColor.ivory)
@@ -151,7 +152,7 @@ private struct FilmRow: View {
     let fallbackIndex: Int
 
     var body: some View {
-        HStack(spacing: MomentsSpacing.md) {
+        HStack(spacing: 16) {
             thumbnail
                 .frame(width: 96, height: 54)
                 .clipShape(RoundedRectangle(cornerRadius: MomentsRadius.film, style: .continuous))
@@ -175,7 +176,7 @@ private struct FilmRow: View {
             MomentsIcon(.chevronRight, size: 16)
                 .foregroundColor(MomentsColor.Gray.g400)
         }
-        .padding(MomentsSpacing.sm)
+        .padding(12)
         .background(
             RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
                 .fill(Color.white)

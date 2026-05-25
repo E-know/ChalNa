@@ -20,10 +20,10 @@ struct PreviewPanel: View {
     }
 
     var body: some View {
-        VStack(spacing: MomentsSpacing.xs) {
+        VStack(spacing: 8) {
             previewCard
             externalScrubBar
-                .padding(.horizontal, MomentsSpacing.sm)
+                .padding(.horizontal, 12)
         }
     }
 
@@ -58,7 +58,7 @@ struct PreviewPanel: View {
     @ViewBuilder
     private var hudOverlay: some View {
         if #available(iOS 26.0, *) {
-            GlassEffectContainer(spacing: MomentsSpacing.md) { hudStack }
+            GlassEffectContainer(spacing: 16) { hudStack }
         } else {
             hudStack
         }
@@ -83,7 +83,7 @@ struct PreviewPanel: View {
                     .regular.tint(MomentsColor.ivory.opacity(0.32)),
                     in: Capsule(style: .continuous)
                 )
-                .padding(MomentsSpacing.sm)
+                .padding(12)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
         } else {
             Text(topRightIndexAttributed(foreground: .white, tail: .white.opacity(0.6)))
@@ -92,7 +92,7 @@ struct PreviewPanel: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
                 .background(Capsule().fill(Color.black.opacity(0.55)))
-                .padding(MomentsSpacing.sm)
+                .padding(12)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
         }
     }
@@ -187,8 +187,8 @@ private struct ScrubBar: View {
             trackColor: MomentsColor.ink.opacity(0.16),
             knobColor: MomentsColor.ivory
         )
-        .padding(.horizontal, MomentsSpacing.sm)
-        .padding(.vertical, MomentsSpacing.xs)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: MomentsRadius.button, style: .continuous)
                 .fill(MomentsColor.ivory.opacity(0.92))
@@ -204,8 +204,8 @@ private struct ScrubBar: View {
             trackColor: MomentsColor.ink.opacity(0.18),
             knobColor: MomentsColor.ivory
         )
-        .padding(.horizontal, MomentsSpacing.sm)
-        .padding(.vertical, MomentsSpacing.xs)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
         .glassEffect(
             .regular.tint(MomentsColor.ivory.opacity(0.3)),
             in: RoundedRectangle(cornerRadius: MomentsRadius.button, style: .continuous)
@@ -218,7 +218,7 @@ private struct ScrubBar: View {
         trackColor: Color,
         knobColor: Color
     ) -> some View {
-        HStack(spacing: MomentsSpacing.xs) {
+        HStack(spacing: 8) {
             Text(currentLabel)
                 .font(MomentsTypography.monoFallback(11, weight: .semibold))
                 .foregroundColor(textColor)
