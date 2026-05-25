@@ -18,6 +18,10 @@ public struct PhotoLibraryClient: Sendable {
     /// 권한 범위 내의 모든 Live Photo / 영상 asset 메타 (id + kind + capturedAt + pixelSize).
     public var fetchAuthorizedAssets: @Sendable () async -> [PhotoLibraryAsset] = { [] }
 
+    /// 주어진 localIdentifier 배열에 해당하는 Live Photo / 영상 asset 메타.
+    /// PHPicker 결과를 PhotoLibraryAsset 으로 변환할 때 사용.
+    public var fetchAssets: @Sendable (_ identifiers: [String]) async -> [PhotoLibraryAsset] = { _ in [] }
+
     /// 특정 asset 의 썸네일 (jpegData).
     public var loadThumbnail: @Sendable (_ assetID: String) async -> Data?
 
@@ -75,6 +79,25 @@ extension PhotoLibraryClient: DependencyKey {
                 return assets.sorted { lhs, rhs in
                     (lhs.capturedAt ?? .distantPast) > (rhs.capturedAt ?? .distantPast)
                 }
+            }.value
+        },
+        fetchAssets: { identifiers in
+            guard !identifiers.isEmpty else { return [] }
+            return await Task.detached(priority: .userInitiated) {
+                let fetch = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
+                var byID: [String: PhotoLibraryAsset] = [:]
+                fetch.enumerateObjects { asset, _, _ in
+                    let kind: PhotoLibraryAssetKind
+                    switch asset.mediaType {
+                    case .video: kind = .video
+                    case .image where asset.mediaSubtypes.contains(.photoLive): kind = .livePhoto
+                    case .image: kind = .image
+                    default: kind = .unknown
+                    }
+                    guard kind.hasMotion else { return }
+                    byID[asset.localIdentifier] = PhotoLibraryAsset(asset: asset, kind: kind)
+                }
+                return identifiers.compactMap { byID[$0] }
             }.value
         },
         loadThumbnail: { assetID in

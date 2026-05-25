@@ -94,6 +94,14 @@ public struct MediaPickerView: View {
             session.replace(clips: confirmation.clips, title: confirmation.title)
             router.push(.timeline)
         }
+        .sheet(
+            isPresented: $store.isSystemPhotoPickerPresented.sending(\.systemPhotoPickerPresentedChanged)
+        ) {
+            SystemPhotoPicker { identifiers in
+                store.send(.photosPickedFromSystemPicker(identifiers: identifiers))
+            }
+            .ignoresSafeArea()
+        }
         .task { await store.send(.task).finish() }
     }
 
@@ -218,7 +226,7 @@ public struct MediaPickerView: View {
     private var photoLauncher: some View {
         Button {
             dismissTitleKeyboard()
-            handlePhotoLauncherTap()
+            store.send(.photoLauncherTapped)
         } label: {
             HStack(spacing: 12) {
                 MomentsIcon(.plus, size: 18).foregroundColor(MomentsColor.coral)
@@ -299,7 +307,7 @@ public struct MediaPickerView: View {
     private var photoGrid: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
-                Text("권한 사진 · \(store.photoAssets.count)").tagLabel()
+                Text("선택한 미디어 · \(selectedAssets.count)").tagLabel()
                 Spacer()
                 if selectedLiveCount > 0 {
                     MomentsChip("\(selectedLiveCount) LIVE", variant: .live)
@@ -328,7 +336,7 @@ public struct MediaPickerView: View {
                 )
             }
 
-            if store.photoAssets.isEmpty {
+            if selectedAssets.isEmpty {
                 Text(photoEmptyMessage)
                     .font(MomentsTypography.krBody(MomentsTypography.Size.body))
                     .foregroundColor(MomentsColor.taupe)
@@ -339,14 +347,13 @@ public struct MediaPickerView: View {
                     columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3),
                     spacing: 12
                 ) {
-                    ForEach(Array(store.photoAssets.enumerated()), id: \.element.id) { idx, asset in
-                        let isSelected = store.selectedAssetIDs.contains(asset.id)
+                    ForEach(Array(selectedAssets.enumerated()), id: \.element.id) { idx, asset in
                         Button {
                             dismissTitleKeyboard()
                             store.send(.photoAssetTapped(asset))
                         } label: {
                             ClipThumbCard(
-                                state: isSelected ? .selected : .normal,
+                                state: .selected,
                                 size: CGSize(width: 84, height: 108)
                             ) {
                                 photoThumbnail(for: asset)
@@ -359,18 +366,17 @@ public struct MediaPickerView: View {
                                     .allowsHitTesting(false)
                             }
                             .overlay(alignment: .topTrailing) {
-                                if isSelected {
-                                    Circle()
-                                        .fill(MomentsColor.coral)
-                                        .frame(width: 22, height: 22)
-                                        .overlay(MomentsIcon(.check, size: 10).foregroundColor(.white))
-                                        .padding(2)
-                                }
+                                Circle()
+                                    .fill(MomentsColor.coral)
+                                    .frame(width: 22, height: 22)
+                                    .overlay(MomentsIcon(.close, size: 10).foregroundColor(.white))
+                                    .padding(2)
                             }
                         }
                         .buttonStyle(.plain)
                         .frame(maxWidth: .infinity)
-                        .accessibilityLabel(thumbnailAccessibilityLabel(for: asset, index: idx, isSelected: isSelected))
+                        .accessibilityLabel(thumbnailAccessibilityLabel(for: asset, index: idx, isSelected: true))
+                        .accessibilityHint("탭하면 선택에서 제외돼요")
                     }
                 }
                 .padding(.top, 16)
@@ -578,12 +584,10 @@ public struct MediaPickerView: View {
         }
     }
 
-    private var hasPhotoAccess: Bool {
-        store.photoAuthorizationStatus == .authorized || store.photoAuthorizationStatus == .limited
-    }
-
-    private var isLimitedPhotoAccess: Bool {
-        store.photoAuthorizationStatus == .limited
+    private var selectedAssets: [PhotoLibraryAsset] {
+        store.selectedAssetIDs.compactMap { id in
+            store.photoAssets.first(where: { $0.id == id })
+        }
     }
 
     private var readyMediaCount: Int {
@@ -604,10 +608,7 @@ public struct MediaPickerView: View {
             return "먼저 사진 권한 범위를 선택해 주세요."
         }
         if store.isPhotoLibraryLoading {
-            return "권한 사진을 불러오는 중"
-        }
-        if store.photoAssets.isEmpty {
-            return isLimitedPhotoAccess ? "권한 목록에 Live Photo나 영상이 없어요." : "보관함에 Live Photo나 영상이 없어요."
+            return "선택한 사진을 불러오는 중"
         }
         if hasUnavailableMedia {
             return "선택한 항목을 불러오지 못했어요. 다시 선택해 주세요."
@@ -647,25 +648,24 @@ public struct MediaPickerView: View {
         let status = store.photoAuthorizationStatus
         if status == .notDetermined { return "사진 권한 선택" }
         if status == .denied || status == .restricted { return "사진 권한 열기" }
-        if isLimitedPhotoAccess { return "권한 사진 추가/새로고침" }
-        return "사진 보관함 새로고침"
+        return store.selectedAssetIDs.isEmpty ? "사진 추가하기" : "다시 고르기"
     }
 
     private var photoLauncherSubtitle: String {
         let status = store.photoAuthorizationStatus
         if status == .notDetermined { return "먼저 권한 범위를 고른 뒤 선택해요" }
         if status == .denied || status == .restricted { return "설정에서 사진 접근을 허용해 주세요" }
-        if store.isPhotoLibraryLoading { return "권한 사진을 불러오는 중" }
-        return "\(store.photoAssets.count)개 접근 가능 · \(store.selectedAssetIDs.count)개 선택됨"
+        if store.isPhotoLibraryLoading { return "선택한 사진을 불러오는 중" }
+        if store.selectedAssetIDs.isEmpty { return "Live Photo와 짧은 영상만 가져올 수 있어요" }
+        return "\(store.selectedAssetIDs.count)개 선택됨 · 탭해서 추가해요"
     }
 
     private var photoEmptyMessage: String {
         let status = store.photoAuthorizationStatus
         if status == .notDetermined { return "먼저 사진 권한 범위를 선택해 주세요" }
         if status == .denied || status == .restricted { return "사진 권한을 허용해야 Live Photo 영상을 만들 수 있어요" }
-        if store.isPhotoLibraryLoading { return "권한 사진을 불러오고 있어요" }
-        if isLimitedPhotoAccess { return "권한 목록에 Live Photo나 영상이 없어요. 권한 사진을 추가해 주세요" }
-        return "보관함에 Live Photo나 영상이 없어요"
+        if store.isPhotoLibraryLoading { return "선택한 사진을 불러오고 있어요" }
+        return "아직 선택한 사진이 없어요. 위 카드를 눌러 골라보세요."
     }
 
     private var selectedLiveCount: Int {
@@ -706,9 +706,8 @@ public struct MediaPickerView: View {
             case .unknown: return "종류 확인 중"
             }
         }()
-        var parts = ["\(index + 1)번째 권한 미디어", kindLabel]
+        var parts = ["\(index + 1)번째 선택한 미디어", kindLabel]
         if isSelected {
-            parts.append("선택됨")
             if !state.isFullyLoaded { parts.append("불러오는 중") }
             if state.thumbnailFailed { parts.append("썸네일 불러오기 실패") }
             if state.videoFailed { parts.append("영상 추출 실패") }
@@ -716,7 +715,7 @@ public struct MediaPickerView: View {
         return parts.joined(separator: ", ")
     }
 
-    // MARK: - Side effects (UIKit / PhotoKit)
+    // MARK: - Side effects
 
     private func dismissTitleKeyboard() {
         isTitleFocused = false
@@ -726,37 +725,39 @@ public struct MediaPickerView: View {
         guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else { return }
         openURL(settingsURL)
     }
+}
 
-    private func handlePhotoLauncherTap() {
-        let current = PHPhotoLibrary.authorizationStatus(for: .readWrite)
-        if current == .limited {
-            // Limited library picker 는 UIKit 호출이라 View 가 직접 처리.
-            presentLimitedLibraryPicker()
-        } else {
-            store.send(.photoLauncherTapped)
-        }
+// MARK: - SystemPhotoPicker
+
+/// PHPickerViewController 를 SwiftUI sheet 로 띄우기 위한 래퍼.
+/// Live Photo 와 영상만 노출하고, 결과는 PHAsset.localIdentifier 배열로 돌려준다.
+private struct SystemPhotoPicker: UIViewControllerRepresentable {
+    let onPicked: ([String]) -> Void
+
+    func makeUIViewController(context: Context) -> PHPickerViewController {
+        var config = PHPickerConfiguration(photoLibrary: .shared())
+        config.filter = .any(of: [.livePhotos, .videos])
+        config.selectionLimit = 0   // 무제한
+        config.preferredAssetRepresentationMode = .current
+        let controller = PHPickerViewController(configuration: config)
+        controller.delegate = context.coordinator
+        return controller
     }
 
-    private func presentLimitedLibraryPicker() {
-        guard let presenter = Self.activeViewController else {
-            openPhotoSettings()
-            return
-        }
-        PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: presenter) { _ in
-            store.send(.limitedLibraryPickerDismissed)
-        }
-    }
+    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
 
-    private static var activeViewController: UIViewController? {
-        let activeScene = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first { $0.activationState == .foregroundActive }
-        let root = activeScene?.windows.first { $0.isKeyWindow }?.rootViewController
-        var presenter = root
-        while let presented = presenter?.presentedViewController {
-            presenter = presented
+    func makeCoordinator() -> Coordinator { Coordinator(onPicked: onPicked) }
+
+    final class Coordinator: NSObject, PHPickerViewControllerDelegate {
+        let onPicked: ([String]) -> Void
+        init(onPicked: @escaping ([String]) -> Void) { self.onPicked = onPicked }
+
+        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+            let ids = results.compactMap(\.assetIdentifier)
+            picker.dismiss(animated: true) { [onPicked] in
+                onPicked(ids)
+            }
         }
-        return presenter
     }
 }
 

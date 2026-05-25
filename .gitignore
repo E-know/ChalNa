@@ -58,3 +58,6 @@ xcuserdata/
 Tuist/.build/
 # tuist graph 가 루트에 만드는 임시 PNG (정식 본은 docs/architecture-graph.png 사용)
 /graph.png
+*.xcodeproj
+*.xcworkspace
+Derived

@@ -124,7 +124,11 @@ let project = Project(
                 .target(name: "TimelineFeature"),
                 .external(name: "ComposableArchitecture"),
                 .external(name: "FirebaseAnalytics"),
-            ]
+            ],
+            // Firebase(GoogleUtilities 등) 가 staticFramework 로 통합되어 있어
+            // ObjC 카테고리 메서드(`gul_dataByGzippingData:` 등) 가 링커의 dead-code-stripping
+            // 으로 빠지면서 런타임에 unrecognized selector 가 발생. `-ObjC` 로 강제 로드.
+            settings: .settings(base: ["OTHER_LDFLAGS": "$(inherited) -ObjC"])
         ),
         Module.unitTests(
             for: "AppCore",

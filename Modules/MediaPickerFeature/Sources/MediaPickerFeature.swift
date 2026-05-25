@@ -25,6 +25,7 @@ public struct MediaPickerFeature {
         public var selectedAssetIDs: [String] = []
         public var isPhotoLibraryLoading: Bool = false
         public var isPhotoPermissionAlertPresented: Bool = false
+        public var isSystemPhotoPickerPresented: Bool = false
 
         // Dev fixtures
         public var devAssets: [DevMediaAsset] = []
@@ -72,12 +73,12 @@ public struct MediaPickerFeature {
         case permissionAlertConfirmTapped
         case permissionAlertDismissed
         case permissionAlertPresentedChanged(Bool)
-        case openLimitedLibraryPicker
-        case limitedLibraryPickerDismissed
+        case openSystemPhotoPicker
+        case systemPhotoPickerPresentedChanged(Bool)
 
         // Library data
-        case photoAssetsLoadStarted
-        case photoAssetsLoaded([PhotoLibraryAsset])
+        case photosPickedFromSystemPicker(identifiers: [String])
+        case photoAssetsResolved([PhotoLibraryAsset])
         case photoAssetTapped(PhotoLibraryAsset)
 
         // Media pipeline
@@ -135,13 +136,6 @@ public struct MediaPickerFeature {
                         await send(.devAssetsLoaded(assets))
                     }
                 case .photoLibrary:
-                    if currentStatus == .authorized || currentStatus == .limited {
-                        return .run { send in
-                            await send(.photoAssetsLoadStarted)
-                            let assets = await photoLibraryClient.fetchAuthorizedAssets()
-                            await send(.photoAssetsLoaded(assets))
-                        }
-                    }
                     return .none
                 }
 
@@ -163,14 +157,7 @@ public struct MediaPickerFeature {
                 state.photoAuthorizationStatus = current
                 switch current {
                 case .authorized, .limited:
-                    if current == .limited {
-                        return .send(.openLimitedLibraryPicker)
-                    }
-                    return .run { send in
-                        await send(.photoAssetsLoadStarted)
-                        let assets = await photoLibraryClient.fetchAuthorizedAssets()
-                        await send(.photoAssetsLoaded(assets))
-                    }
+                    return .send(.openSystemPhotoPicker)
                 case .notDetermined:
                     return .run { send in
                         let status = await photoLibraryClient.requestAuthorization()
@@ -188,11 +175,7 @@ public struct MediaPickerFeature {
             case let .permissionRequestCompleted(status):
                 state.photoAuthorizationStatus = status
                 if status == .authorized || status == .limited {
-                    return .run { send in
-                        await send(.photoAssetsLoadStarted)
-                        let assets = await photoLibraryClient.fetchAuthorizedAssets()
-                        await send(.photoAssetsLoaded(assets))
-                    }
+                    return .send(.openSystemPhotoPicker)
                 }
                 state.isPhotoPermissionAlertPresented = true
                 return .none
@@ -209,38 +192,44 @@ public struct MediaPickerFeature {
                 state.isPhotoPermissionAlertPresented = value
                 return .none
 
-            case .openLimitedLibraryPicker:
-                return .none   // View 가 PHPhotoLibrary.presentLimitedLibraryPicker 호출
-
-            case .limitedLibraryPickerDismissed:
-                return .run { send in
-                    await send(.photoAssetsLoadStarted)
-                    let assets = await photoLibraryClient.fetchAuthorizedAssets()
-                    await send(.photoAssetsLoaded(assets))
-                }
-
-            case .photoAssetsLoadStarted:
-                state.isPhotoLibraryLoading = true
+            case .openSystemPhotoPicker:
+                state.isSystemPhotoPickerPresented = true
                 return .none
 
-            case let .photoAssetsLoaded(assets):
-                state.photoAssets = assets
-                let validIDs = Set(assets.map(\.id))
-                state.selectedAssetIDs.removeAll { !validIDs.contains($0) }
-                state.media = state.media.filter { validIDs.contains($0.key) }
-                state.assetThumbnails = state.assetThumbnails.filter { validIDs.contains($0.key) }
-                state.isPhotoLibraryLoading = false
-                if state.selectedAssetIDs.isEmpty {
-                    return .none
+            case let .systemPhotoPickerPresentedChanged(value):
+                state.isSystemPhotoPickerPresented = value
+                return .none
+
+            case let .photosPickedFromSystemPicker(identifiers):
+                state.isSystemPhotoPickerPresented = false
+                guard !identifiers.isEmpty else { return .none }
+                state.isPhotoLibraryLoading = true
+                return .run { send in
+                    let assets = await photoLibraryClient.fetchAssets(identifiers)
+                    await send(.photoAssetsResolved(assets))
                 }
+
+            case let .photoAssetsResolved(assets):
+                state.isPhotoLibraryLoading = false
+                for asset in assets where !state.photoAssets.contains(where: { $0.id == asset.id }) {
+                    state.photoAssets.append(asset)
+                }
+                for asset in assets where !state.selectedAssetIDs.contains(asset.id) {
+                    state.selectedAssetIDs.append(asset.id)
+                }
+                guard !state.selectedAssetIDs.isEmpty else { return .none }
                 return .send(.startSyncingMedia(ids: state.selectedAssetIDs))
 
             case let .photoAssetTapped(asset):
                 if let idx = state.selectedAssetIDs.firstIndex(of: asset.id) {
                     state.selectedAssetIDs.remove(at: idx)
+                    state.photoAssets.removeAll { $0.id == asset.id }
+                    state.media[asset.id] = nil
+                    state.assetThumbnails[asset.id] = nil
                 } else {
                     state.selectedAssetIDs.append(asset.id)
                 }
+                guard !state.selectedAssetIDs.isEmpty else { return .none }
                 return .send(.startSyncingMedia(ids: state.selectedAssetIDs))
 
             case let .startSyncingMedia(ids):
