@@ -60,7 +60,8 @@ public struct HomeView: View {
             Button {
                 store.send(.settingsButtonTapped)
             } label: {
-                MomentsIcon(.calendar, size: 20)
+                Image(systemName: "gearshape")
+                    .font(.system(size: 20, weight: .regular))
                     .foregroundColor(MomentsColor.ink)
             }
             .buttonStyle(.momentsHeaderAction)
@@ -120,7 +121,12 @@ public struct HomeView: View {
             } else {
                 LazyVStack(spacing: 12) {
                     ForEach(Array(films.enumerated()), id: \.element.id) { idx, film in
-                        FilmRow(film: film, fallbackIndex: idx)
+                        Button {
+                            router.push(.filmDetail(filmID: film.id))
+                        } label: {
+                            FilmRow(film: film, fallbackIndex: idx)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, 24)
