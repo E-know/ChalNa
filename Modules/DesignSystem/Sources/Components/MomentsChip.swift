@@ -1,8 +1,11 @@
 import SwiftUI
 
+// Danawa DDS Mobile v2.0 칩/태그.
+// Live(Red) · Video(Purple) · Film(Blue) · Selected · Dashed · Custom.
 public enum MomentsChipVariant {
     case live
     case video
+    case film
     case selected
     case dashed
     case custom(background: Color, foreground: Color, border: Color?)
@@ -20,32 +23,29 @@ public struct MomentsChip: View {
     }
 
     public var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 4) {
             leadingGlyph
             Text(label)
-                .font(MomentsTypography.monoFallback(11, weight: .semibold))
-                .tracking(0.5)
+                .font(MomentsTypography.krBody(MomentsTypography.Size.tag, weight: .semibold))
+                .tracking(-0.20)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
         .foregroundColor(foreground)
-        .background(
-            Capsule(style: .continuous).fill(background)
-        )
+        .background(Capsule(style: .continuous).fill(background))
         .overlay(
             Capsule(style: .continuous)
                 .strokeBorder(borderColor ?? .clear, style: .init(lineWidth: 1, dash: dashedBorder ? [3, 2] : []))
         )
     }
 
-    // MARK: - Style resolution
-
     private var background: Color {
         switch variant {
         case .live:     return MomentsColor.Chip.liveBackground
         case .video:    return MomentsColor.Chip.videoBackground
+        case .film:     return MomentsColor.Chip.filmBackground
         case .selected: return MomentsColor.ink
-        case .dashed:   return MomentsColor.ivory
+        case .dashed:   return Color.white
         case .custom(let bg, _, _): return bg
         }
     }
@@ -54,7 +54,8 @@ public struct MomentsChip: View {
         switch variant {
         case .live:     return MomentsColor.Chip.liveForeground
         case .video:    return MomentsColor.Chip.videoForeground
-        case .selected: return MomentsColor.cream
+        case .film:     return MomentsColor.Chip.filmForeground
+        case .selected: return .white
         case .dashed:   return MomentsColor.taupe
         case .custom(_, let fg, _): return fg
         }
@@ -62,10 +63,11 @@ public struct MomentsChip: View {
 
     private var borderColor: Color? {
         switch variant {
-        case .live:     return MomentsColor.Chip.liveForeground.opacity(0.2)
-        case .video:    return MomentsColor.Chip.videoForeground.opacity(0.2)
+        case .live:     return MomentsColor.Chip.liveForeground.opacity(0.25)
+        case .video:    return MomentsColor.Chip.videoForeground.opacity(0.25)
+        case .film:     return MomentsColor.Chip.filmForeground.opacity(0.25)
         case .selected: return nil
-        case .dashed:   return MomentsColor.taupe
+        case .dashed:   return MomentsColor.Gray.g300
         case .custom(_, _, let b): return b
         }
     }
@@ -81,11 +83,6 @@ public struct MomentsChip: View {
             Circle()
                 .fill(MomentsColor.Chip.liveForeground)
                 .frame(width: 6, height: 6)
-                .overlay(
-                    Circle()
-                        .stroke(MomentsColor.Chip.liveForeground.opacity(0.2), lineWidth: 3)
-                        .frame(width: 10, height: 10)
-                )
         } else if let icon {
             MomentsIcon(icon).frame(width: 10, height: 10)
         }
@@ -96,6 +93,7 @@ public struct MomentsChip: View {
     HStack {
         MomentsChip("LIVE", variant: .live)
         MomentsChip("VIDEO", variant: .video, icon: .film)
+        MomentsChip("FILM", variant: .film, icon: .film)
         MomentsChip("SELECTED", variant: .selected, icon: .plus)
         MomentsChip("+ 날짜", variant: .dashed)
     }

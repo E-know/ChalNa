@@ -1,11 +1,10 @@
 import SwiftUI
 
-/// Live Photo를 나타내는 동심원 뱃지.
-/// 바깥: 얇은 링, 안쪽: 채워진 원.
+/// Live Photo 강조용 작은 dot 뱃지. 다나와 톤에서는 Red-500 으로 노출.
 public struct LiveBadge: View {
     public enum Style {
-        case light   // 흰색 (사진 위)
-        case dark    // 잉크 (밝은 배경 위)
+        case light   // 다크 배경 위 (사진 위) — White dot
+        case dark    // 밝은 배경 위 — Red-500 dot
     }
 
     public var size: CGFloat
@@ -17,7 +16,7 @@ public struct LiveBadge: View {
     }
 
     public var body: some View {
-        let color: Color = (style == .light) ? .white : MomentsColor.ink
+        let color: Color = (style == .light) ? .white : MomentsColor.danger
         return ZStack {
             Circle()
                 .stroke(color, lineWidth: size * 0.11)

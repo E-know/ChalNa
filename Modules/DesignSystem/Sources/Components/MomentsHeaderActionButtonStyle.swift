@@ -5,6 +5,7 @@ public enum MomentsHeaderActionProminence {
     case primary
 }
 
+/// 다나와 네비게이션 바 좌·우측 액션 버튼 스타일.
 public struct MomentsHeaderActionButtonStyle: ButtonStyle {
     public let prominence: MomentsHeaderActionProminence
 
@@ -13,66 +14,24 @@ public struct MomentsHeaderActionButtonStyle: ButtonStyle {
     }
 
     public func makeBody(configuration: Configuration) -> some View {
-        HeaderActionButtonBody(configuration: configuration, prominence: prominence)
-    }
-}
-
-private struct HeaderActionButtonBody: View {
-    let configuration: ButtonStyleConfiguration
-    let prominence: MomentsHeaderActionProminence
-
-    var body: some View {
-        if #available(iOS 26.0, *) {
-            liquidGlassBody
-        } else {
-            fallbackBody
-        }
-    }
-
-    @available(iOS 26.0, *)
-    private var liquidGlassBody: some View {
         configuration.label
             .padding(.horizontal, MomentsSpacing.xs)
             .frame(minWidth: MomentsSpacing.minimumHitTarget, minHeight: MomentsSpacing.minimumHitTarget)
             .contentShape(Capsule(style: .continuous))
-            .glassEffect(
-                .regular.tint(glassTint).interactive(),
-                in: Capsule(style: .continuous)
-            )
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .opacity(configuration.isPressed ? 0.86 : 1)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
-    }
-
-    private var fallbackBody: some View {
-        configuration.label
-            .padding(.horizontal, MomentsSpacing.xs)
-            .frame(minWidth: MomentsSpacing.minimumHitTarget, minHeight: MomentsSpacing.minimumHitTarget)
-            .contentShape(Capsule(style: .continuous))
-            .background {
+            .background(
                 Capsule(style: .continuous)
-                    .fill(fallbackFill)
-            }
-            .opacity(configuration.isPressed ? 0.68 : 1)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+                    .fill(backgroundFill(pressed: configuration.isPressed))
+            )
+            .opacity(configuration.isPressed ? 0.78 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 
-    private var glassTint: Color {
+    private func backgroundFill(pressed: Bool) -> Color {
         switch prominence {
         case .standard:
-            return MomentsColor.ivory.opacity(0.24)
+            return pressed ? MomentsColor.Gray.g100 : .clear
         case .primary:
-            return MomentsColor.coral.opacity(0.22)
-        }
-    }
-
-    private var fallbackFill: Color {
-        guard configuration.isPressed else { return .clear }
-        switch prominence {
-        case .standard:
-            return MomentsColor.ivory.opacity(0.62)
-        case .primary:
-            return MomentsColor.coral.opacity(0.18)
+            return pressed ? MomentsColor.Purple.p200.opacity(0.6) : MomentsColor.Purple.p100.opacity(0.5)
         }
     }
 }

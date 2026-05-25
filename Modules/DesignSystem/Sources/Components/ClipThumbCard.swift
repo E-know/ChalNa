@@ -10,8 +10,8 @@ public enum ClipThumbState: Hashable, Sendable {
     case dimmed       // 뒤로 물러난 상태
 }
 
-/// 필름 스트립 안의 미니 폴라로이드 카드(흰 테두리 + 회전 + 작은 그림자).
-/// 타임라인의 idle/selected/playing/ghost/lifted 상태를 모두 수용.
+/// 타임라인/그리드의 평면 클립 카드. 다나와 톤(평면 4px 라운딩 + 단색 테두리).
+/// 기존 호출 호환을 위해 `rotationDegrees` 시그니처는 유지하되 내부에서 무시한다.
 public struct ClipThumbCard<Content: View>: View {
 
     public var state: ClipThumbState
@@ -34,7 +34,7 @@ public struct ClipThumbCard<Content: View>: View {
     public var body: some View {
         if case .ghost = state {
             RoundedRectangle(cornerRadius: MomentsRadius.film, style: .continuous)
-                .strokeBorder(MomentsColor.coral.opacity(0.5), style: .init(lineWidth: 2, dash: [4, 3]))
+                .strokeBorder(MomentsColor.coral.opacity(0.6), style: .init(lineWidth: 2, dash: [4, 3]))
                 .background(
                     RoundedRectangle(cornerRadius: MomentsRadius.film, style: .continuous)
                         .fill(MomentsColor.coral.opacity(0.08))
@@ -46,28 +46,21 @@ public struct ClipThumbCard<Content: View>: View {
     }
 
     private var card: some View {
-        VStack(spacing: 0) {
-            content()
-                .frame(width: size.width, height: size.height)
-                .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
-        }
-        .padding(EdgeInsets(top: 3, leading: 3, bottom: 12, trailing: 3))
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
-        .overlay(selectionOverlay)
-        .shadow(color: baseShadowColor, radius: baseShadowRadius, x: 0, y: baseShadowY)
-        .shadow(color: glowColor, radius: glowRadius, x: 0, y: 0)
-        .rotationEffect(.degrees(rotationDegrees))
-        .scaleEffect(scale, anchor: .bottom)
-        .offset(y: offsetY)
-        .opacity(opacity)
+        content()
+            .frame(width: size.width, height: size.height)
+            .clipShape(RoundedRectangle(cornerRadius: MomentsRadius.film, style: .continuous))
+            .overlay(selectionOverlay)
+            .shadow(color: shadowColor, radius: shadowRadius, x: 0, y: shadowY)
+            .scaleEffect(scale, anchor: .bottom)
+            .offset(y: offsetY)
+            .opacity(opacity)
     }
 
     @ViewBuilder
     private var selectionOverlay: some View {
         switch state {
         case .selected, .playing:
-            RoundedRectangle(cornerRadius: 3, style: .continuous)
+            RoundedRectangle(cornerRadius: MomentsRadius.film, style: .continuous)
                 .strokeBorder(MomentsColor.coral, lineWidth: 2)
         default:
             EmptyView()
@@ -76,14 +69,14 @@ public struct ClipThumbCard<Content: View>: View {
 
     private var scale: CGFloat {
         switch state {
-        case .playing: return 1.18
-        case .lifted:  return 1.18
+        case .playing: return 1.10
+        case .lifted:  return 1.12
         default:       return 1.0
         }
     }
 
     private var offsetY: CGFloat {
-        state == .playing ? -6 : 0
+        state == .playing ? -4 : 0
     }
 
     private var opacity: Double {
@@ -93,59 +86,46 @@ public struct ClipThumbCard<Content: View>: View {
         }
     }
 
-    // shadow: base + optional glow
-    private var baseShadowColor: Color {
+    private var shadowColor: Color {
         switch state {
-        case .lifted:  return MomentsColor.ink.opacity(0.35)
-        default:       return MomentsColor.ink.opacity(0.18)
+        case .lifted:  return Color.black.opacity(0.30)
+        case .playing: return MomentsColor.coral.opacity(0.4)
+        default:       return Color.black.opacity(0.10)
         }
     }
 
-    private var baseShadowRadius: CGFloat {
+    private var shadowRadius: CGFloat {
         switch state {
         case .lifted:  return 14
+        case .playing: return 8
         default:       return 2
         }
     }
 
-    private var baseShadowY: CGFloat {
+    private var shadowY: CGFloat {
         switch state {
-        case .lifted:  return 14
+        case .lifted:  return 10
         default:       return 1
         }
-    }
-
-    private var glowColor: Color {
-        switch state {
-        case .playing: return MomentsColor.coral.opacity(0.5)
-        default:       return .clear
-        }
-    }
-
-    private var glowRadius: CGFloat {
-        state == .playing ? 12 : 0
     }
 }
 
 #Preview {
     HStack(alignment: .bottom, spacing: MomentsSpacing.md) {
-        ClipThumbCard(state: .normal, rotationDegrees: -1) {
+        ClipThumbCard(state: .normal) {
             LinearGradient(colors: [.blue.opacity(0.6), .cyan], startPoint: .top, endPoint: .bottom)
         }
-        ClipThumbCard(state: .selected, rotationDegrees: 1) {
+        ClipThumbCard(state: .selected) {
             LinearGradient(colors: [.green.opacity(0.7), .mint], startPoint: .top, endPoint: .bottom)
         }
         ClipThumbCard(state: .playing) {
             LinearGradient(colors: [.orange, .pink], startPoint: .top, endPoint: .bottom)
         }
         ClipThumbCard(state: .ghost) { Color.clear }
-        ClipThumbCard(state: .dimmed, rotationDegrees: -1) {
-            LinearGradient(colors: [.brown.opacity(0.7), .yellow], startPoint: .top, endPoint: .bottom)
-        }
-        ClipThumbCard(state: .lifted, rotationDegrees: -5, size: CGSize(width: 46, height: 60)) {
+        ClipThumbCard(state: .lifted, size: CGSize(width: 46, height: 60)) {
             LinearGradient(colors: [.purple.opacity(0.7), .pink], startPoint: .top, endPoint: .bottom)
         }
     }
     .padding(MomentsSpacing.xl)
-    .background(MomentsColor.ink)
+    .background(MomentsColor.ivory)
 }
