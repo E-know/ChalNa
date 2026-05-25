@@ -25,7 +25,7 @@ public struct DesignSystemShowcaseView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: MomentsSpacing.xs) {
-            Text("OneSecMovie")
+            Text("Moments")
                 .font(MomentsTypography.title(MomentsTypography.Size.h1))
                 .foregroundColor(MomentsColor.ink)
             Text("Danawa DDS Mobile v2.0 — Design System")

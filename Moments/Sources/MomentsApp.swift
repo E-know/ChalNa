@@ -3,7 +3,7 @@ import Models
 import SwiftData
 
 @main
-struct OneSecMovieApp: App {
+struct MomentsApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

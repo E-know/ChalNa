@@ -52,7 +52,7 @@ public struct HomeView: View {
 
     private var header: some View {
         HStack(alignment: .center) {
-            Text("OneSecMovie")
+            Text("Moments")
                 .font(MomentsTypography.title(MomentsTypography.Size.h1))
                 .foregroundColor(MomentsColor.ink)
             Spacer()

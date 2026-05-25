@@ -10,7 +10,7 @@ import PackageDescription
 #endif
 
 let package = Package(
-    name: "OneSecMovie",
+    name: "Moments",
     dependencies: [
         .package(
             url: "https://github.com/pointfreeco/swift-composable-architecture",
