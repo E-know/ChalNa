@@ -1,0 +1,177 @@
+import ComposableArchitecture
+import Foundation
+import Models
+import CompositionService
+import PhotosService
+
+/// Timeline → Export 화면 Reducer. 진행률/완료/실패 phase 와 사진 보관함 저장 phase 를 함께 관리.
+@Reducer
+public struct ExportFeature {
+    public init() {}
+
+    // MARK: - State
+
+    @ObservableState
+    public struct State: Equatable {
+        public var phase: ExportPhase
+        public var progress: Double
+        public var exportedURL: URL?
+        public var errorMessage: String?
+        public var isSaving: Bool
+        public var saveToast: String?
+        /// 같은 export 가 두 번 라이브러리에 추가되는 걸 방지.
+        public var didAddToLibrary: Bool
+
+        public init(
+            phase: ExportPhase = .idle,
+            progress: Double = 0,
+            exportedURL: URL? = nil,
+            errorMessage: String? = nil,
+            isSaving: Bool = false,
+            saveToast: String? = nil,
+            didAddToLibrary: Bool = false
+        ) {
+            self.phase = phase
+            self.progress = progress
+            self.exportedURL = exportedURL
+            self.errorMessage = errorMessage
+            self.isSaving = isSaving
+            self.saveToast = saveToast
+            self.didAddToLibrary = didAddToLibrary
+        }
+    }
+
+    public enum ExportPhase: Sendable, Equatable {
+        case idle
+        case exporting
+        case done
+        case failed
+    }
+
+    // MARK: - Action
+
+    public enum Action {
+        case startExport(clips: [Clip], rotations: [Clip.ID: ClipRotation])
+        case exportProgress(Double)
+        case exportCompleted(URL)
+        case exportFailed(String)
+
+        case retryTapped(clips: [Clip], rotations: [Clip.ID: ClipRotation])
+
+        case saveToPhotoLibraryTapped
+        case saveCompleted(PhotoSaveResult)
+        case toastDismissed
+
+        case markAddedToLibrary
+
+        // Navigation intents — View 가 router 처리
+        case dismissTapped
+        case startAnotherTapped
+        case homeTapped
+    }
+
+    // MARK: - Dependencies
+
+    @Dependency(\.compositionClient) var compositionClient
+    @Dependency(\.photoLibraryClient) var photoLibraryClient
+
+    private enum CancelID { case exportStream }
+
+    // MARK: - Reducer
+
+    public var body: some ReducerOf<Self> {
+        Reduce { state, action in
+            switch action {
+            case let .startExport(clips, rotations):
+                guard !clips.isEmpty else { return .none }
+                state.phase = .exporting
+                state.progress = 0
+                state.errorMessage = nil
+                state.exportedURL = nil
+                state.didAddToLibrary = false
+                return .run { send in
+                    for await event in compositionClient.export(clips, rotations) {
+                        switch event {
+                        case let .progress(p):
+                            await send(.exportProgress(p))
+                        case let .completed(url):
+                            await send(.exportCompleted(url))
+                        case let .failed(msg):
+                            await send(.exportFailed(msg))
+                        }
+                    }
+                }
+                .cancellable(id: CancelID.exportStream, cancelInFlight: true)
+
+            case let .exportProgress(p):
+                state.progress = p
+                if state.phase != .exporting {
+                    state.phase = .exporting
+                }
+                return .none
+
+            case let .exportCompleted(url):
+                state.progress = 1.0
+                state.exportedURL = url
+                state.phase = .done
+                return .none
+
+            case let .exportFailed(msg):
+                state.errorMessage = msg
+                state.phase = .failed
+                return .none
+
+            case let .retryTapped(clips, rotations):
+                return .send(.startExport(clips: clips, rotations: rotations))
+
+            case .saveToPhotoLibraryTapped:
+                guard let url = state.exportedURL, !state.isSaving else { return .none }
+                state.isSaving = true
+                return .run { send in
+                    let result = await photoLibraryClient.saveVideoToPhotoLibrary(url)
+                    await send(.saveCompleted(result))
+                }
+
+            case let .saveCompleted(result):
+                state.isSaving = false
+                switch result {
+                case .ok:        state.saveToast = "사진 앱에 저장됐어요 ✦"
+                case .denied:    state.saveToast = "사진 보관함 접근 권한이 필요해요"
+                case let .failed(msg): state.saveToast = "저장 실패 — \(msg)"
+                }
+                return .none
+
+            case .toastDismissed:
+                state.saveToast = nil
+                return .none
+
+            case .markAddedToLibrary:
+                state.didAddToLibrary = true
+                return .none
+
+            case .dismissTapped, .startAnotherTapped, .homeTapped:
+                return .cancel(id: CancelID.exportStream)
+            }
+        }
+    }
+}
+
+// MARK: - View helpers
+
+public extension ExportFeature.ExportPhase {
+    var title: String {
+        switch self {
+        case .idle, .exporting: return "저장 중"
+        case .done:             return "완성"
+        case .failed:           return "저장 실패"
+        }
+    }
+
+    var tag: String {
+        switch self {
+        case .idle, .exporting: return "EXPORTING"
+        case .done:             return "DONE"
+        case .failed:           return "FAILED"
+        }
+    }
+}
