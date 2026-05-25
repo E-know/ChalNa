@@ -41,34 +41,34 @@ public struct MomentsChip: View {
 
     private var background: Color {
         switch variant {
-        case .live:     return MomentsColor.Chip.liveBackground
-        case .video:    return MomentsColor.Chip.videoBackground
-        case .film:     return MomentsColor.Chip.filmBackground
-        case .selected: return MomentsColor.ink
-        case .dashed:   return Color.white
-        case .custom(let bg, _, _): return bg
+            case .live:     return MomentsColor.Chip.liveBackground
+            case .video:    return MomentsColor.Chip.videoBackground
+            case .film:     return MomentsColor.Chip.filmBackground
+            case .selected: return MomentsColor.ink
+            case .dashed:   return Color.white
+            case .custom(let bg, _, _): return bg
         }
     }
 
     private var foreground: Color {
         switch variant {
-        case .live:     return MomentsColor.Chip.liveForeground
-        case .video:    return MomentsColor.Chip.videoForeground
-        case .film:     return MomentsColor.Chip.filmForeground
-        case .selected: return .white
-        case .dashed:   return MomentsColor.taupe
-        case .custom(_, let fg, _): return fg
+            case .live:     return MomentsColor.Chip.liveForeground
+            case .video:    return MomentsColor.Chip.videoForeground
+            case .film:     return MomentsColor.Chip.filmForeground
+            case .selected: return .white
+            case .dashed:   return MomentsColor.taupe
+            case .custom(_, let fg, _): return fg
         }
     }
 
     private var borderColor: Color? {
         switch variant {
-        case .live:     return MomentsColor.Chip.liveForeground.opacity(0.25)
-        case .video:    return MomentsColor.Chip.videoForeground.opacity(0.25)
-        case .film:     return MomentsColor.Chip.filmForeground.opacity(0.25)
-        case .selected: return nil
-        case .dashed:   return MomentsColor.Gray.g300
-        case .custom(_, _, let b): return b
+            case .live:     return MomentsColor.Chip.liveForeground.opacity(0.25)
+            case .video:    return MomentsColor.Chip.videoForeground.opacity(0.25)
+            case .film:     return MomentsColor.Chip.filmForeground.opacity(0.25)
+            case .selected: return nil
+            case .dashed:   return MomentsColor.Gray.g300
+            case .custom(_, _, let b): return b
         }
     }
 
@@ -79,12 +79,15 @@ public struct MomentsChip: View {
 
     @ViewBuilder
     private var leadingGlyph: some View {
-        if case .live = variant {
-            Circle()
-                .fill(MomentsColor.Chip.liveForeground)
-                .frame(width: 6, height: 6)
-        } else if let icon {
-            MomentsIcon(icon).frame(width: 10, height: 10)
+        switch variant {
+            case .live:
+                Image(systemName: "livephoto")
+                    .frame(width: 6, height: 6)
+            case .video:
+                Image(systemName: "video")
+                    .frame(width: 6, height: 6)
+            default:
+                MomentsIcon(icon ?? .download).frame(width: 10, height: 10)
         }
     }
 }
