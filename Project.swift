@@ -2,7 +2,7 @@ import ProjectDescription
 import ProjectDescriptionHelpers
 
 let project = Project(
-    name: "OneSecMovie",
+    name: "Moments",
     targets: [
         Module.framework(
             name: "DesignSystem",
@@ -89,7 +89,7 @@ let project = Project(
             ]
         ),
         .target(
-            name: "OneSecMovie",
+            name: "Moments",
             destinations: .iOS,
             product: .app,
             bundleId: Module.bundleIdPrefix,
@@ -106,8 +106,8 @@ let project = Project(
                 ]
             ),
             buildableFolders: [
-                "OneSecMovie/Sources",
-                "OneSecMovie/Resources",
+                "Moments/Sources",
+                "Moments/Resources",
                 "Modules/PhotosService/Resources",
             ],
             dependencies: [
@@ -158,12 +158,12 @@ let project = Project(
     ],
     schemes: [
         .scheme(
-            name: "OneSecMovie Dev",
+            name: "Moments Dev",
             shared: true,
-            buildAction: .buildAction(targets: ["OneSecMovie"]),
+            buildAction: .buildAction(targets: ["Moments"]),
             runAction: .runAction(
                 configuration: .debug,
-                executable: "OneSecMovie",
+                executable: "Moments",
                 arguments: .arguments(environmentVariables: [
                     "MOMENTS_APP_MODE": "devMock",
                 ])
