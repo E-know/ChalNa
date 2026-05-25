@@ -97,8 +97,8 @@ public struct MediaPickerView: View {
         .sheet(
             isPresented: $store.isSystemPhotoPickerPresented.sending(\.systemPhotoPickerPresentedChanged)
         ) {
-            SystemPhotoPicker { identifiers in
-                store.send(.photosPickedFromSystemPicker(identifiers: identifiers))
+            SystemPhotoPicker { media in
+                store.send(.photosPickedFromSystemPicker(media: media))
             }
             .ignoresSafeArea()
         }
@@ -724,9 +724,10 @@ public struct MediaPickerView: View {
 // MARK: - SystemPhotoPicker
 
 /// PHPickerViewController 를 SwiftUI sheet 로 띄우기 위한 래퍼.
-/// Live Photo 와 영상만 노출하고, 결과는 PHAsset.localIdentifier 배열로 돌려준다.
+/// `.limited` 권한에서도 picker 가 임시로 부여하는 NSItemProvider 접근권으로
+/// 권한 밖 사진의 paired video / movie 파일을 임시 디렉토리에 미리 추출해 둔다.
 private struct SystemPhotoPicker: UIViewControllerRepresentable {
-    let onPicked: ([String]) -> Void
+    let onPicked: ([PickedMedia]) -> Void
 
     func makeUIViewController(context: Context) -> PHPickerViewController {
         var config = PHPickerConfiguration(photoLibrary: .shared())
@@ -743,13 +744,18 @@ private struct SystemPhotoPicker: UIViewControllerRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(onPicked: onPicked) }
 
     final class Coordinator: NSObject, PHPickerViewControllerDelegate {
-        let onPicked: ([String]) -> Void
-        init(onPicked: @escaping ([String]) -> Void) { self.onPicked = onPicked }
+        let onPicked: ([PickedMedia]) -> Void
+        init(onPicked: @escaping ([PickedMedia]) -> Void) { self.onPicked = onPicked }
 
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-            let ids = results.compactMap(\.assetIdentifier)
-            picker.dismiss(animated: true) { [onPicked] in
-                onPicked(ids)
+            picker.dismiss(animated: true)
+            guard !results.isEmpty else {
+                onPicked([])
+                return
+            }
+            Task { [onPicked] in
+                let media = await PickedMediaLoader.load(from: results)
+                await MainActor.run { onPicked(media) }
             }
         }
     }
