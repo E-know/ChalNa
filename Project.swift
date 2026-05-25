@@ -32,6 +32,13 @@ let project = Project(
             ]
         ),
         Module.framework(
+            name: "AnalyticsService",
+            dependencies: [
+                .external(name: "ComposableArchitecture"),
+                .external(name: "FirebaseAnalytics"),
+            ]
+        ),
+        Module.framework(
             name: "AppCore",
             dependencies: [
                 .target(name: "Models"),
@@ -42,6 +49,7 @@ let project = Project(
             name: "HomeFeature",
             dependencies: [
                 .target(name: "AppCore"),
+                .target(name: "AnalyticsService"),
                 .target(name: "Models"),
                 .target(name: "DesignSystem"),
                 .external(name: "ComposableArchitecture"),
@@ -51,6 +59,7 @@ let project = Project(
             name: "MediaPickerFeature",
             dependencies: [
                 .target(name: "AppCore"),
+                .target(name: "AnalyticsService"),
                 .target(name: "Models"),
                 .target(name: "DesignSystem"),
                 .target(name: "PhotosService"),
@@ -61,6 +70,7 @@ let project = Project(
             name: "ExportFeature",
             dependencies: [
                 .target(name: "AppCore"),
+                .target(name: "AnalyticsService"),
                 .target(name: "Models"),
                 .target(name: "DesignSystem"),
                 .target(name: "CompositionService"),
@@ -107,11 +117,13 @@ let project = Project(
                 .target(name: "CompositionService"),
                 .target(name: "PhotosService"),
                 .target(name: "AppCore"),
+                .target(name: "AnalyticsService"),
                 .target(name: "HomeFeature"),
                 .target(name: "MediaPickerFeature"),
                 .target(name: "ExportFeature"),
                 .target(name: "TimelineFeature"),
                 .external(name: "ComposableArchitecture"),
+                .external(name: "FirebaseAnalytics"),
             ]
         ),
         Module.unitTests(
