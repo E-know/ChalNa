@@ -4,6 +4,7 @@ import TimelineFeature
 import ExportFeature
 import MediaPickerFeature
 import HomeFeature
+import FilmDetailFeature
 import AppCore
 import DesignSystem
 import PhotosService
@@ -40,6 +41,7 @@ public struct RootView: View {
         case let .mediaPicker(s): MediaPickerView(store: s)
         case let .timeline(s):    TimelineView(store: s)
         case let .export(s):      ExportView(store: s)
+        case let .filmDetail(s):  FilmDetailView(store: s)
         }
     }
 
@@ -52,6 +54,8 @@ public struct RootView: View {
                 store.send(.routerPushedTimeline)
             case .export:
                 store.send(.routerPushedExport)
+            case let .filmDetail(filmID):
+                store.send(.routerPushedFilmDetail(filmID: filmID))
             }
         }
         router.popHandler = { [store] in store.send(.routerPopped) }
