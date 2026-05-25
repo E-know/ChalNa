@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>ios.inho.OneSecMovie</string>
+	<string>ios.inho.Moments</string>
 	<key>PROJECT_ID</key>
 	<string>onesecmovie</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:593502077027:ios:8dd5a45d1caacdc970f856</string>
+	<string>1:593502077027:ios:4e0ac766ed974ac470f856</string>
 </dict>
 </plist>

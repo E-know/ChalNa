@@ -15,8 +15,8 @@ public struct MomentsHeaderActionButtonStyle: ButtonStyle {
 
     public func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .padding(.horizontal, MomentsSpacing.xs)
-            .frame(minWidth: MomentsSpacing.minimumHitTarget, minHeight: MomentsSpacing.minimumHitTarget)
+            .padding(.horizontal, 8)
+            .frame(minWidth: 44, minHeight: 44)
             .contentShape(Capsule(style: .continuous))
             .background(
                 Capsule(style: .continuous)

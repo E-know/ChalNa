@@ -24,7 +24,7 @@ public struct MomentsTextField: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: MomentsSpacing.xs) {
+        VStack(alignment: .leading, spacing: 8) {
             if let label {
                 Text(label)
                     .font(MomentsTypography.krBody(MomentsTypography.Size.small, weight: .medium))
@@ -35,7 +35,7 @@ public struct MomentsTextField: View {
                 .focused($isFocused)
                 .font(MomentsTypography.krBody(MomentsTypography.Size.body, weight: .regular))
                 .foregroundColor(MomentsColor.ink)
-                .padding(.horizontal, MomentsSpacing.md)
+                .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .background(
                     RoundedRectangle(cornerRadius: MomentsRadius.button, style: .continuous)

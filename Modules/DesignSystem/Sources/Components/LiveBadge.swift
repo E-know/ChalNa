@@ -29,12 +29,12 @@ public struct LiveBadge: View {
 }
 
 #Preview {
-    HStack(spacing: MomentsSpacing.md) {
+    HStack(spacing: 16) {
         LiveBadge(size: 18)
-            .padding(MomentsSpacing.md)
+            .padding(16)
             .background(Color.black)
         LiveBadge(size: 18, style: .dark)
-            .padding(MomentsSpacing.md)
+            .padding(16)
             .background(MomentsColor.cream)
     }
 }
