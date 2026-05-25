@@ -1,6 +1,7 @@
 import ComposableArchitecture
 import Foundation
 import AppCore
+import AnalyticsService
 import HomeFeature
 import MediaPickerFeature
 import TimelineFeature
@@ -38,6 +39,8 @@ public struct AppFeature {
         case export(ExportFeature)
     }
 
+    @Dependency(\.analyticsTracker) var analyticsTracker
+
     public var body: some ReducerOf<Self> {
         Scope(state: \.home, action: \.home) {
             HomeFeature()
@@ -47,14 +50,21 @@ public struct AppFeature {
             switch action {
             case let .routerPushedMediaPicker(source):
                 state.path.append(.mediaPicker(MediaPickerFeature.State(source: source)))
+                let tag: MediaPickerSourceTag = switch source {
+                case .photoLibrary: .photoLibrary
+                case .devFixtures:  .devFixtures
+                }
+                analyticsTracker.log(.mediaPickerOpened(source: tag))
                 return .none
 
             case .routerPushedTimeline:
                 state.path.append(.timeline(TimelineFeature.State()))
+                analyticsTracker.log(.timelineOpened)
                 return .none
 
             case .routerPushedExport:
                 state.path.append(.export(ExportFeature.State()))
+                analyticsTracker.log(.exportScreenOpened)
                 return .none
 
             case .routerPopped:

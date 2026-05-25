@@ -4,6 +4,7 @@ import Photos
 import Models
 import PhotosService
 import AppCore
+import AnalyticsService
 
 /// 사진 보관함에서 Live Photo / 영상을 선택해 Timeline 으로 넘기는 화면의 Reducer.
 @Reducer
@@ -117,6 +118,7 @@ public struct MediaPickerFeature {
 
     @Dependency(\.photoLibraryClient) var photoLibraryClient
     @Dependency(\.uuid) var uuid
+    @Dependency(\.analyticsTracker) var analyticsTracker
 
     // MARK: - Reducer
 
@@ -322,6 +324,7 @@ public struct MediaPickerFeature {
                 let ordered = clips.sorted { $0.capturedAt < $1.capturedAt }
                 let trimmed = state.titleInput.trimmingCharacters(in: .whitespacesAndNewlines)
                 state.confirmation = State.Confirmation(id: uuid(), clips: ordered, title: trimmed)
+                analyticsTracker.log(.clipsConfirmed(count: ordered.count))
                 return .none
 
             case let .devResolveCompleted(.failure(error)):
@@ -363,6 +366,7 @@ public struct MediaPickerFeature {
         let ordered = clips.sorted { $0.capturedAt < $1.capturedAt }
         let trimmed = state.titleInput.trimmingCharacters(in: .whitespacesAndNewlines)
         state.confirmation = State.Confirmation(id: uuid(), clips: ordered, title: trimmed)
+        analyticsTracker.log(.clipsConfirmed(count: ordered.count))
         return .none
     }
 
