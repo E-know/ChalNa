@@ -19,7 +19,7 @@
       disablePerformanceAntipatternChecker = "YES"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/inhochoi/Documents/2026Code/OneSecMovie"
+      customWorkingDirectory = "/Users/inhochoi/Documents/ProductCode/OneSecMovie/Clone1"
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
