@@ -107,7 +107,7 @@ HomeFt MediaPickerFt TimelineFt ExportFt   AppCore (Router · Session)
 ## 코드 컨벤션
 - 타입 추론이 명확한 곳에서는 타입 생략, 공개 API는 명시
 - `self.` 명시 (클로저/이니셜라이저 외에는 생략)
-- 매직 넘버 금지, `DesignSystem/Tokens.swift`에 상수화
+- Spacing/padding 은 토큰 없이 리터럴 숫자(`.padding(16)`)로 직접 기입한다. 색/타이포/라디우스/섀도우 는 여전히 토큰 사용.
 - 한국어 주석 OK, 식별자는 영어
 - 한 파일 = 한 타입 원칙, 단 긴밀하게 결합된 small helper는 예외
 
@@ -131,13 +131,12 @@ HomeFt MediaPickerFt TimelineFt ExportFt   AppCore (Router · Session)
 
 ## 디자인 시스템 (Moments)
 
-모든 UI 는 `OneSecMovie/Sources/DesignSystem/` 의 토큰/컴포넌트만 사용한다.
-**리터럴 HEX·폰트명·매직 넘버 금지**. 새 컴포넌트를 만들기 전에 기존 것부터 재사용.
+모든 UI 는 `OneSecMovie/Sources/DesignSystem/` 의 토큰/컴포넌트를 사용한다 (단, **spacing/padding 은 토큰 없이 리터럴 숫자로 직접 기입**). **리터럴 HEX·폰트명 금지**. 새 컴포넌트를 만들기 전에 기존 것부터 재사용.
 
 ### 파일 레이아웃
 ```
 OneSecMovie/Sources/DesignSystem/
-├─ Tokens/       MomentsColor · Typography · Spacing · Radius · Shadow
+├─ Tokens/       MomentsColor · Typography · Radius · Shadow
 ├─ Effects/      PaperGrainOverlay · HandwrittenUnderline · Vignette
 ├─ Components/   MomentsButton · MomentsChip · PolaroidCard · MaskingTape
 │                StampBadge · StickerRing · FilmStripBackground
@@ -170,8 +169,10 @@ OneSecMovie/Sources/DesignSystem/
 - 스케일: `Size.tag(10) / caption(14) / body(16) / bodyLg(18) / h2(24) / h1(32) / displayS(48) / displayL(72)`
 - tag label: `Text("...").tagLabel()` 확장으로 통일
 
-### Spacing — `MomentsSpacing` (4pt base)
-`xxs(4) · xs(8) · sm(12) · md(16) · lg(24) · xl(32) · xxl(48) · xxxl(64) · huge(96)`
+### Spacing / Padding
+- 토큰 없이 **리터럴 숫자로 직접 기입**한다 (`.padding(16)`, `HStack(spacing: 8)` 등).
+- 권장 스케일 (참고): `4 · 8 · 12 · 16 · 24 · 32 · 48 · 64 · 96` (4pt base). 강제는 아님.
+- HIG 최소 터치 영역은 `44`pt 를 직접 사용한다.
 
 ### Radius — `MomentsRadius`
 | API | 값 | 용도 |
@@ -210,7 +211,6 @@ OneSecMovie/Sources/DesignSystem/
 ### 금지 사항
 - `Color(hex: 0x...)` / `Color(red:green:blue:)` 직접 호출 금지
 - `.font(.system(size: 16))` 금지 — 반드시 `MomentsTypography.*` 경유
-- `.padding(17)` 같은 비-4pt 값 금지 — `MomentsSpacing.md` 사용
 - `.cornerRadius(15)` 금지 — `MomentsRadius.*` 사용
 - `UIColor` / `UIFont` 직접 참조 금지 (단 `PaperGrainOverlay` 내부 예외)
 

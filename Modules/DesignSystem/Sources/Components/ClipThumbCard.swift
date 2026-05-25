@@ -111,7 +111,7 @@ public struct ClipThumbCard<Content: View>: View {
 }
 
 #Preview {
-    HStack(alignment: .bottom, spacing: MomentsSpacing.md) {
+    HStack(alignment: .bottom, spacing: 16) {
         ClipThumbCard(state: .normal) {
             LinearGradient(colors: [.blue.opacity(0.6), .cyan], startPoint: .top, endPoint: .bottom)
         }
@@ -126,6 +126,6 @@ public struct ClipThumbCard<Content: View>: View {
             LinearGradient(colors: [.purple.opacity(0.7), .pink], startPoint: .top, endPoint: .bottom)
         }
     }
-    .padding(MomentsSpacing.xl)
+    .padding(32)
     .background(MomentsColor.ivory)
 }

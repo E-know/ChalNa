@@ -21,13 +21,13 @@ public struct MomentsBottomSheet<Content: View>: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: MomentsSpacing.md) {
+        VStack(alignment: .leading, spacing: 16) {
             if showsGrabber {
                 Capsule()
                     .fill(MomentsColor.Gray.g200)
                     .frame(width: 36, height: 4)
                     .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, MomentsSpacing.xs)
+                    .padding(.top, 8)
             }
 
             if let title {
@@ -44,8 +44,8 @@ public struct MomentsBottomSheet<Content: View>: View {
 
             content()
         }
-        .padding(.horizontal, MomentsSpacing.lg)
-        .padding(.bottom, MomentsSpacing.lg)
+        .padding(.horizontal, 24)
+        .padding(.bottom, 24)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             UnevenRoundedRectangle(
@@ -66,11 +66,11 @@ public struct MomentsBottomSheet<Content: View>: View {
         title: "내보내기 준비됨",
         subtitle: "Vlog가 저장되었어요. 공유하거나 한 번 더 확인하세요."
     ) {
-        VStack(spacing: MomentsSpacing.sm) {
+        VStack(spacing: 12) {
             Button("공유하기") {}.buttonStyle(.moments(.filled, size: .lg, fillWidth: true))
             Button("나중에") {}.buttonStyle(.moments(.standardOutlined, size: .lg, fillWidth: true))
         }
     }
-    .padding(MomentsSpacing.lg)
+    .padding(24)
     .background(MomentsColor.ivory)
 }

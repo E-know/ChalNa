@@ -18,8 +18,8 @@ private struct MomentsHeaderBarModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .padding(.horizontal, MomentsSpacing.md)
-            .padding(.vertical, MomentsSpacing.sm)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
             .frame(maxWidth: .infinity)
             .background(
                 MomentsColor.cream

@@ -9,7 +9,7 @@ struct TransportControls: View {
     let onNext: () -> Void
 
     var body: some View {
-        HStack(spacing: MomentsSpacing.lg) {
+        HStack(spacing: 24) {
             sideButton(icon: .skipBack, label: "이전 클립", action: onPrev)
             centerButton
             sideButton(icon: .skipForward, label: "다음 클립", action: onNext)
