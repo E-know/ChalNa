@@ -14,34 +14,24 @@ public struct MomentsShadowLayer {
     }
 }
 
+// Danawa DDS Mobile v2.0: drop shadow #000000 20% blur 6 표준.
 public enum MomentsShadow {
 
-    private static let ink08 = Color(hex: 0x3D2E24, opacity: 0.08)
-    private static let ink10 = Color(hex: 0x3D2E24, opacity: 0.10)
-    private static let ink18 = Color(hex: 0x3D2E24, opacity: 0.18)
-    private static let ink22 = Color(hex: 0x3D2E24, opacity: 0.22)
-    private static let ink25 = Color(hex: 0x3D2E24, opacity: 0.25)
-    private static let ink28 = Color(hex: 0x3D2E24, opacity: 0.28)
+    private static let black10 = Color.black.opacity(0.10)
+    private static let black20 = Color.black.opacity(0.20)
 
     public static let sm: [MomentsShadowLayer] = [
-        .init(ink08, radius: 1, y: 1),
-        .init(ink10, radius: 2, y: 2),
+        .init(black10, radius: 2, y: 1),
     ]
 
+    /// 다나와 탭바 표준: #000000 20% blur 6
     public static let md: [MomentsShadowLayer] = [
-        .init(ink08, radius: 2, y: 2),
-        .init(ink18, radius: 8, y: 8),
+        .init(black20, radius: 6, y: 2),
     ]
 
     public static let lg: [MomentsShadowLayer] = [
-        .init(ink08, radius: 4, y: 4),
-        .init(ink25, radius: 20, y: 20),
-    ]
-
-    public static let polaroid: [MomentsShadowLayer] = [
-        .init(ink08, radius: 1,  y: 1),
-        .init(ink22, radius: 6,  y: 6),
-        .init(ink28, radius: 18, y: 18),
+        .init(black10, radius: 4, y: 2),
+        .init(black20, radius: 16, y: 8),
     ]
 }
 
