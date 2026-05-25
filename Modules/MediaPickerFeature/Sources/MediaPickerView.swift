@@ -135,20 +135,14 @@ public struct MediaPickerView: View {
 
             Spacer()
 
-            Button {
-                store.send(.primaryActionTapped)
-            } label: {
-                if store.isResolving || isPreparingMedia {
-                    ProgressView().controlSize(.small).tint(MomentsColor.coral)
-                } else {
-                    Text("다음")
-                        .font(MomentsTypography.krSemibold(14))
-                        .foregroundColor(canUsePrimaryAction ? MomentsColor.ink : MomentsColor.taupe.opacity(0.5))
-                }
+            // 헤더 좌우 균형용 빈 영역 (뒤로 버튼과 같은 크기)
+            HStack(spacing: 2) {
+                MomentsIcon(.chevronLeft, size: 14)
+                Text("뒤로").font(MomentsTypography.krBody(14, weight: .medium))
             }
-            .buttonStyle(.momentsHeaderPrimaryAction)
-            .accessibilityLabel(store.isResolving || isPreparingMedia ? "미디어 준비 중" : "다음")
-            .disabled(!canUsePrimaryAction || store.isResolving)
+            .opacity(0)
+            .accessibilityHidden(true)
+            .allowsHitTesting(false)
         }
     }
 

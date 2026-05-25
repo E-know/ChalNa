@@ -110,39 +110,14 @@ public struct ExportView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .top) {
-            backButton
-            Spacer()
-            VStack(spacing: 2) {
-                Text(store.phase.title)
-                    .font(MomentsTypography.krSemibold(15))
-                    .foregroundColor(MomentsColor.ink)
-                Text(store.phase.tag)
-                    .tagLabel(color: tagColor)
-            }
-            Spacer()
-            backButton
-                .opacity(0)
-                .accessibilityHidden(true)
-                .allowsHitTesting(false)
+        VStack(spacing: 2) {
+            Text(store.phase.title)
+                .font(MomentsTypography.krSemibold(15))
+                .foregroundColor(MomentsColor.ink)
+            Text(store.phase.tag)
+                .tagLabel(color: tagColor)
         }
-    }
-
-    private var backButton: some View {
-        Button {
-            router.pop()
-        } label: {
-            HStack(spacing: 2) {
-                MomentsIcon(.chevronLeft, size: 14)
-                Text("편집으로")
-                    .font(MomentsTypography.krBody(14, weight: .medium))
-            }
-            .foregroundColor(MomentsColor.taupe)
-        }
-        .buttonStyle(.momentsHeaderAction)
-        .accessibilityLabel("편집으로")
-        .disabled(store.phase == .exporting)
-        .opacity(store.phase == .exporting ? 0.4 : 1)
+        .frame(maxWidth: .infinity)
     }
 
     private var tagColor: Color {

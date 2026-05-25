@@ -1,6 +1,6 @@
 import SwiftUI
 
-// Danawa DDS Mobile v2.0 타이포 토큰. Pretendard(KR) + SF Mono(spec) 로 단순화.
+// Danawa DDS Mobile v2.0 타이포 토큰. 한글 본문은 시스템 폰트, Spec/숫자는 SF Mono.
 // 다나와 가이드:
 //   본문 15~16px, 14px 이하 사용 제한, 11px 이하 컨텐츠 금지.
 //   Title Big1/Big2 24px bold/regular (LH 32, tracking -0.2px)
@@ -10,27 +10,26 @@ import SwiftUI
 public enum MomentsTypography {
 
     private enum FontName {
-        static let pretendard = "Pretendard"
         static let systemMono = "SF Mono"
     }
 
-    // MARK: - KR (Pretendard, 시스템 폰트로 자동 fallback)
+    // MARK: - KR (기본 시스템 폰트)
 
     public static func displayKR(_ size: CGFloat, weight: Font.Weight = .bold) -> Font {
-        Font.custom(FontName.pretendard, size: size, relativeTo: textStyle(for: size)).weight(weight)
+        Font.system(size: size, weight: weight, design: .default)
     }
 
     public static func krSemibold(_ size: CGFloat) -> Font {
-        Font.custom(FontName.pretendard, size: size, relativeTo: textStyle(for: size)).weight(.semibold)
+        Font.system(size: size, weight: .semibold, design: .default)
     }
 
     public static func krBody(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        Font.custom(FontName.pretendard, size: size, relativeTo: textStyle(for: size)).weight(weight)
+        Font.system(size: size, weight: weight, design: .default)
     }
 
     /// 다나와 Title (Big1/Big2) 기본 24pt bold
     public static func title(_ size: CGFloat = Size.h1, weight: Font.Weight = .bold) -> Font {
-        Font.custom(FontName.pretendard, size: size, relativeTo: textStyle(for: size)).weight(weight)
+        Font.system(size: size, weight: weight, design: .default)
     }
 
     // MARK: - Mono (Spec / Price / 코드용)

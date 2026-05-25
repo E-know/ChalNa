@@ -7,8 +7,10 @@ struct EditToolbar: View {
     var dimmed: Bool = false
     /// 현재 클립이 r0이 아닐 때 회전 아이콘 우상단에 coral dot으로 "회전 적용 중" 표시.
     var rotationActive: Bool = false
+    var canSave: Bool = true
     var onRotate: () -> Void = {}
     var onDelete: () -> Void = {}
+    var onSave: () -> Void = {}
 
     @ViewBuilder
     var body: some View {
@@ -23,6 +25,7 @@ struct EditToolbar: View {
         HStack(spacing: 0) {
             item(icon: .rotate, label: "회전", action: onRotate, dotIndicator: rotationActive)
             item(icon: .trash, label: "삭제", action: onDelete, tone: .destructive)
+            item(icon: .check, label: "저장", action: onSave, disabled: !canSave)
         }
         .padding(.vertical, 12)
         .background(
@@ -47,6 +50,7 @@ struct EditToolbar: View {
             HStack(spacing: 8) {
                 glassItem(icon: .rotate, label: "회전", action: onRotate, dotIndicator: rotationActive)
                 glassItem(icon: .trash, label: "삭제", action: onDelete, tone: .destructive)
+                glassItem(icon: .check, label: "저장", action: onSave, disabled: !canSave)
             }
             .padding(.vertical, 4)
         }
@@ -60,7 +64,8 @@ struct EditToolbar: View {
         label: String,
         action: @escaping () -> Void,
         dotIndicator: Bool = false,
-        tone: ToolbarItemTone = .normal
+        tone: ToolbarItemTone = .normal,
+        disabled: Bool = false
     ) -> some View {
         Button(action: action) {
             VStack(spacing: 4) {
@@ -80,12 +85,12 @@ struct EditToolbar: View {
                         .foregroundColor(tone.foregroundColor)
                 }
             }
-            .opacity(dimmed ? 0.45 : 1)
+            .opacity(dimmed ? 0.45 : (disabled ? 0.4 : 1))
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.plain)
         .momentsHitTarget()
-        .disabled(dimmed)
+        .disabled(dimmed || disabled)
         .accessibilityLabel(label)
         .accessibilityHint(tone.accessibilityHint)
     }
@@ -96,7 +101,8 @@ struct EditToolbar: View {
         label: String,
         action: @escaping () -> Void,
         dotIndicator: Bool = false,
-        tone: ToolbarItemTone = .normal
+        tone: ToolbarItemTone = .normal,
+        disabled: Bool = false
     ) -> some View {
         Button(action: action) {
             VStack(spacing: 4) {
@@ -116,13 +122,13 @@ struct EditToolbar: View {
                         .foregroundColor(tone.foregroundColor)
                 }
             }
-            .opacity(dimmed ? 0.45 : 1)
+            .opacity(dimmed ? 0.45 : (disabled ? 0.4 : 1))
             .frame(maxWidth: .infinity)
             .frame(minHeight: 52)
         }
         .buttonStyle(.glass)
         .frame(maxWidth: .infinity)
-        .disabled(dimmed)
+        .disabled(dimmed || disabled)
         .accessibilityLabel(label)
         .accessibilityHint(tone.accessibilityHint)
     }
