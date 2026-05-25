@@ -61,3 +61,4 @@ Tuist/.build/
 *.xcodeproj
 *.xcworkspace
 Derived
+understand/*
