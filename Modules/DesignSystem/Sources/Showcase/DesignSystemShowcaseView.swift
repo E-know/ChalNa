@@ -1,436 +1,327 @@
 import SwiftUI
 
-/// 무드보드 5섹션을 SwiftUI로 축약 재현. 앱 실행 시 첫 화면으로 노출.
+/// Danawa DDS Mobile v2.0 디자인 시스템 카탈로그. 토큰·컴포넌트 검증용.
 public struct DesignSystemShowcaseView: View {
     public init() {}
 
     public var body: some View {
-        ZStack {
-            MomentsColor.cream.ignoresSafeArea()
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 48) {
-                    coverSection
-                    dividerLine
-                    colorSection
-                    dividerLine
-                    typographySection
-                    dividerLine
-                    componentsSection
-                    dividerLine
-                    texturesSection
-                    footer
-                }
-                .padding(.horizontal, 32)
-                .padding(.vertical, 40)
+        ScrollView {
+            VStack(alignment: .leading, spacing: MomentsSpacing.xxl) {
+                header
+                colorSection
+                typographySection
+                buttonSection
+                chipSection
+                textFieldSection
+                foundationSection
             }
+            .padding(.horizontal, MomentsSpacing.lg)
+            .padding(.vertical, MomentsSpacing.xl)
         }
-        .overlay(PaperGrainOverlay(opacity: 0.25))
-        .momentsVignette(0.08)
+        .background(MomentsColor.cream.ignoresSafeArea())
     }
 
-    // MARK: - 01 Cover
+    // MARK: - Header
 
-    private var coverSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionHeader(num: "01", label: "COVER / TITLE")
-
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 8) {
-                    (Text("Moments")
-                        .font(MomentsTypography.serifFallback(64, italic: true))
-                        .foregroundColor(MomentsColor.ink)
-                     + Text(".")
-                        .foregroundColor(MomentsColor.coral))
-
-                    Text("— Design System")
-                        .font(MomentsTypography.handFallback(28))
-                        .foregroundColor(MomentsColor.coral)
-                        .rotationEffect(.degrees(-2))
-
-                    Text("여행의 순간들을 자동으로 이어 붙여\n한 편의 필름처럼 기록하는 iOS 앱의 디자인 토큰.")
-                        .font(MomentsTypography.krBody(14))
-                        .foregroundColor(MomentsColor.ink)
-                        .padding(.top, 8)
-                }
-                Spacer()
-                StampBadge("Draft · v0.1")
-            }
-        }
-    }
-
-    // MARK: - 02 Colors
-
-    private var colorSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            sectionHeader(num: "02", label: "COLOR · PALETTE")
-
-            FilmStripBackground {
-                VStack(spacing: 14) {
-                    paletteRow([
-                        (MomentsColor.cream, "Cream",       "#FBF6EE", "BACKGROUND"),
-                        (MomentsColor.ivory, "Warm Ivory",  "#F2E9D8", "SURFACE"),
-                        (MomentsColor.coral, "Sunset Coral", "#E8A598", "CTA · ACCENT"),
-                        (MomentsColor.sage,  "Dusty Sage",  "#A8B89E", "SECONDARY")
-                    ])
-                    paletteRow([
-                        (MomentsColor.denim, "Faded Denim", "#7A92A8", "INFO · LINK"),
-                        (MomentsColor.ink,   "Ink Brown",   "#3D2E24", "TEXT · PRIMARY"),
-                        (MomentsColor.taupe, "Soft Taupe",  "#8B7968", "TEXT · SUB"),
-                        (MomentsColor.coral, "Primary",     "—",       "60 · 30 · 10")
-                    ])
-                }
-            }
-        }
-    }
-
-    private func paletteRow(_ swatches: [(Color, String, String, String)]) -> some View {
-        HStack(spacing: 14) {
-            ForEach(Array(swatches.enumerated()), id: \.offset) { _, s in
-                swatchCell(color: s.0, name: s.1, hex: s.2, usage: s.3)
-                    .frame(maxWidth: .infinity)
-            }
-        }
-    }
-
-    private func swatchCell(color: Color, name: String, hex: String, usage: String) -> some View {
-        VStack(spacing: 6) {
-            Circle()
-                .fill(color)
-                .frame(width: 64, height: 64)
-                .overlay(
-                    Circle().strokeBorder(MomentsColor.ink.opacity(0.12), lineWidth: 1)
-                )
-                .overlay(
-                    Circle()
-                        .strokeBorder(Color.white.opacity(0.55),
-                                      style: StrokeStyle(lineWidth: 1, dash: [2, 2]))
-                        .padding(7)
-                )
-            Text(name)
-                .font(MomentsTypography.serifFallback(13, italic: true))
-                .foregroundColor(MomentsColor.cream)
-            Text(hex)
-                .font(MomentsTypography.monoFallback(9))
-                .foregroundColor(MomentsColor.cream.opacity(0.7))
-            Text(usage)
-                .font(MomentsTypography.monoFallback(8, weight: .medium))
-                .tracking(0.8)
-                .foregroundColor(Color(hex: 0xC8B894))
-        }
-    }
-
-    // MARK: - 03 Typography
-
-    private var typographySection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            sectionHeader(num: "03", label: "TYPE · SYSTEM")
-
-            HStack(alignment: .top, spacing: 16) {
-                typeCardEN.frame(maxWidth: .infinity)
-                typeCardKR.frame(maxWidth: .infinity)
-            }
-
-            scaleRuler
-        }
-    }
-
-    private var typeCardEN: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("DISPLAY · EN · Fraunces")
-                .tagLabel()
-            (Text("Moments\n").font(MomentsTypography.serifFallback(44, italic: true))
-             + Text("of summer").font(MomentsTypography.serifFallback(44, italic: false))
-             + Text(".").foregroundColor(MomentsColor.coral))
+    private var header: some View {
+        VStack(alignment: .leading, spacing: MomentsSpacing.xs) {
+            Text("OneSecMovie")
+                .font(MomentsTypography.title(MomentsTypography.Size.h1))
                 .foregroundColor(MomentsColor.ink)
-                .lineSpacing(-8)
-            Divider().background(MomentsColor.taupe.opacity(0.3))
-            Text("Warm afternoon light.")
-                .font(MomentsTypography.serifFallback(22, italic: false))
-                .foregroundColor(MomentsColor.ink)
-            Text("The shutter falls, the film keeps turning. Softly, like a page in an old diary.")
-                .font(MomentsTypography.serifFallback(14, italic: false))
-                .foregroundColor(MomentsColor.ink)
-        }
-        .padding(20)
-        .background(MomentsColor.ivory)
-        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-        .momentsShadow(MomentsShadow.md)
-    }
-
-    private var typeCardKR: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("DISPLAY · KR · Pretendard 700").tagLabel()
-            (Text("여행의\n순간들")
-                .font(MomentsTypography.displayKR(40, weight: .bold))
-             + Text(".").foregroundColor(MomentsColor.coral))
-                .foregroundColor(MomentsColor.ink)
-                .tracking(-0.5)
-                .lineSpacing(2)
-            Divider().background(MomentsColor.taupe.opacity(0.3))
-            Text("오늘의 라이브 포토를 한 편의 영상으로.")
-                .font(MomentsTypography.krSemibold(18))
-                .foregroundColor(MomentsColor.ink)
-            Text("촬영일 순서대로 자동으로 이어붙여,\n편집 없이 여행의 기분을 그대로 담아드려요.")
-                .font(MomentsTypography.krBody(14))
-                .foregroundColor(MomentsColor.ink)
-            Text("제주, 사월의 오후 · 총 12컷")
-                .font(MomentsTypography.krBody(12, weight: .medium))
+            Text("Danawa DDS Mobile v2.0 — Design System")
+                .font(MomentsTypography.krBody(MomentsTypography.Size.body2))
                 .foregroundColor(MomentsColor.taupe)
         }
-        .padding(20)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-        .momentsShadow(MomentsShadow.md)
     }
 
-    private var scaleRuler: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("TYPE · SCALE").tagLabel()
-            HStack(alignment: .bottom, spacing: 16) {
-                ForEach([CGFloat(48), 32, 24, 18, 16, 14, 10], id: \.self) { size in
-                    VStack(spacing: 4) {
-                        Text("가")
-                            .font(.system(size: size, weight: .bold))
+    // MARK: - Color
+
+    private var colorSection: some View {
+        sectionShell(title: "Color") {
+            VStack(alignment: .leading, spacing: MomentsSpacing.md) {
+                colorRow("Brand", swatches: [
+                    ("Primary", MomentsColor.coral, "#8B38E5"),
+                    ("Cream",   MomentsColor.cream, "#FFFFFF"),
+                    ("Ivory",   MomentsColor.ivory, "#F8F8F8"),
+                    ("Ink",     MomentsColor.ink,   "#1A1A1A"),
+                    ("Taupe",   MomentsColor.taupe, "#919191"),
+                ])
+                colorRow("Status", swatches: [
+                    ("Success", MomentsColor.success, "#06B87F"),
+                    ("Danger",  MomentsColor.danger,  "#E53B38"),
+                    ("Info",    MomentsColor.info,    "#02B8D3"),
+                    ("Link",    MomentsColor.denim,   "#2070EB"),
+                ])
+                colorScale("Purple", scale: [
+                    ("100", MomentsColor.Purple.p100), ("300", MomentsColor.Purple.p300),
+                    ("500", MomentsColor.Purple.p500), ("600", MomentsColor.Purple.p600),
+                    ("800", MomentsColor.Purple.p800),
+                ])
+                colorScale("Gray", scale: [
+                    ("50", MomentsColor.Gray.g50), ("100", MomentsColor.Gray.g100),
+                    ("300", MomentsColor.Gray.g300), ("500", MomentsColor.Gray.g500),
+                    ("700", MomentsColor.Gray.g700), ("900", MomentsColor.Gray.g900),
+                ])
+            }
+        }
+    }
+
+    private func colorRow(_ label: String, swatches: [(String, Color, String)]) -> some View {
+        VStack(alignment: .leading, spacing: MomentsSpacing.xs) {
+            Text(label)
+                .font(MomentsTypography.krBody(MomentsTypography.Size.small, weight: .semibold))
+                .foregroundColor(MomentsColor.taupe)
+            HStack(spacing: MomentsSpacing.sm) {
+                ForEach(Array(swatches.enumerated()), id: \.offset) { _, s in
+                    VStack(alignment: .leading, spacing: 4) {
+                        RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
+                            .fill(s.1)
+                            .frame(height: 56)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
+                                    .strokeBorder(MomentsColor.Gray.g100, lineWidth: 0.5)
+                            )
+                        Text(s.0)
+                            .font(MomentsTypography.krBody(MomentsTypography.Size.caption, weight: .medium))
                             .foregroundColor(MomentsColor.ink)
-                        Text("\(Int(size))").tagLabel()
+                        Text(s.2)
+                            .font(MomentsTypography.monoFallback(MomentsTypography.Size.caption))
+                            .foregroundColor(MomentsColor.taupe)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .padding(12)
-            .background(MomentsColor.ivory.opacity(0.5))
-            .overlay(
-                RoundedRectangle(cornerRadius: 4)
-                    .strokeBorder(MomentsColor.taupe.opacity(0.35),
-                                   style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
-            )
         }
     }
 
-    // MARK: - 04 Components
-
-    private var componentsSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            sectionHeader(num: "04", label: "COMPONENTS")
-
-            // Polaroid row
-            VStack(alignment: .leading, spacing: 8) {
-                Text("POLAROID · -2° / 0° / +2°").tagLabel()
-                HStack(alignment: .bottom, spacing: 14) {
-                    PolaroidCard(rotation: .left,   width: 120, caption: "Jeju, 04.05", meta: "LIVE · 01 / 24", topTape: true) {
-                        placeholderA
-                    }
-                    PolaroidCard(rotation: .center, width: 130, caption: "소길리, 오후 4시", meta: "VIDEO · 00:03", topTape: true) {
-                        placeholderB
-                    }
-                    PolaroidCard(rotation: .right,  width: 120, caption: "Last light ◦", meta: "LIVE · 18 / 24") {
-                        placeholderC
-                    }
-                }
-                .padding(.top, 16)
-                .frame(maxWidth: .infinity)
-            }
-
-            // Buttons
-            VStack(alignment: .leading, spacing: 8) {
-                Text("BUTTONS · 3 STYLES").tagLabel()
-                HStack(spacing: 12) {
-                    Button { } label: {
-                        HStack(spacing: 6) {
-                            MomentsIcon(.play, size: 14)
-                            Text("Vlog 만들기")
-                        }
-                    }.buttonStyle(.momentsCoral)
-                    Button("불러오기") { }.buttonStyle(.momentsOutline)
-                    Button("나중에 하기 →") { }.buttonStyle(.momentsText)
-                }
-            }
-
-            // Chips
-            VStack(alignment: .leading, spacing: 8) {
-                Text("CHIPS · TAGS").tagLabel()
-                HStack(spacing: 8) {
-                    MomentsChip("LIVE",     variant: .live)
-                    MomentsChip("VIDEO",    variant: .video,    icon: .film)
-                    MomentsChip("SELECTED", variant: .selected, icon: .plus)
-                    MomentsChip("+ 날짜",    variant: .dashed)
-                }
-            }
-
-            // Icons
-            VStack(alignment: .leading, spacing: 8) {
-                Text("ICONS · 1.5 STROKE · LUCIDE").tagLabel()
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 16) {
-                    ForEach(MomentsIconKind.allCases, id: \.self) { kind in
-                        VStack(spacing: 4) {
-                            MomentsIcon(kind, size: 26)
-                                .foregroundColor(MomentsColor.ink)
-                            Text(kind.rawValue).tagLabel()
-                        }
-                    }
-                }
-                .padding(16)
-                .background(Color.white.opacity(0.5))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 4)
-                        .strokeBorder(MomentsColor.taupe.opacity(0.35),
-                                       style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
-                )
-            }
-        }
-    }
-
-    // MARK: - 05 Textures
-
-    private var texturesSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            sectionHeader(num: "05", label: "TEXTURE · TOKENS")
-
-            HStack(alignment: .top, spacing: 16) {
-                shadowsBlock.frame(maxWidth: .infinity)
-                radiiBlock.frame(width: 130)
-            }
-
-            spacingBlock
-            principlesBlock
-        }
-    }
-
-    private var shadowsBlock: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("SHADOWS · 3 LEVELS").tagLabel()
-            HStack(spacing: 12) {
-                shadowSample("sm", shadow: MomentsShadow.sm, radius: 12)
-                shadowSample("md", shadow: MomentsShadow.md, radius: 16)
-                shadowSample("lg", shadow: MomentsShadow.lg, radius: 20)
-            }
-        }
-    }
-
-    private func shadowSample(_ label: String, shadow: [MomentsShadowLayer], radius: CGFloat) -> some View {
-        VStack(spacing: 8) {
-            RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .fill(Color.white)
-                .frame(height: 80)
-                .momentsShadow(shadow)
-            Text(label.uppercased()).tagLabel()
-        }
-    }
-
-    private var radiiBlock: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("RADIUS").tagLabel()
-            radiusRow(4, "POLAROID")
-            radiusRow(16, "CARD")
-            radiusRow(20, "MODAL")
-        }
-    }
-
-    private func radiusRow(_ r: CGFloat, _ label: String) -> some View {
-        HStack(spacing: 10) {
-            RoundedRectangle(cornerRadius: r, style: .continuous)
-                .fill(LinearGradient(colors: [MomentsColor.ivory, Color(hex: 0xEADFC8)],
-                                     startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 42, height: 42)
-                .overlay(
-                    RoundedRectangle(cornerRadius: r, style: .continuous)
-                        .strokeBorder(MomentsColor.ink.opacity(0.12), lineWidth: 1)
-                )
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(Int(r)) px")
-                    .font(MomentsTypography.serifFallback(14, italic: true))
-                    .foregroundColor(MomentsColor.ink)
-                Text(label).tagLabel()
-            }
-        }
-    }
-
-    private var spacingBlock: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("SPACING · 4pt BASE").tagLabel()
-            HStack(alignment: .bottom, spacing: 8) {
-                ForEach([CGFloat(4), 8, 12, 16, 24, 32, 48, 64, 96], id: \.self) { step in
+    private func colorScale(_ label: String, scale: [(String, Color)]) -> some View {
+        VStack(alignment: .leading, spacing: MomentsSpacing.xs) {
+            Text(label)
+                .font(MomentsTypography.krBody(MomentsTypography.Size.small, weight: .semibold))
+                .foregroundColor(MomentsColor.taupe)
+            HStack(spacing: 6) {
+                ForEach(Array(scale.enumerated()), id: \.offset) { _, s in
                     VStack(spacing: 4) {
-                        Rectangle()
-                            .fill(step == 24 || step == 96 ? MomentsColor.coral : MomentsColor.ink)
-                            .frame(width: 4, height: step)
-                        Text("\(Int(step))").tagLabel()
+                        RoundedRectangle(cornerRadius: MomentsRadius.film, style: .continuous)
+                            .fill(s.1)
+                            .frame(height: 40)
+                        Text(s.0)
+                            .font(MomentsTypography.monoFallback(MomentsTypography.Size.caption))
+                            .foregroundColor(MomentsColor.taupe)
                     }
+                    .frame(maxWidth: .infinity)
                 }
             }
         }
     }
 
-    private var principlesBlock: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("DESIGN · PRINCIPLES").tagLabel()
-            VStack(alignment: .leading, spacing: 6) {
-                principle("01.", "편집하지 않은 듯, 편집한 것 — 자동화 뒤의 손맛.")
-                principle("02.", "화면은 필름 한 컷, 여백은 빛.")
-                principle("03.", "한글 먼저 읽히게, 영문은 노래처럼.")
-                principle("04.", "파스텔은 밝지만, 흐리지 않게.")
+    // MARK: - Typography
+
+    private var typographySection: some View {
+        sectionShell(title: "Typography") {
+            VStack(alignment: .leading, spacing: MomentsSpacing.md) {
+                typeRow("Title H1 · 24pt", font: MomentsTypography.title(MomentsTypography.Size.h1))
+                typeRow("Big · 22pt", font: MomentsTypography.title(MomentsTypography.Size.big, weight: .bold))
+                typeRow("Medium · 20pt", font: MomentsTypography.title(MomentsTypography.Size.h2, weight: .semibold))
+                typeRow("Header · 19pt", font: MomentsTypography.krBody(MomentsTypography.Size.header, weight: .regular))
+                typeRow("Body · 16pt", font: MomentsTypography.krBody(MomentsTypography.Size.body))
+                typeRow("Body2 · 15pt", font: MomentsTypography.krBody(MomentsTypography.Size.body2))
+                typeRow("Small · 14pt", font: MomentsTypography.krBody(MomentsTypography.Size.small))
+                typeRow("Caption · 12pt", font: MomentsTypography.krBody(MomentsTypography.Size.caption))
+                typeRow("Mono · 14pt", font: MomentsTypography.monoFallback(MomentsTypography.Size.small))
             }
         }
     }
 
-    private func principle(_ num: String, _ text: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Text(num)
-                .font(MomentsTypography.serifFallback(14, italic: true))
-                .foregroundColor(MomentsColor.coral)
-            Text(text)
-                .font(MomentsTypography.krBody(14))
+    private func typeRow(_ label: String, font: Font) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: MomentsSpacing.md) {
+            Text(label)
+                .font(MomentsTypography.monoFallback(MomentsTypography.Size.caption))
+                .foregroundColor(MomentsColor.taupe)
+                .frame(width: 110, alignment: .leading)
+            Text("매일의 순간을 기록하다 · Moments")
+                .font(font)
                 .foregroundColor(MomentsColor.ink)
         }
+    }
+
+    // MARK: - Button
+
+    private var buttonSection: some View {
+        sectionShell(title: "Button") {
+            VStack(alignment: .leading, spacing: MomentsSpacing.md) {
+                buttonRow(label: "Filled · L", variant: .filled, size: .lg)
+                buttonRow(label: "Outlined · L", variant: .outlined, size: .lg)
+                buttonRow(label: "Standard Filled · L", variant: .standardFilled, size: .lg)
+                buttonRow(label: "Standard Outlined · L", variant: .standardOutlined, size: .lg)
+                HStack(spacing: MomentsSpacing.sm) {
+                    Button("XL") {}.buttonStyle(.moments(.filled, size: .xl))
+                    Button("L") {}.buttonStyle(.moments(.filled, size: .lg))
+                    Button("M") {}.buttonStyle(.moments(.filled, size: .md))
+                    Button("S") {}.buttonStyle(.moments(.filled, size: .sm))
+                }
+                Button("Text 버튼 →") {}.buttonStyle(.momentsText)
+            }
+        }
+    }
+
+    private func buttonRow(label: String, variant: MomentsButtonVariant, size: MomentsButtonSize) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(MomentsTypography.monoFallback(MomentsTypography.Size.caption))
+                .foregroundColor(MomentsColor.taupe)
+            Button("샘플 라벨") {}.buttonStyle(.moments(variant, size: size, fillWidth: true))
+        }
+    }
+
+    // MARK: - Chip
+
+    private var chipSection: some View {
+        sectionShell(title: "Chip") {
+            HStack(spacing: MomentsSpacing.xs) {
+                MomentsChip("LIVE", variant: .live)
+                MomentsChip("VIDEO", variant: .video, icon: .film)
+                MomentsChip("FILM", variant: .film, icon: .film)
+                MomentsChip("SELECTED", variant: .selected, icon: .check)
+                MomentsChip("+ 날짜", variant: .dashed)
+            }
+        }
+    }
+
+    // MARK: - TextField
+
+    private var textFieldSection: some View {
+        sectionShell(title: "TextField") {
+            VStack(spacing: MomentsSpacing.md) {
+                ShowcaseTextField()
+            }
+        }
+    }
+
+    // MARK: - Foundation
+
+    private var foundationSection: some View {
+        sectionShell(title: "Foundation") {
+            VStack(alignment: .leading, spacing: MomentsSpacing.md) {
+                radiusRow
+                shadowRow
+                spacingRow
+            }
+        }
+    }
+
+    private var radiusRow: some View {
+        VStack(alignment: .leading, spacing: MomentsSpacing.xs) {
+            Text("Radius (4pt 단위)")
+                .font(MomentsTypography.krBody(MomentsTypography.Size.small, weight: .semibold))
+                .foregroundColor(MomentsColor.taupe)
+            HStack(spacing: MomentsSpacing.sm) {
+                radiusSwatch("film 4", radius: MomentsRadius.film)
+                radiusSwatch("button 4", radius: MomentsRadius.button)
+                radiusSwatch("card 8", radius: MomentsRadius.card)
+                radiusSwatch("sheet 16", radius: MomentsRadius.sheet)
+            }
+        }
+    }
+
+    private func radiusSwatch(_ label: String, radius: CGFloat) -> some View {
+        VStack(spacing: 4) {
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .fill(MomentsColor.Purple.p100)
+                .overlay(
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .strokeBorder(MomentsColor.coral, lineWidth: 1)
+                )
+                .frame(height: 56)
+            Text(label)
+                .font(MomentsTypography.monoFallback(MomentsTypography.Size.caption))
+                .foregroundColor(MomentsColor.taupe)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var shadowRow: some View {
+        VStack(alignment: .leading, spacing: MomentsSpacing.xs) {
+            Text("Shadow (#000000 20% blur 6 표준)")
+                .font(MomentsTypography.krBody(MomentsTypography.Size.small, weight: .semibold))
+                .foregroundColor(MomentsColor.taupe)
+            HStack(spacing: MomentsSpacing.md) {
+                shadowSwatch("sm", layers: MomentsShadow.sm)
+                shadowSwatch("md", layers: MomentsShadow.md)
+                shadowSwatch("lg", layers: MomentsShadow.lg)
+            }
+        }
+    }
+
+    private func shadowSwatch(_ label: String, layers: [MomentsShadowLayer]) -> some View {
+        VStack(spacing: 4) {
+            RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
+                .fill(Color.white)
+                .frame(width: 80, height: 56)
+                .momentsShadow(layers)
+            Text(label)
+                .font(MomentsTypography.monoFallback(MomentsTypography.Size.caption))
+                .foregroundColor(MomentsColor.taupe)
+        }
+    }
+
+    private var spacingRow: some View {
+        VStack(alignment: .leading, spacing: MomentsSpacing.xs) {
+            Text("Spacing (4pt base)")
+                .font(MomentsTypography.krBody(MomentsTypography.Size.small, weight: .semibold))
+                .foregroundColor(MomentsColor.taupe)
+            HStack(alignment: .bottom, spacing: 6) {
+                spacingBar("xxs", MomentsSpacing.xxs)
+                spacingBar("xs", MomentsSpacing.xs)
+                spacingBar("sm", MomentsSpacing.sm)
+                spacingBar("md", MomentsSpacing.md)
+                spacingBar("lg", MomentsSpacing.lg)
+                spacingBar("xl", MomentsSpacing.xl)
+                spacingBar("xxl", MomentsSpacing.xxl)
+            }
+        }
+    }
+
+    private func spacingBar(_ label: String, _ value: CGFloat) -> some View {
+        VStack(spacing: 4) {
+            Rectangle()
+                .fill(MomentsColor.coral)
+                .frame(width: 24, height: value)
+            Text(label)
+                .font(MomentsTypography.monoFallback(MomentsTypography.Size.caption))
+                .foregroundColor(MomentsColor.taupe)
+        }
+        .frame(width: 36)
     }
 
     // MARK: - Helpers
 
-    private func sectionHeader(num: String, label: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text(num)
-                .font(MomentsTypography.serifFallback(32, italic: true))
-                .foregroundColor(MomentsColor.coral)
-            Text(label).tagLabel()
-            Spacer()
-        }
-    }
-
-    private var dividerLine: some View {
-        ScallopDivider()
-    }
-
-    private var footer: some View {
-        HStack {
-            HStack(spacing: 8) {
-                Circle().fill(MomentsColor.coral).frame(width: 8, height: 8)
-                Text("MOMENTS · DESIGN SYSTEM").tagLabel()
+    private func sectionShell<C: View>(title: String, @ViewBuilder content: () -> C) -> some View {
+        VStack(alignment: .leading, spacing: MomentsSpacing.md) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(title)
+                    .font(MomentsTypography.title(MomentsTypography.Size.big, weight: .bold))
+                    .foregroundColor(MomentsColor.ink)
+                Spacer()
+                Rectangle()
+                    .fill(MomentsColor.Gray.g200)
+                    .frame(height: 1)
             }
-            Spacer()
-            StampBadge("Keep · Analog", angle: 4)
+            content()
         }
-        .padding(.top, 32)
     }
+}
 
-    // MARK: - Image placeholders
+/// 단순 텍스트필드 데모용 wrapper (State 보유).
+private struct ShowcaseTextField: View {
+    @State private var text: String = ""
+    @State private var failing: String = "30자를 넘는 값입니다."
 
-    private var placeholderA: some View {
-        LinearGradient(
-            colors: [Color(hex: 0xF3C9A8), Color(hex: 0xC98B72)],
-            startPoint: .top, endPoint: .bottom
-        )
-    }
-    private var placeholderB: some View {
-        LinearGradient(
-            colors: [Color(hex: 0xA8B89E), Color(hex: 0x3D5240)],
-            startPoint: .top, endPoint: .bottom
-        )
-    }
-    private var placeholderC: some View {
-        LinearGradient(
-            colors: [Color(hex: 0xC9B9A0), Color(hex: 0x8D7A61)],
-            startPoint: .top, endPoint: .bottom
-        )
+    var body: some View {
+        VStack(spacing: MomentsSpacing.md) {
+            MomentsTextField(label: "필름 제목", placeholder: "예: 제주도, 우리의 봄", helper: "비워두면 자동으로 채워져요.", text: $text)
+            MomentsTextField(label: "에러 상태", placeholder: "값을 입력하세요", errorText: "30자 이내로 입력해 주세요.", text: $failing)
+        }
     }
 }
 
