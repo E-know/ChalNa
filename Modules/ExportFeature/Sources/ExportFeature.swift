@@ -118,6 +118,10 @@ public struct ExportFeature {
                 state.exportedURL = url
                 state.phase = .done
                 analyticsTracker.log(.exportCompleted(durationMs: nil))
+                // 완성되면 자동으로 사진 보관함에 저장. 중복 추가는 `didAddToLibrary` 가드.
+                if !state.didAddToLibrary {
+                    return .send(.saveToPhotoLibraryTapped)
+                }
                 return .none
 
             case let .exportFailed(msg):
@@ -130,7 +134,9 @@ public struct ExportFeature {
                 return .send(.startExport(clips: clips, rotations: rotations))
 
             case .saveToPhotoLibraryTapped:
-                guard let url = state.exportedURL, !state.isSaving else { return .none }
+                guard let url = state.exportedURL,
+                      !state.isSaving,
+                      !state.didAddToLibrary else { return .none }
                 state.isSaving = true
                 return .run { send in
                     let result = await photoLibraryClient.saveVideoToPhotoLibrary(url)
@@ -141,6 +147,7 @@ public struct ExportFeature {
                 state.isSaving = false
                 switch result {
                 case .ok:
+                    state.didAddToLibrary = true
                     state.saveToast = "사진 앱에 저장됐어요 ✦"
                     analyticsTracker.log(.vlogSavedToLibrary)
                 case .denied:
