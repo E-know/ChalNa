@@ -2,6 +2,10 @@ import Foundation
 import Models
 import AVFoundation
 import CoreGraphics
+import QuartzCore
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// 익스포트 진행 중 외부로 흘려보내는 이벤트.
 public enum ExportEvent: Sendable {
@@ -143,7 +147,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
         // 2) 시간순으로 트랙을 채우면서 클립별 layerInstruction 누적.
         var cursor = CMTime.zero
-        var layerInstructions: [(timeRange: CMTimeRange, transform: CGAffineTransform)] = []
+        var layerInstructions: [(timeRange: CMTimeRange, transform: CGAffineTransform, capturedAt: Date)] = []
 
         for clip in clips {
             guard let videoURL = clip.videoURL else { continue }
@@ -189,7 +193,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
             )
 
             let placedRange = CMTimeRange(start: cursor, duration: clipDuration)
-            layerInstructions.append((placedRange, transform))
+            layerInstructions.append((placedRange, transform, clip.capturedAt))
 
             cursor = CMTimeAdd(cursor, clipDuration)
         }
@@ -209,10 +213,151 @@ public actor AVFoundationCompositionService: CompositionServicing {
             return inst
         }
 
+        // 4) 각 클립의 placedRange 동안 우측하단에 촬영일시 라벨을 오버레이.
+        if hasContent {
+            videoComposition.animationTool = Self.makeDateLabelAnimationTool(
+                renderSize: renderSize,
+                entries: layerInstructions.map { ($0.timeRange, $0.capturedAt) }
+            )
+        }
+
         return BuiltComposition(
             composition: composition,
             videoComposition: videoComposition,
             hasContent: hasContent
+        )
+    }
+
+    // MARK: - Date label overlay
+
+    /// 라벨 텍스트 포맷. `yyyy/MM/dd HH:mm` · 사용자의 현재 타임존 · POSIX 로케일(ICU 의존 제거).
+    private static let dateLabelFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = .current
+        f.dateFormat = "yyyy/MM/dd HH:mm"
+        return f
+    }()
+
+    /// `UIAppFonts`로 등록된 KERISKEDU 패밀리에서 Line(outline) 변형의 PostScript name 우선 선택.
+    /// 매칭 실패 시 빈 문자열 → `UIFont(name:size:)`가 nil 리턴 → 시스템 폰트로 fallback.
+    /// 첫 호출 시 진단용 print 1회 — 사용자 환경에서 매칭이 안 될 때 family/name 을 확인할 수 있음.
+    private static let kerisLabelFontName: String = {
+        #if canImport(UIKit)
+        let kerisFamilies = UIFont.familyNames.filter { $0.localizedCaseInsensitiveContains("KERIS") }
+        print("[CompositionService] KERIS families: \(kerisFamilies)")
+        for family in kerisFamilies {
+            let names = UIFont.fontNames(forFamilyName: family)
+            print("[CompositionService] family=\(family) names=\(names)")
+            if let line = names.first(where: {
+                let upper = $0.uppercased()
+                return upper.contains("LINE") || upper.contains("OUTLINE")
+                    || upper.hasSuffix("_LINE") || upper.hasSuffix("-LINE")
+            }) {
+                return line
+            }
+            if let any = names.first {
+                return any
+            }
+        }
+        #endif
+        return ""
+    }()
+
+    /// 클립별 촬영일시를 우측하단에 오버레이로 합성하는 `AVVideoCompositionCoreAnimationTool` 생성.
+    /// 각 라벨은 자신의 `timeRange` 동안만 opacity 1, 그 외엔 0.
+    private static func makeDateLabelAnimationTool(
+        renderSize: CGSize,
+        entries: [(timeRange: CMTimeRange, capturedAt: Date)]
+    ) -> AVVideoCompositionCoreAnimationTool {
+        let parentLayer = CALayer()
+        let videoLayer = CALayer()
+        parentLayer.frame = CGRect(origin: .zero, size: renderSize)
+        videoLayer.frame = parentLayer.frame
+        parentLayer.addSublayer(videoLayer)
+
+        let minDim = min(renderSize.width, renderSize.height)
+        let fontSize = minDim * 0.035
+        let padX = renderSize.width * 0.04
+        let padY = renderSize.height * 0.04
+
+        // KERISKEDU UIFont. UIAppFonts에 등록되어 있고 PostScript name 매칭이 성공하면
+        // 커스텀 폰트, 실패하면 시스템 bold로 fallback. CATextLayer.font 에 CGFont 를
+        // 직접 할당하는 패턴은 Swift에서 wrapping 이슈로 무시되는 사례가 있어,
+        // NSAttributedString의 .font attribute 로 적용한다.
+        #if canImport(UIKit)
+        let labelUIFont: UIFont = {
+            if !kerisLabelFontName.isEmpty,
+               let f = UIFont(name: kerisLabelFontName, size: fontSize) {
+                return f
+            }
+            return .systemFont(ofSize: fontSize, weight: .bold)
+        }()
+        #endif
+
+        let blackCG = CGColor(red: 0, green: 0, blue: 0, alpha: 1)
+
+        for entry in entries {
+            let textLayer = CATextLayer()
+            let labelString = dateLabelFormatter.string(from: entry.capturedAt)
+
+            #if canImport(UIKit)
+            let attributed = NSAttributedString(
+                string: labelString,
+                attributes: [
+                    .font: labelUIFont,
+                    .foregroundColor: UIColor.white,
+                ]
+            )
+            textLayer.string = attributed
+            // 실측 텍스트 사이즈에 딱 맞춰 frame을 잡고 그 frame 자체를 우측 padX 안쪽에 붙인다.
+            // 이러면 CATextLayer / paragraphStyle alignment 동작과 무관하게 정확히 우측 정렬됨.
+            let measured = attributed.size()
+            let textWidth = ceil(measured.width)
+            let textHeight = ceil(measured.height)
+            #else
+            textLayer.string = labelString
+            textLayer.fontSize = fontSize
+            textLayer.alignmentMode = .right
+            let textWidth = fontSize * 9   // "yyyy/MM/dd HH:mm" ≈ 16 글자 대략치
+            let textHeight = fontSize * 1.4
+            #endif
+
+            textLayer.contentsScale = 2.0
+            textLayer.isWrapped = false
+            // CoreAnimation 좌표계는 좌하단 원점. 아래쪽으로 떨어지는 그림자는 -y 오프셋.
+            textLayer.shadowColor = blackCG
+            textLayer.shadowOpacity = 0.5
+            textLayer.shadowOffset = CGSize(width: 0, height: -2)
+            textLayer.shadowRadius = 4
+            textLayer.frame = CGRect(
+                x: renderSize.width - textWidth - padX,
+                y: padY,
+                width: textWidth,
+                height: textHeight
+            )
+            textLayer.opacity = 0
+
+            // 해당 클립의 timeRange 동안만 보이게. `AVCoreAnimationBeginTimeAtZero` 는
+            // CoreAnimation에서 "합성 0초"를 의미하는 매직값 (0은 "즉시"라 의미가 다름).
+            // fillMode = .removed: 애니메이션 활성 구간 밖에서는 layer model value(opacity=0)로
+            // 복귀해 다음 클립의 라벨과 겹치지 않게 함. isRemovedOnCompletion = false 는
+            // 비디오 렌더링 시 애니메이션이 evaluated 되도록 유지하기 위함.
+            let show = CABasicAnimation(keyPath: "opacity")
+            show.fromValue = 1.0
+            show.toValue = 1.0
+            show.beginTime = AVCoreAnimationBeginTimeAtZero + CMTimeGetSeconds(entry.timeRange.start)
+            show.duration = max(0.01, CMTimeGetSeconds(entry.timeRange.duration))
+            show.fillMode = .removed
+            show.isRemovedOnCompletion = false
+            textLayer.add(show, forKey: "show")
+
+            parentLayer.addSublayer(textLayer)
+        }
+
+        return AVVideoCompositionCoreAnimationTool(
+            postProcessingAsVideoLayer: videoLayer,
+            in: parentLayer
         )
     }
 
