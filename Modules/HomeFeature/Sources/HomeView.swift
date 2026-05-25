@@ -1,52 +1,47 @@
 import SwiftUI
+import ComposableArchitecture
 import AppCore
 import Models
 import DesignSystem
 import SwiftData
 
-/// 앱 루트 화면. Moments 커버 · 최근 필름 · Vlog 만들기 CTA.
+/// 앱 루트 화면. Vlog 만들기 CTA + 최근 필름 라이브러리.
 public struct HomeView: View {
     @Environment(AppRouter.self) private var router
-    @Environment(EditSession.self) private var session
+    let store: StoreOf<HomeFeature>
 
-    /// 사용자가 export 해서 라이브러리에 영구 저장된 필름들. 최근 순.
     @Query(sort: [SortDescriptor(\Film.createdAt, order: .reverse)])
     private var films: [Film]
 
-    @State private var scrollProgress: Double = 0
-
-    public init() {}
+    public init(store: StoreOf<HomeFeature> = Store(initialState: HomeFeature.State()) { HomeFeature() }) {
+        self.store = store
+    }
 
     public var body: some View {
         VStack(spacing: 0) {
-            header.momentsHeaderBar(scrollProgress: scrollProgress)
+            header
+                .momentsHeaderBar(scrollProgress: store.scrollProgress)
                 .zIndex(1)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    cover
+                VStack(alignment: .leading, spacing: MomentsSpacing.xl) {
+                    hero
                         .padding(.horizontal, MomentsSpacing.lg)
                         .padding(.top, MomentsSpacing.md)
                         .trackScrollOffset(in: "home-scroll")
 
+                    primaryAction
+                        .padding(.horizontal, MomentsSpacing.lg)
+
                     recentFilmsSection
-                        .padding(.top, MomentsSpacing.xxl)
-
-                    ScallopDivider()
-                        .padding(.horizontal, MomentsSpacing.lg)
-                        .padding(.top, MomentsSpacing.xl)
-
-                    ctaStack // cta == Call To Action
-                        .padding(.horizontal, MomentsSpacing.lg)
-                        .padding(.top, MomentsSpacing.xl)
                         .padding(.bottom, MomentsSpacing.xxxl)
                 }
             }
             .coordinateSpace(name: "home-scroll")
             .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
-                let p = max(0, min(1, offset / 8))
-                if abs(p - scrollProgress) > 0.01 {
-                    withAnimation(.easeInOut(duration: 0.15)) { scrollProgress = p }
+                let p = offset / 8
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    store.send(.scrollProgressChanged(p))
                 }
             }
         }
@@ -56,42 +51,51 @@ public struct HomeView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("MOMENTS · 2026")
-                    .tagLabel()
-                Text("오늘의 순간들")
-                    .font(MomentsTypography.krSemibold(15))
+        HStack(alignment: .center) {
+            Text("OneSecMovie")
+                .font(MomentsTypography.title(MomentsTypography.Size.h1))
+                .foregroundColor(MomentsColor.ink)
+            Spacer()
+            Button {
+                store.send(.settingsButtonTapped)
+            } label: {
+                MomentsIcon(.calendar, size: 20)
                     .foregroundColor(MomentsColor.ink)
             }
-            Spacer()
-            StampBadge("Draft · v0.1", angle: -6)
+            .buttonStyle(.momentsHeaderAction)
+            .accessibilityLabel("설정")
         }
     }
 
-    // MARK: - Cover
+    // MARK: - Hero
 
-    private var cover: some View {
+    private var hero: some View {
         VStack(alignment: .leading, spacing: MomentsSpacing.sm) {
-            (Text("Moments")
-                .font(MomentsTypography.serifFallback(60, italic: true))
+            Text("오늘의 순간들")
+                .font(MomentsTypography.title(MomentsTypography.Size.h1, weight: .bold))
                 .foregroundColor(MomentsColor.ink)
-             + Text(".")
-                .font(MomentsTypography.serifFallback(60, italic: true))
-                .foregroundColor(MomentsColor.coral))
-
-            Text("— of your travel")
-                .font(MomentsTypography.handFallback(26))
-                .foregroundColor(MomentsColor.coral)
-                .rotationEffect(.degrees(-2))
-                .padding(.leading, MomentsSpacing.xs)
-
-            Text("라이브 포토와 짧은 영상을 촬영일 순서로 이어붙여\n한 편의 필름처럼 기록해요.")
-                .font(MomentsTypography.krBody(14))
+            Text("Live Photo와 짧은 영상을 촬영일 순서로 이어붙여\n한 편의 필름처럼 기록해요.")
+                .font(MomentsTypography.krBody(MomentsTypography.Size.body))
                 .foregroundColor(MomentsColor.taupe)
                 .lineSpacing(4)
-                .padding(.top, MomentsSpacing.xs)
         }
+    }
+
+    // MARK: - Primary CTA
+
+    private var primaryAction: some View {
+        Button {
+            store.send(.newVlogButtonTapped)
+            // 임시: navigation 은 여전히 router 가 처리. Step 6 에서 AppFeature.StackState 로 통합 예정.
+            router.push(.mediaPicker)
+        } label: {
+            HStack(spacing: MomentsSpacing.xs) {
+                MomentsIcon(.plus, size: 16)
+                Text("새 Vlog 만들기")
+            }
+        }
+        .buttonStyle(.moments(.filled, size: .xl, fillWidth: true))
+        .accessibilityLabel("새 Vlog 만들기")
     }
 
     // MARK: - Recent films
@@ -99,85 +103,103 @@ public struct HomeView: View {
     private var recentFilmsSection: some View {
         VStack(alignment: .leading, spacing: MomentsSpacing.md) {
             HStack(alignment: .firstTextBaseline) {
-                Text("RECENT · FILMS")
-                    .tagLabel()
+                Text("최근 필름")
+                    .font(MomentsTypography.title(MomentsTypography.Size.h2, weight: .semibold))
+                    .foregroundColor(MomentsColor.ink)
                 Spacer()
-                Text("\(films.count) REEL")
-                    .tagLabel(color: MomentsColor.coral)
+                Text("\(films.count)편")
+                    .font(MomentsTypography.krBody(MomentsTypography.Size.small))
+                    .foregroundColor(MomentsColor.taupe)
             }
             .padding(.horizontal, MomentsSpacing.lg)
 
             if films.isEmpty {
-                HandNoteRow("아직 만든 필름이 없어요 ✦ 첫 Vlog를 시작해보세요",
-                            tone: .muted, size: 17, alignment: .leading)
+                emptyState
                     .padding(.horizontal, MomentsSpacing.lg)
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(alignment: .bottom, spacing: MomentsSpacing.md) {
-                        ForEach(Array(films.enumerated()), id: \.element.id) { idx, film in
-                            PolaroidCard(
-                                rotation: rotation(for: idx),
-                                width: 168,
-                                caption: film.title,
-                                meta: film.metaLabel,
-                                topTape: idx == 0
-                            ) {
-                                filmCoverContent(for: film, index: idx)
-                            }
-                        }
+                LazyVStack(spacing: MomentsSpacing.sm) {
+                    ForEach(Array(films.enumerated()), id: \.element.id) { idx, film in
+                        FilmRow(film: film, fallbackIndex: idx)
                     }
-                    .padding(.horizontal, MomentsSpacing.lg)
-                    .padding(.vertical, MomentsSpacing.md)
                 }
+                .padding(.horizontal, MomentsSpacing.lg)
             }
         }
     }
 
-    /// 라이브러리 Film 의 cover 표지. 저장된 thumbnail 이 있으면 이미지로,
-    /// 없으면 안전한 fallback 으로 ThumbnailPreset 의 그라데이션을 사용한다.
+    private var emptyState: some View {
+        VStack(alignment: .leading, spacing: MomentsSpacing.xs) {
+            Text("아직 만든 필름이 없어요.")
+                .font(MomentsTypography.krBody(MomentsTypography.Size.body, weight: .medium))
+                .foregroundColor(MomentsColor.ink)
+            Text("첫 Vlog를 시작해보세요.")
+                .font(MomentsTypography.krBody(MomentsTypography.Size.body2))
+                .foregroundColor(MomentsColor.taupe)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(MomentsSpacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
+                .fill(MomentsColor.ivory)
+        )
+    }
+}
+
+/// 라이브러리 필름 1행 (다나와 list item 패턴: 좌측 16:9 썸네일 · 중앙 텍스트 · 우측 chevron).
+private struct FilmRow: View {
+    let film: Film
+    let fallbackIndex: Int
+
+    var body: some View {
+        HStack(spacing: MomentsSpacing.md) {
+            thumbnail
+                .frame(width: 96, height: 54)
+                .clipShape(RoundedRectangle(cornerRadius: MomentsRadius.film, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: MomentsRadius.film, style: .continuous)
+                        .strokeBorder(MomentsColor.Gray.g100, lineWidth: 0.5)
+                )
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(film.title)
+                    .font(MomentsTypography.krBody(MomentsTypography.Size.body, weight: .semibold))
+                    .foregroundColor(MomentsColor.ink)
+                    .lineLimit(1)
+                Text(film.metaLabel)
+                    .font(MomentsTypography.krBody(MomentsTypography.Size.small))
+                    .foregroundColor(MomentsColor.taupe)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            MomentsIcon(.chevronRight, size: 16)
+                .foregroundColor(MomentsColor.Gray.g400)
+        }
+        .padding(MomentsSpacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
+                .fill(Color.white)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
+                .strokeBorder(MomentsColor.Gray.g100, lineWidth: 1)
+        )
+    }
+
     @ViewBuilder
-    private func filmCoverContent(for film: Film, index: Int) -> some View {
+    private var thumbnail: some View {
         if let data = film.thumbnailData, let image = UIImage(data: data) {
             Image(uiImage: image)
                 .resizable()
                 .scaledToFill()
         } else {
-            fallbackCoverPreset(for: index).view()
+            fallbackPreset.view()
         }
     }
 
-    private func fallbackCoverPreset(for index: Int) -> ThumbnailPreset {
+    private var fallbackPreset: ThumbnailPreset {
         let pool: [ThumbnailPreset] = [.jejuOrange, .seoulSun, .field, .forest, .sunset, .cafe]
-        return pool[index % pool.count]
-    }
-
-    // MARK: - CTA
-
-    private var ctaStack: some View {
-        VStack(alignment: .leading, spacing: MomentsSpacing.md) {
-            Text("START · NEW")
-                .tagLabel()
-
-            Button {
-                router.push(.mediaPicker)
-            } label: {
-                HStack(spacing: 8) {
-                    MomentsIcon(.plus, size: 14)
-                    Text("Vlog 만들기")
-                }
-            }
-            .buttonStyle(.momentsCoral)
-        }
-    }
-
-    // MARK: - Helpers
-
-    private func rotation(for index: Int) -> PolaroidRotation {
-        switch index % 3 {
-        case 0: return .left
-        case 1: return .center
-        default: return .right
-        }
+        return pool[fallbackIndex % pool.count]
     }
 }
 
