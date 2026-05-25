@@ -24,7 +24,7 @@ struct EditToolbar: View {
             item(icon: .rotate, label: "회전", action: onRotate, dotIndicator: rotationActive)
             item(icon: .trash, label: "삭제", action: onDelete, tone: .destructive)
         }
-        .padding(.vertical, MomentsSpacing.sm)
+        .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(dimmed ? Color.white.opacity(0.7) : .white)
@@ -43,12 +43,12 @@ struct EditToolbar: View {
 
     @available(iOS 26.0, *)
     private var liquidGlassToolbar: some View {
-        GlassEffectContainer(spacing: MomentsSpacing.xs) {
-            HStack(spacing: MomentsSpacing.xs) {
+        GlassEffectContainer(spacing: 8) {
+            HStack(spacing: 8) {
                 glassItem(icon: .rotate, label: "회전", action: onRotate, dotIndicator: rotationActive)
                 glassItem(icon: .trash, label: "삭제", action: onDelete, tone: .destructive)
             }
-            .padding(.vertical, MomentsSpacing.xxs)
+            .padding(.vertical, 4)
         }
         .opacity(dimmed ? 0.82 : 1)
         .allowsHitTesting(!dimmed)
