@@ -25,6 +25,7 @@ public struct MomentsChip: View {
     public var body: some View {
         HStack(spacing: 4) {
             leadingGlyph
+                .frame(width: 10, height: 10)
             Text(label)
                 .font(MomentsTypography.krBody(MomentsTypography.Size.tag, weight: .semibold))
                 .tracking(-0.20)
@@ -82,10 +83,12 @@ public struct MomentsChip: View {
         switch variant {
             case .live:
                 Image(systemName: "livephoto")
-                    .frame(width: 6, height: 6)
+                    .resizable()
+                    .scaledToFit()
             case .video:
                 Image(systemName: "video")
-                    .frame(width: 6, height: 6)
+                    .resizable()
+                    .scaledToFit()
             default:
                 MomentsIcon(icon ?? .download).frame(width: 10, height: 10)
         }
