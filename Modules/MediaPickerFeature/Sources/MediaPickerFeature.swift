@@ -77,8 +77,7 @@ public struct MediaPickerFeature {
         case systemPhotoPickerPresentedChanged(Bool)
 
         // Library data
-        case photosPickedFromSystemPicker(identifiers: [String])
-        case photoAssetsResolved([PhotoLibraryAsset])
+        case photosPickedFromSystemPicker(media: [PickedMedia])
         case photoAssetTapped(PhotoLibraryAsset)
 
         // Media pipeline
@@ -200,25 +199,43 @@ public struct MediaPickerFeature {
                 state.isSystemPhotoPickerPresented = value
                 return .none
 
-            case let .photosPickedFromSystemPicker(identifiers):
+            case let .photosPickedFromSystemPicker(media):
                 state.isSystemPhotoPickerPresented = false
-                guard !identifiers.isEmpty else { return .none }
-                state.isPhotoLibraryLoading = true
-                return .run { send in
-                    let assets = await photoLibraryClient.fetchAssets(identifiers)
-                    await send(.photoAssetsResolved(assets))
-                }
-
-            case let .photoAssetsResolved(assets):
                 state.isPhotoLibraryLoading = false
-                for asset in assets where !state.photoAssets.contains(where: { $0.id == asset.id }) {
-                    state.photoAssets.append(asset)
+                guard !media.isEmpty else { return .none }
+
+                for item in media {
+                    let asset = PhotoLibraryAsset(
+                        id: item.id,
+                        kind: item.kind,
+                        capturedAt: item.capturedAt,
+                        pixelSize: item.displaySize ?? .zero
+                    )
+                    if !state.photoAssets.contains(where: { $0.id == item.id }) {
+                        state.photoAssets.append(asset)
+                    }
+                    if !state.selectedAssetIDs.contains(item.id) {
+                        state.selectedAssetIDs.append(item.id)
+                    }
+                    if let thumb = item.thumbnailData {
+                        state.assetThumbnails[item.id] = thumb
+                    }
+
+                    // picker 단계에서 이미 모든 데이터를 꺼냈으므로 비동기 로딩 없이 즉시 ready 상태.
+                    var loaded = MediaLoadState(
+                        kind: item.kind,
+                        thumbnail: item.thumbnailData,
+                        isLoading: false
+                    )
+                    loaded.thumbnailFailed = (item.thumbnailData == nil)
+                    loaded.videoURL = item.videoURL
+                    loaded.videoFailed = (item.videoURL == nil)
+                    loaded.duration = item.duration
+                    loaded.capturedAt = item.capturedAt
+                    loaded.displaySize = item.displaySize
+                    state.media[item.id] = loaded
                 }
-                for asset in assets where !state.selectedAssetIDs.contains(asset.id) {
-                    state.selectedAssetIDs.append(asset.id)
-                }
-                guard !state.selectedAssetIDs.isEmpty else { return .none }
-                return .send(.startSyncingMedia(ids: state.selectedAssetIDs))
+                return .none
 
             case let .photoAssetTapped(asset):
                 if let idx = state.selectedAssetIDs.firstIndex(of: asset.id) {
