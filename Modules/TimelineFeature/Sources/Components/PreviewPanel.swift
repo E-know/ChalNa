@@ -1,22 +1,21 @@
 import SwiftUI
+import ComposableArchitecture
 import AppCore
 import Models
 import DesignSystem
 
 /// 고정 크기 영상 프리뷰 패널. Idle(큰 플레이 + 외부 스크럽바) · Playing(큰 일시정지 + 외부 스크럽바).
-/// 콘텐츠 비율과 무관하게 박스 크기는 항상 같고, 내부 사진/영상은 letterbox 로 fit.
 struct PreviewPanel: View {
-    /// Figma 노드 `39:81` 기준 고정 높이.
     private static let previewHeight: CGFloat = 224
 
     @Environment(EditSession.self) private var session
 
-    let model: TimelineModel
+    let store: StoreOf<TimelineFeature>
     let playback: ClipPlaybackController
     let onTogglePlay: () -> Void
 
     private var currentRotation: ClipRotation {
-        guard let id = model.currentClip?.id else { return .r0 }
+        guard let id = store.currentClip?.id else { return .r0 }
         return session.rotation(for: id)
     }
 
@@ -30,10 +29,8 @@ struct PreviewPanel: View {
 
     private var previewCard: some View {
         ZStack {
-            // letterbox 베이스 — 가로/세로 비율이 다른 콘텐츠에서 띠 영역의 색.
             MomentsColor.ink
-            thumbnail
-                .overlay(hudOverlay)
+            thumbnail.overlay(hudOverlay)
         }
         .frame(maxWidth: .infinity)
         .frame(height: Self.previewHeight)
@@ -41,12 +38,10 @@ struct PreviewPanel: View {
         .momentsShadow(MomentsShadow.md)
     }
 
-    // MARK: - Thumb
-
     @ViewBuilder
     private var thumbnail: some View {
         ZStack {
-            if let clip = model.currentClip {
+            if let clip = store.currentClip {
                 RotatableContent(rotation: currentRotation) {
                     if clip.videoURL != nil && playback.hasVideo {
                         PlayerLayerView(player: playback.player)
@@ -63,9 +58,7 @@ struct PreviewPanel: View {
     @ViewBuilder
     private var hudOverlay: some View {
         if #available(iOS 26.0, *) {
-            GlassEffectContainer(spacing: MomentsSpacing.md) {
-                hudStack
-            }
+            GlassEffectContainer(spacing: MomentsSpacing.md) { hudStack }
         } else {
             hudStack
         }
@@ -77,8 +70,6 @@ struct PreviewPanel: View {
             playPauseButton
         }
     }
-
-    // MARK: - Top-right "1 / 12"
 
     @ViewBuilder
     private var topRightClipIndex: some View {
@@ -107,15 +98,13 @@ struct PreviewPanel: View {
     }
 
     private func topRightIndexAttributed(foreground: Color, tail tailColor: Color) -> AttributedString {
-        var s = AttributedString("\(model.currentIndex + 1) ")
+        var s = AttributedString("\(store.currentIndex + 1) ")
         s.foregroundColor = foreground
-        var tail = AttributedString("/ \(model.clips.count)")
+        var tail = AttributedString("/ \(store.clips.count)")
         tail.foregroundColor = tailColor
         s.append(tail)
         return s
     }
-
-    // MARK: - Center play/pause
 
     @ViewBuilder
     private var playPauseButton: some View {
@@ -124,16 +113,15 @@ struct PreviewPanel: View {
         }
         .buttonStyle(.plain)
         .momentsHitTarget(minSize: 64)
-        .accessibilityLabel(model.isPlaying ? "일시정지" : "재생")
-        .accessibilityHint("타임라인 미리보기 재생 상태를 전환합니다.")
+        .accessibilityLabel(store.isPlaying ? "일시정지" : "재생")
     }
 
     @ViewBuilder
     private var playPauseButtonLabel: some View {
         if #available(iOS 26.0, *) {
-            MomentsIcon(model.isPlaying ? .pause : .play, size: 22)
+            MomentsIcon(store.isPlaying ? .pause : .play, size: 22)
                 .foregroundColor(MomentsColor.ink)
-                .offset(x: model.isPlaying ? 0 : 2)
+                .offset(x: store.isPlaying ? 0 : 2)
                 .frame(width: 64, height: 64)
                 .glassEffect(
                     .regular.tint(MomentsColor.ivory.opacity(0.34)).interactive(),
@@ -145,36 +133,32 @@ struct PreviewPanel: View {
                     .fill(Color.white.opacity(0.94))
                     .frame(width: 64, height: 64)
                     .shadow(color: .black.opacity(0.3), radius: 14, y: 10)
-                MomentsIcon(model.isPlaying ? .pause : .play, size: 22)
+                MomentsIcon(store.isPlaying ? .pause : .play, size: 22)
                     .foregroundColor(MomentsColor.ink)
-                    .offset(x: model.isPlaying ? 0 : 2)
+                    .offset(x: store.isPlaying ? 0 : 2)
             }
         }
     }
-
-    // MARK: - External scrub bar
 
     @ViewBuilder
     private var externalScrubBar: some View {
         ScrubBar(
             currentLabel: scrubCurrentLabel,
-            totalLabel: model.totalClockLabel,
+            totalLabel: store.totalClockLabel,
             progress: scrubProgress,
             style: .liquidGlass
         )
     }
 
     private var scrubCurrentLabel: String {
-        model.isPlaying ? model.playheadLabel : "00:00"
+        store.isPlaying ? store.playheadLabel : "00:00"
     }
 
     private var scrubProgress: Double {
-        guard model.isPlaying else { return 0 }
-        return min(1.0, max(0.0, model.playheadSeconds / max(model.totalDuration, 0.001)))
+        guard store.isPlaying else { return 0 }
+        return min(1.0, max(0.0, store.playheadSeconds / max(store.totalDuration, 0.001)))
     }
 }
-
-// MARK: - Scrub bar
 
 private enum ScrubBarStyle {
     case paper

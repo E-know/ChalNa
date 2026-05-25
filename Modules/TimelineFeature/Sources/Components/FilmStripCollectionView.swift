@@ -1,4 +1,5 @@
 import SwiftUI
+import ComposableArchitecture
 import AppCore
 import Models
 import DesignSystem
@@ -6,16 +7,9 @@ import UIKit
 
 // MARK: - SwiftUI bridge
 
-/// `UICollectionView` 기반 FilmStrip 의 SwiftUI 진입점.
-///
-/// SwiftUI의 long-press → drag&drop 제스처 합성이 production-grade가 아니어서
-/// 14년간 검증된 UIKit `UICollectionView` drag-and-drop API로 전환.
-///
-/// - Drag preview는 UIWindow 레벨에서 렌더링 → 화면 어디서든 손가락 추적 (strip 박스 무관)
-/// - Long-press 타이밍은 iOS가 직접 관리 → 0.5s 미만 터치는 절대 활성화 안 됨
-/// - Auto-scroll near edges built-in
+/// `UICollectionView` 기반 FilmStrip 의 SwiftUI 진입점. TimelineFeature store 기반.
 struct FilmStripCollectionView: UIViewControllerRepresentable {
-    let model: TimelineModel
+    let store: StoreOf<TimelineFeature>
     let session: EditSession
     let onTapClip: (Int) -> Void
 
@@ -24,7 +18,14 @@ struct FilmStripCollectionView: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ vc: FilmStripVC, context: Context) {
-        vc.update(model: model, session: session, onTapClip: onTapClip)
+        vc.update(
+            clips: store.clips,
+            currentIndex: store.currentIndex,
+            isPlaying: store.isPlaying,
+            session: session,
+            onTapClip: onTapClip,
+            onMove: { id, target in store.send(.clipMoved(id: id, toIndex: target)) }
+        )
     }
 }
 
@@ -47,12 +48,12 @@ final class FilmStripVC: UIViewController,
 
     // SwiftUI에서 매 update 마다 다시 받아 캐시.
     private var clips: [Clip] = []
-    private weak var model: TimelineModel?
     private weak var session: EditSession?
     private var currentClipID: Clip.ID?
     private var isPlaying: Bool = false
     private var rotationByClipID: [Clip.ID: ClipRotation] = [:]
     private var onTapClip: ((Int) -> Void)?
+    private var onMove: ((Clip.ID, Int) -> Void)?
 
     // MARK: - Lifecycle
 
@@ -199,22 +200,29 @@ final class FilmStripVC: UIViewController,
 
     // MARK: - Update from SwiftUI
 
-    func update(model: TimelineModel, session: EditSession, onTapClip: @escaping (Int) -> Void) {
+    func update(
+        clips: [Clip],
+        currentIndex: Int,
+        isPlaying: Bool,
+        session: EditSession,
+        onTapClip: @escaping (Int) -> Void,
+        onMove: @escaping (Clip.ID, Int) -> Void
+    ) {
         let previousItems = dataSource.snapshot().itemIdentifiers
         let previousCurrentClipID = currentClipID
-        let previousIsPlaying = isPlaying
+        let previousIsPlaying = self.isPlaying
         let previousRotationByClipID = rotationByClipID
-        let nextClips = model.clips
-        let nextCurrentClipID = nextClips.indices.contains(model.currentIndex) ? nextClips[model.currentIndex].id : nil
+        let nextClips = clips
+        let nextCurrentClipID = nextClips.indices.contains(currentIndex) ? nextClips[currentIndex].id : nil
         let nextItems = Self.items(for: nextClips)
 
-        self.model = model
         self.session = session
         self.clips = nextClips
         self.currentClipID = nextCurrentClipID
-        self.isPlaying = model.isPlaying
+        self.isPlaying = isPlaying
         self.rotationByClipID = Self.rotationByClipID(for: nextClips, session: session)
         self.onTapClip = onTapClip
+        self.onMove = onMove
 
         if previousItems != nextItems {
             applySnapshot(animated: true)
@@ -405,8 +413,8 @@ final class FilmStripVC: UIViewController,
         // 2) snapshot 동기 적용 — 1프레임 flicker 방지
         applySnapshot(animated: false)
 
-        // 3) SwiftUI model 통보 — onChange(of: model.clips) 가 EditSession 동기화
-        model?.move(clipID: clipID, toIndex: target)
+        // 3) Reducer 에 통보 — store 가 clips 를 갱신하고 onChange(of: store.clips) 가 EditSession 동기화
+        onMove?(clipID, target)
 
         // 4) UIKit drop settle 애니메이션
         let fallbackDestination = coordinator.destinationIndexPath ?? currentDestination
@@ -472,7 +480,7 @@ final class FilmStripVC: UIViewController,
         guard let from = clips.firstIndex(where: { $0.id == clipID }) else { return false }
         let target = from + delta
         guard clips.indices.contains(target) else { return false }
-        model?.move(clipID: clipID, toIndex: target)
+        onMove?(clipID, target)
         UIAccessibility.post(
             notification: .announcement,
             argument: "\(target + 1)번째 위치로 이동했습니다."

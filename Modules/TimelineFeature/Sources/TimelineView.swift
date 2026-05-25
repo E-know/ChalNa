@@ -1,21 +1,20 @@
 import SwiftUI
+import ComposableArchitecture
 import AppCore
 import Models
 import DesignSystem
 
-/// 타임라인 편집 화면. 2가지 상태(idle · playing) — 재정렬은 UIKit `UICollectionView` drag interaction이 시스템 레벨에서 처리.
+/// 타임라인 편집 화면. TCA store 기반.
 public struct TimelineView: View {
     @Environment(AppRouter.self) private var router
     @Environment(EditSession.self) private var session
 
-    @State private var model: TimelineModel
+    @Bindable var store: StoreOf<TimelineFeature>
     @State private var playback = ClipPlaybackController()
     @State private var didWireController = false
-    @State private var pendingDeleteClip: Clip?
-    @State private var isConfirmingDelete = false
 
-    public init(model: TimelineModel = TimelineModel()) {
-        self._model = State(initialValue: model)
+    public init(store: StoreOf<TimelineFeature> = Store(initialState: TimelineFeature.State()) { TimelineFeature() }) {
+        self.store = store
     }
 
     public var body: some View {
@@ -34,9 +33,9 @@ public struct TimelineView: View {
                 .padding(.top, MomentsSpacing.md + 4)
 
             FilmStripCollectionView(
-                model: model,
+                store: store,
                 session: session,
-                onTapClip: { model.select(clipAt: $0) }
+                onTapClip: { store.send(.clipTapped(index: $0)) }
             )
             .frame(height: 104)
             .padding(.horizontal, MomentsSpacing.md)
@@ -46,12 +45,12 @@ public struct TimelineView: View {
                 .padding(.horizontal, MomentsSpacing.md + 4)
                 .padding(.top, MomentsSpacing.md)
 
-            if model.isPlaying {
+            if store.isPlaying {
                 TransportControls(
                     isPlaying: true,
-                    onPrev: { model.previous() },
-                    onToggle: { togglePlayback() },
-                    onNext: { model.next() }
+                    onPrev: { store.send(.previousTapped) },
+                    onToggle: { store.send(.togglePlay) },
+                    onNext: { store.send(.nextTapped) }
                 )
                 .padding(.top, MomentsSpacing.md)
             }
@@ -63,23 +62,16 @@ public struct TimelineView: View {
         .onAppear {
             syncFromSessionIfNeeded()
             wirePlaybackControllerIfNeeded()
-            playback.load(clip: model.currentClip)
+            playback.load(clip: store.currentClip)
         }
-        .onChange(of: model.isPlaying) { _, playing in
-            if playing {
-                playback.play()
-            } else {
-                playback.pause()
-            }
+        .onChange(of: store.isPlaying) { _, playing in
+            if playing { playback.play() } else { playback.pause() }
         }
-        .onChange(of: model.currentIndex) { _, _ in
-            playback.load(clip: model.currentClip)
-            if model.isPlaying {
-                playback.play()
-            }
+        .onChange(of: store.currentIndex) { _, _ in
+            playback.load(clip: store.currentClip)
+            if store.isPlaying { playback.play() }
         }
-        .onChange(of: model.clips) { _, newClips in
-            // 편집 결과를 세션에 반영 (삭제/순서 변경/트림).
+        .onChange(of: store.clips) { _, newClips in
             if session.clips != newClips {
                 session.clips = newClips
             }
@@ -87,18 +79,11 @@ public struct TimelineView: View {
         .onDisappear { playback.pause() }
         .confirmationDialog(
             "클립을 삭제할까요?",
-            isPresented: $isConfirmingDelete,
+            isPresented: $store.isConfirmingDelete.sending(\.deletePresentedChanged),
             titleVisibility: .visible
         ) {
-            if let pendingDeleteClip {
-                Button("삭제", role: .destructive) {
-                    delete(pendingDeleteClip)
-                    self.pendingDeleteClip = nil
-                }
-            }
-            Button("취소", role: .cancel) {
-                pendingDeleteClip = nil
-            }
+            Button("삭제", role: .destructive) { store.send(.deleteConfirmed) }
+            Button("취소", role: .cancel) { store.send(.deleteCancelled) }
         } message: {
             Text("삭제한 클립은 현재 타임라인에서 제거됩니다.")
         }
@@ -110,22 +95,17 @@ public struct TimelineView: View {
         guard !didWireController else { return }
         didWireController = true
 
-        // 현재 클립의 경과 시간을 global playhead(0 → totalDuration)로 환산.
-        playback.onElapsed = { [model] elapsed in
-            let base = model.cumulativeStart(ofClipAt: model.currentIndex)
-            model.playheadSeconds = min(base + elapsed, model.totalDuration)
+        // 현재 클립의 경과 → reducer 의 playheadSeconds 갱신
+        playback.onElapsed = { elapsed in
+            store.send(.playheadElapsedUpdated(elapsed))
         }
 
-        // 현재 클립 끝 → 다음 클립으로. 마지막이면 재생 종료 후 처음으로 복귀.
-        playback.onClipEnd = { [model, playback] in
-            if model.currentIndex + 1 < model.clips.count {
-                model.next()
-            } else {
-                model.state = .idle
-                model.currentIndex = 0
-                model.playheadSeconds = 0
+        // 클립 끝 → reducer 가 next or 종료 처리. 그 후 controller load.
+        playback.onClipEnd = { [playback] in
+            store.send(.currentClipEnded)
+            if !store.isPlaying {
                 playback.pause()
-                playback.load(clip: model.currentClip)
+                playback.load(clip: store.currentClip)
             }
         }
     }
@@ -134,12 +114,8 @@ public struct TimelineView: View {
 
     private func syncFromSessionIfNeeded() {
         guard !session.clips.isEmpty else { return }
-        if model.clips != session.clips {
-            model.clips = session.clips
-            if !session.title.isEmpty { model.title = session.title }
-            model.currentIndex = 0
-            model.playheadSeconds = 0
-            model.state = .idle
+        if store.clips != session.clips {
+            store.send(.syncFromSession(clips: session.clips, title: session.title))
         }
     }
 
@@ -147,7 +123,10 @@ public struct TimelineView: View {
 
     private var header: some View {
         HStack {
-            Button(action: { router.pop() }) {
+            Button {
+                store.send(.dismissTapped)
+                router.pop()
+            } label: {
                 HStack(spacing: 2) {
                     MomentsIcon(.chevronLeft, size: 14)
                     Text("뒤로").font(MomentsTypography.krBody(14, weight: .medium))
@@ -161,65 +140,62 @@ public struct TimelineView: View {
 
             VStack(spacing: 2) {
                 HStack(spacing: 6) {
-                    if model.isPlaying { PulseDot() }
+                    if store.isPlaying { PulseDot() }
                     Text(headerTitle)
                         .font(MomentsTypography.krSemibold(15))
                         .foregroundColor(MomentsColor.ink)
                 }
                 Text(headerSubtitle)
-                    .tagLabel(color: model.isPlaying ? MomentsColor.coral : MomentsColor.taupe)
+                    .tagLabel(color: store.isPlaying ? MomentsColor.coral : MomentsColor.taupe)
             }
 
             Spacer()
 
-            Button(action: { router.push(.export) }) {
+            Button {
+                store.send(.saveTapped)
+                router.push(.export)
+            } label: {
                 Text("저장")
                     .font(MomentsTypography.krSemibold(14))
                     .foregroundColor(canSave ? MomentsColor.ink : MomentsColor.taupe.opacity(0.5))
             }
             .buttonStyle(.momentsHeaderPrimaryAction)
             .accessibilityLabel("저장")
-            .accessibilityHint(canSave ? "완성된 영상을 내보냅니다." : "클립이 있으면 저장할 수 있습니다.")
             .disabled(!canSave)
         }
     }
 
-    private var canSave: Bool {
-        !model.clips.isEmpty
-    }
+    private var canSave: Bool { !store.clips.isEmpty }
 
     private var headerTitle: String {
-        switch model.state {
-        case .idle:    return "편집"
-        case .playing: return "재생 중"
-        }
+        store.isPlaying ? "재생 중" : "편집"
     }
 
     private var headerSubtitle: String {
-        switch model.state {
-        case .idle:    return model.title
-        case .playing: return "PLAYING"
-        }
+        store.isPlaying ? "PLAYING" : store.title
     }
 
     // MARK: - Preview
 
     private var preview: some View {
-        PreviewPanel(model: model, playback: playback, onTogglePlay: { togglePlayback() })
+        PreviewPanel(store: store, playback: playback, onTogglePlay: { store.send(.togglePlay) })
     }
 
     // MARK: - Date sticker
 
     @ViewBuilder
     private var dateSticker: some View {
-        if let clip = model.currentClip {
-            DateTapeSticker(
-                text: dateStickerText(for: clip),
-                rotationDegrees: model.isPlaying ? 1.5 : -1.5,
-                leftTape: model.isPlaying ? .sage : .coral,
-                rightTape: model.isPlaying ? .coral : .sage,
-                muted: false
-            )
+        if let clip = store.currentClip {
+            HStack(spacing: MomentsSpacing.xxs) {
+                MomentsIcon(.calendar, size: 12)
+                    .foregroundColor(MomentsColor.taupe)
+                Text(dateStickerText(for: clip))
+                    .font(MomentsTypography.monoFallback(MomentsTypography.Size.small, weight: .medium))
+                    .foregroundColor(MomentsColor.taupe)
+            }
+            .padding(.horizontal, MomentsSpacing.sm)
+            .padding(.vertical, MomentsSpacing.xxs + 2)
+            .background(Capsule(style: .continuous).fill(MomentsColor.ivory))
         }
     }
 
@@ -238,37 +214,31 @@ public struct TimelineView: View {
 
     private var labelRow: some View {
         HStack {
-            Text(labelLeft)
-                .tagLabel(color: labelLeftColor)
+            Text(labelLeft).tagLabel(color: labelLeftColor)
             Spacer()
             labelRight
         }
     }
 
     private var labelLeft: String {
-        switch model.state {
-        case .idle:    return "TIMELINE · \(model.clips.count) CLIPS"
-        case .playing: return "▶ NOW PLAYING · CLIP \(model.currentIndex + 1)"
-        }
+        store.isPlaying
+            ? "▶ NOW PLAYING · CLIP \(store.currentIndex + 1)"
+            : "TIMELINE · \(store.clips.count) CLIPS"
     }
 
     private var labelLeftColor: Color {
-        switch model.state {
-        case .idle:    return MomentsColor.taupe
-        case .playing: return MomentsColor.coral
-        }
+        store.isPlaying ? MomentsColor.coral : MomentsColor.taupe
     }
 
     @ViewBuilder
     private var labelRight: some View {
-        switch model.state {
-        case .idle:
+        if store.isPlaying {
+            Text("\(store.playheadLabel) / \(store.totalClockLabel)").tagLabel()
+        } else {
             (Text("총 ").tagLabel(color: MomentsColor.taupe)
-             + Text(model.totalDurationLabel)
-                .font(MomentsTypography.serifFallback(13, italic: true))
+             + Text(store.totalDurationLabel)
+                .font(MomentsTypography.krBody(13, weight: .medium))
                 .foregroundColor(MomentsColor.ink))
-        case .playing:
-            Text("\(model.playheadLabel) / \(model.totalClockLabel)").tagLabel()
         }
     }
 
@@ -276,11 +246,11 @@ public struct TimelineView: View {
 
     @ViewBuilder
     private var hintRow: some View {
-        switch model.state {
-        case .idle:
-            HandNoteRow("클립을 탭해 편집 · 길게 눌러서 끌어 이동", tone: .muted)
-        case .playing:
-            EmptyView()
+        if !store.isPlaying {
+            Text("클립을 탭해 편집 · 길게 눌러서 끌어 이동")
+                .font(MomentsTypography.krBody(MomentsTypography.Size.small))
+                .foregroundColor(MomentsColor.taupe)
+                .frame(maxWidth: .infinity, alignment: .center)
         }
     }
 
@@ -288,48 +258,31 @@ public struct TimelineView: View {
 
     @ViewBuilder
     private var bottomBar: some View {
-        switch model.state {
-        case .idle:
-            EditToolbar(
-                rotationActive: currentRotationActive,
-                onRotate:  { rotateCurrentClip() },
-                onDelete:  { requestDeleteCurrentClip() }
-            )
-            .padding(.bottom, MomentsSpacing.md)
-        case .playing:
+        if store.isPlaying {
             EditToolbar(dimmed: true, rotationActive: currentRotationActive)
                 .padding(.bottom, MomentsSpacing.md)
+        } else {
+            EditToolbar(
+                rotationActive: currentRotationActive,
+                onRotate: { rotateCurrentClip() },
+                onDelete: { store.send(.deleteCurrentRequested) }
+            )
+            .padding(.bottom, MomentsSpacing.md)
         }
     }
 
-    // MARK: - Intents
-
-    private func togglePlayback() {
-        model.togglePlay()
-    }
-
-    // MARK: - Rotation
+    // MARK: - Rotation (session 환경 객체 사용)
 
     private var currentRotationActive: Bool {
-        guard let id = model.currentClip?.id else { return false }
+        guard let id = store.currentClip?.id else { return false }
         return session.rotation(for: id) != .r0
     }
 
     private func rotateCurrentClip() {
-        guard let id = model.currentClip?.id else { return }
+        guard let id = store.currentClip?.id else { return }
         session.cycleRotation(for: id)
+        store.send(.rotateCurrentTapped)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-    }
-
-    private func requestDeleteCurrentClip() {
-        pendingDeleteClip = model.currentClip
-        isConfirmingDelete = pendingDeleteClip != nil
-    }
-
-    private func delete(_ clip: Clip) {
-        guard let index = model.clips.firstIndex(where: { $0.id == clip.id }) else { return }
-        model.currentIndex = index
-        model.deleteCurrent()
     }
 }
 
@@ -347,27 +300,17 @@ private struct PulseDot: View {
 // MARK: - Previews
 
 #Preview("Idle") {
-    TimelineView(model: TimelineModel(state: .idle))
+    TimelineView()
         .environment(AppRouter())
         .environment(EditSession())
 }
 
 #Preview("Playing") {
     TimelineView(
-        model: {
-            let m = TimelineModel(state: .playing, currentIndex: 3)
-            m.playheadSeconds = 35
-            return m
-        }()
+        store: Store(initialState: TimelineFeature.State(currentIndex: 3, playbackState: .playing, playheadSeconds: 35)) {
+            TimelineFeature()
+        }
     )
     .environment(AppRouter())
     .environment(EditSession())
-}
-
-private extension TimelineModel {
-    convenience init(state: TimelineState, currentIndex: Int = 0) {
-        self.init()
-        self.state = state
-        self.currentIndex = currentIndex
-    }
 }
