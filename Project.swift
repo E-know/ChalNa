@@ -18,16 +18,25 @@ let project = Project(
         ),
         Module.framework(
             name: "CompositionService",
-            dependencies: [.target(name: "Models")]
+            dependencies: [
+                .target(name: "Models"),
+                .external(name: "ComposableArchitecture"),
+            ]
         ),
         Module.framework(
             name: "PhotosService",
             hasResources: true,
-            dependencies: [.target(name: "Models")]
+            dependencies: [
+                .target(name: "Models"),
+                .external(name: "ComposableArchitecture"),
+            ]
         ),
         Module.framework(
             name: "AppCore",
-            dependencies: [.target(name: "Models")]
+            dependencies: [
+                .target(name: "Models"),
+                .external(name: "ComposableArchitecture"),
+            ]
         ),
         Module.framework(
             name: "HomeFeature",
@@ -35,6 +44,7 @@ let project = Project(
                 .target(name: "AppCore"),
                 .target(name: "Models"),
                 .target(name: "DesignSystem"),
+                .external(name: "ComposableArchitecture"),
             ]
         ),
         Module.framework(
@@ -44,6 +54,7 @@ let project = Project(
                 .target(name: "Models"),
                 .target(name: "DesignSystem"),
                 .target(name: "PhotosService"),
+                .external(name: "ComposableArchitecture"),
             ]
         ),
         Module.framework(
@@ -54,6 +65,8 @@ let project = Project(
                 .target(name: "DesignSystem"),
                 .target(name: "CompositionService"),
                 .target(name: "FileStorage"),
+                .target(name: "PhotosService"),
+                .external(name: "ComposableArchitecture"),
             ]
         ),
         Module.framework(
@@ -62,6 +75,7 @@ let project = Project(
                 .target(name: "AppCore"),
                 .target(name: "Models"),
                 .target(name: "DesignSystem"),
+                .external(name: "ComposableArchitecture"),
             ]
         ),
         .target(
@@ -97,11 +111,15 @@ let project = Project(
                 .target(name: "MediaPickerFeature"),
                 .target(name: "ExportFeature"),
                 .target(name: "TimelineFeature"),
+                .external(name: "ComposableArchitecture"),
             ]
         ),
         Module.unitTests(
             for: "AppCore",
-            dependencies: [.target(name: "Models")]
+            dependencies: [
+                .target(name: "Models"),
+                .external(name: "ComposableArchitecture"),
+            ]
         ),
         Module.unitTests(
             for: "CompositionService",
@@ -122,6 +140,7 @@ let project = Project(
             dependencies: [
                 .target(name: "Models"),
                 .target(name: "CompositionService"),
+                .external(name: "ComposableArchitecture"),
             ]
         ),
     ],
