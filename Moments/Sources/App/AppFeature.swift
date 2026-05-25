@@ -6,6 +6,7 @@ import HomeFeature
 import MediaPickerFeature
 import TimelineFeature
 import ExportFeature
+import FilmDetailFeature
 
 /// 앱 루트 Reducer. Home 을 root 로 두고 mediaPicker / timeline / export 를 StackState 로 push.
 @Reducer
@@ -28,6 +29,7 @@ public struct AppFeature {
         case routerPushedMediaPicker(source: MediaPickerSource)
         case routerPushedTimeline
         case routerPushedExport
+        case routerPushedFilmDetail(filmID: UUID)
         case routerPopped
         case routerPoppedToRoot
     }
@@ -37,6 +39,7 @@ public struct AppFeature {
         case mediaPicker(MediaPickerFeature)
         case timeline(TimelineFeature)
         case export(ExportFeature)
+        case filmDetail(FilmDetailFeature)
     }
 
     @Dependency(\.analyticsTracker) var analyticsTracker
@@ -65,6 +68,11 @@ public struct AppFeature {
             case .routerPushedExport:
                 state.path.append(.export(ExportFeature.State()))
                 analyticsTracker.log(.exportScreenOpened)
+                return .none
+
+            case let .routerPushedFilmDetail(filmID):
+                state.path.append(.filmDetail(FilmDetailFeature.State(filmID: filmID)))
+                analyticsTracker.log(.filmDetailOpened(filmID: filmID))
                 return .none
 
             case .routerPopped:

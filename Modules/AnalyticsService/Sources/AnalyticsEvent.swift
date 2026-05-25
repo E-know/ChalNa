@@ -9,6 +9,7 @@ public enum AnalyticsEvent: Sendable, Equatable {
     case mediaPickerOpened(source: MediaPickerSourceTag)
     case timelineOpened
     case exportScreenOpened
+    case filmDetailOpened(filmID: UUID)
 
     // 미디어 선택 funnel
     case clipsConfirmed(count: Int)
@@ -22,6 +23,9 @@ public enum AnalyticsEvent: Sendable, Equatable {
     case vlogSavedToLibrary
     case vlogSaveFailed(reason: String)
 
+    // 라이브러리
+    case filmDeleted(filmID: UUID)
+
     /// Firebase Analytics 에 보낼 이벤트 이름 (snake_case).
     public var name: String {
         switch self {
@@ -30,12 +34,14 @@ public enum AnalyticsEvent: Sendable, Equatable {
         case .mediaPickerOpened:   return "media_picker_opened"
         case .timelineOpened:      return "timeline_opened"
         case .exportScreenOpened:  return "export_screen_opened"
+        case .filmDetailOpened:    return "film_detail_opened"
         case .clipsConfirmed:      return "clips_confirmed"
         case .exportStarted:       return "export_started"
         case .exportCompleted:     return "export_completed"
         case .exportFailed:        return "export_failed"
         case .vlogSavedToLibrary:  return "vlog_saved_to_library"
         case .vlogSaveFailed:      return "vlog_save_failed"
+        case .filmDeleted:         return "film_deleted"
         }
     }
 
@@ -57,6 +63,10 @@ public enum AnalyticsEvent: Sendable, Equatable {
             return ["reason": .string(reason)]
         case let .vlogSaveFailed(reason):
             return ["reason": .string(reason)]
+        case let .filmDetailOpened(filmID):
+            return ["film_id": .string(filmID.uuidString)]
+        case let .filmDeleted(filmID):
+            return ["film_id": .string(filmID.uuidString)]
         }
     }
 }

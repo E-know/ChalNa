@@ -1,3 +1,4 @@
+import Foundation
 import Observation
 
 /// 루트 NavigationStack의 라우트 열거형. Home은 루트에서 렌더하므로 스택에 push하지 않음.
@@ -5,6 +6,7 @@ public enum Route: Hashable, Sendable {
     case mediaPicker
     case timeline
     case export
+    case filmDetail(filmID: UUID)
 }
 
 /// AppFeature(TCA) 의 path 와 연결되는 thin wrapper.
