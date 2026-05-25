@@ -46,6 +46,7 @@ public struct HomeView: View {
             }
         }
         .momentsScreen()
+        .onAppear { store.send(.onAppear) }
     }
 
     // MARK: - Header

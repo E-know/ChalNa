@@ -3,6 +3,7 @@ import Foundation
 import Models
 import CompositionService
 import PhotosService
+import AnalyticsService
 
 /// Timeline → Export 화면 Reducer. 진행률/완료/실패 phase 와 사진 보관함 저장 phase 를 함께 관리.
 @Reducer
@@ -74,6 +75,7 @@ public struct ExportFeature {
 
     @Dependency(\.compositionClient) var compositionClient
     @Dependency(\.photoLibraryClient) var photoLibraryClient
+    @Dependency(\.analyticsTracker) var analyticsTracker
 
     private enum CancelID { case exportStream }
 
@@ -89,6 +91,7 @@ public struct ExportFeature {
                 state.errorMessage = nil
                 state.exportedURL = nil
                 state.didAddToLibrary = false
+                analyticsTracker.log(.exportStarted(clipCount: clips.count))
                 return .run { send in
                     for await event in compositionClient.export(clips, rotations) {
                         switch event {
@@ -114,11 +117,13 @@ public struct ExportFeature {
                 state.progress = 1.0
                 state.exportedURL = url
                 state.phase = .done
+                analyticsTracker.log(.exportCompleted(durationMs: nil))
                 return .none
 
             case let .exportFailed(msg):
                 state.errorMessage = msg
                 state.phase = .failed
+                analyticsTracker.log(.exportFailed(reason: msg))
                 return .none
 
             case let .retryTapped(clips, rotations):
@@ -135,9 +140,15 @@ public struct ExportFeature {
             case let .saveCompleted(result):
                 state.isSaving = false
                 switch result {
-                case .ok:        state.saveToast = "사진 앱에 저장됐어요 ✦"
-                case .denied:    state.saveToast = "사진 보관함 접근 권한이 필요해요"
-                case let .failed(msg): state.saveToast = "저장 실패 — \(msg)"
+                case .ok:
+                    state.saveToast = "사진 앱에 저장됐어요 ✦"
+                    analyticsTracker.log(.vlogSavedToLibrary)
+                case .denied:
+                    state.saveToast = "사진 보관함 접근 권한이 필요해요"
+                    analyticsTracker.log(.vlogSaveFailed(reason: "denied"))
+                case let .failed(msg):
+                    state.saveToast = "저장 실패 — \(msg)"
+                    analyticsTracker.log(.vlogSaveFailed(reason: msg))
                 }
                 return .none
 
