@@ -22,6 +22,7 @@ public struct ExportFeature {
         public var saveToast: String?
         /// 같은 export 가 두 번 라이브러리에 추가되는 걸 방지.
         public var didAddToLibrary: Bool
+        public var isPlayerPresented: Bool
 
         public init(
             phase: ExportPhase = .idle,
@@ -30,7 +31,8 @@ public struct ExportFeature {
             errorMessage: String? = nil,
             isSaving: Bool = false,
             saveToast: String? = nil,
-            didAddToLibrary: Bool = false
+            didAddToLibrary: Bool = false,
+            isPlayerPresented: Bool = false
         ) {
             self.phase = phase
             self.progress = progress
@@ -39,6 +41,7 @@ public struct ExportFeature {
             self.isSaving = isSaving
             self.saveToast = saveToast
             self.didAddToLibrary = didAddToLibrary
+            self.isPlayerPresented = isPlayerPresented
         }
     }
 
@@ -64,6 +67,8 @@ public struct ExportFeature {
         case toastDismissed
 
         case markAddedToLibrary
+
+        case playerPresentedChanged(Bool)
 
         // Navigation intents — View 가 router 처리
         case dismissTapped
@@ -167,7 +172,12 @@ public struct ExportFeature {
                 state.didAddToLibrary = true
                 return .none
 
+            case let .playerPresentedChanged(isPresented):
+                state.isPlayerPresented = isPresented
+                return .none
+
             case .dismissTapped, .startAnotherTapped, .homeTapped:
+                state.isPlayerPresented = false
                 return .cancel(id: CancelID.exportStream)
             }
         }

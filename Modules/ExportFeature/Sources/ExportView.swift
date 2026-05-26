@@ -7,6 +7,8 @@ import Models
 import DesignSystem
 import SwiftData
 import Photos
+import AVKit
+import AVFoundation
 
 /// Timeline에서 "저장"을 누르면 진입. AVFoundationCompositionService 를 구동해 mp4 를 만든다.
 public struct ExportView: View {
@@ -14,7 +16,7 @@ public struct ExportView: View {
     @Environment(EditSession.self) private var session
     @Environment(\.modelContext) private var modelContext
 
-    let store: StoreOf<ExportFeature>
+    @Bindable var store: StoreOf<ExportFeature>
 
     public init(store: StoreOf<ExportFeature> = Store(initialState: ExportFeature.State()) { ExportFeature() }) {
         self.store = store
@@ -74,6 +76,33 @@ public struct ExportView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: store.saveToast)
+        .fullScreenCover(
+            isPresented: $store.isPlayerPresented.sending(\.playerPresentedChanged)
+        ) {
+            if let url = store.exportedURL {
+                ZStack(alignment: .topTrailing) {
+                    Color.black.ignoresSafeArea()
+
+                    ExportVideoPlayerCover(url: url) {
+                        store.send(.playerPresentedChanged(false))
+                    }
+                    .ignoresSafeArea()
+
+                    Button {
+                        store.send(.playerPresentedChanged(false))
+                    } label: {
+                        ChalNaIcon(.close, size: 18)
+                            .foregroundColor(.white)
+                            .frame(width: 36, height: 36)
+                            .background(Circle().fill(Color.black.opacity(0.5)))
+                            .overlay(Circle().strokeBorder(Color.white.opacity(0.25), lineWidth: 1))
+                    }
+                    .padding(.top, 12)
+                    .padding(.trailing, 16)
+                    .accessibilityLabel("재생 닫기")
+                }
+            }
+        }
     }
 
     // MARK: - Film library
@@ -144,19 +173,35 @@ public struct ExportView: View {
     @ViewBuilder
     private func cover(width: CGFloat) -> some View {
         if let clip = session.clips.first {
+            let canPlay = store.phase == .done && store.exportedURL != nil
             VStack(alignment: .leading, spacing: 12) {
                 ZStack(alignment: .topTrailing) {
-                    clip.thumbnailView()
-                        .frame(width: width, height: width * 9 / 16)
-                        .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                                .strokeBorder(ChalNaColor.Gray.g100, lineWidth: 0.5)
-                        )
+                    Button {
+                        guard canPlay else { return }
+                        store.send(.playerPresentedChanged(true))
+                    } label: {
+                        clip.thumbnailView()
+                            .frame(width: width, height: width * 9 / 16)
+                            .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
+                                    .strokeBorder(ChalNaColor.Gray.g100, lineWidth: 0.5)
+                            )
+                            .overlay {
+                                if canPlay {
+                                    playOverlay
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canPlay)
+                    .accessibilityLabel(canPlay ? "완성된 영상 재생" : "")
+                    .accessibilityAddTraits(canPlay ? .isButton : [])
 
                     if store.phase == .done {
                         ChalNaChip("DONE", variant: .selected, icon: .check)
                             .padding(12)
+                            .allowsHitTesting(false)
                     }
                 }
 
@@ -447,6 +492,64 @@ public struct ExportView: View {
         session.clear()
         router.popToRoot()
         router.push(.mediaPicker)
+    }
+
+    // MARK: - Play overlay
+
+    private var playOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.18)
+            Circle()
+                .fill(.ultraThinMaterial)
+                .frame(width: 64, height: 64)
+                .overlay(
+                    Circle().strokeBorder(Color.white.opacity(0.55), lineWidth: 1)
+                )
+                .overlay(
+                    ChalNaIcon(.play, size: 28)
+                        .foregroundColor(ChalNaColor.ink)
+                        .offset(x: 2)
+                )
+                .shadow(color: Color.black.opacity(0.18), radius: 8, x: 0, y: 4)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous))
+    }
+}
+
+// MARK: - Video player bridge
+
+private struct ExportVideoPlayerCover: UIViewControllerRepresentable {
+    let url: URL
+    let onDismiss: () -> Void
+
+    func makeUIViewController(context: Context) -> AVPlayerViewController {
+        // 무음 스위치가 켜져 있어도 영상 사운드가 재생되도록 playback 카테고리로 활성화.
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.playback, mode: .moviePlayback, options: [])
+        try? session.setActive(true)
+
+        let player = AVPlayer(url: url)
+        let controller = AVPlayerViewController()
+        controller.player = player
+        controller.allowsPictureInPicturePlayback = true
+        controller.delegate = context.coordinator
+        player.play()
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator(onDismiss: onDismiss) }
+
+    final class Coordinator: NSObject, AVPlayerViewControllerDelegate {
+        let onDismiss: () -> Void
+        init(onDismiss: @escaping () -> Void) { self.onDismiss = onDismiss }
+
+        func playerViewController(_ playerViewController: AVPlayerViewController, willEndFullScreenPresentationWithAnimationCoordinator coordinator: any UIViewControllerTransitionCoordinator) {
+            coordinator.animate(alongsideTransition: nil) { [weak self] _ in
+                self?.onDismiss()
+            }
+        }
     }
 }
 
