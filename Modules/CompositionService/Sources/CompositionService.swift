@@ -142,7 +142,8 @@ public actor AVFoundationCompositionService: CompositionServicing {
         }
         var compAudioTrack: AVMutableCompositionTrack?
 
-        // 1) 첫 유효 클립의 displaySize와 회전을 미리 살펴 renderSize를 결정한다.
+        // 1) 출력 캔버스는 "가장 큰 oriented height"를 가진 클립의 W×H 비율 그대로.
+        //    비율이 다른 클립은 `transform()`이 aspectFit + 가운데 정렬해 letterbox/pillarbox 처리.
         let renderSize = await Self.resolveRenderSize(clips: clips, rotations: rotations)
 
         // 2) 시간순으로 트랙을 채우면서 클립별 layerInstruction 누적.
@@ -230,12 +231,22 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
     // MARK: - Date label overlay
 
-    /// 라벨 텍스트 포맷. `yyyy/MM/dd HH:mm` · 사용자의 현재 타임존 · POSIX 로케일(ICU 의존 제거).
-    private static let dateLabelFormatter: DateFormatter = {
+    /// 우측 하단 작은 라벨용 — 날짜만 (`yyyy/MM/dd`).
+    /// 사용자의 현재 타임존 · POSIX 로케일(ICU 의존 제거).
+    private static let dateOnlyFormatter: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.timeZone = .current
-        f.dateFormat = "yyyy/MM/dd HH:mm"
+        f.dateFormat = "yyyy/MM/dd"
+        return f
+    }()
+
+    /// 화면 정중앙 큰 라벨용 — 시:분 (`HH:mm`).
+    private static let timeOnlyFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = .current
+        f.dateFormat = "HH:mm"
         return f
     }()
 
@@ -264,7 +275,9 @@ public actor AVFoundationCompositionService: CompositionServicing {
         return ""
     }()
 
-    /// 클립별 촬영일시를 우측하단에 오버레이로 합성하는 `AVVideoCompositionCoreAnimationTool` 생성.
+    /// 클립별 촬영일시를 두 위치에 오버레이로 합성하는 `AVVideoCompositionCoreAnimationTool` 생성.
+    /// - 우측 하단(작은 글씨): 날짜 `yyyy/MM/dd`
+    /// - 화면 정중앙(큰 글씨): 시각 `HH:mm`
     /// 각 라벨은 자신의 `timeRange` 동안만 opacity 1, 그 외엔 0.
     private static func makeDateLabelAnimationTool(
         renderSize: CGSize,
@@ -277,9 +290,58 @@ public actor AVFoundationCompositionService: CompositionServicing {
         parentLayer.addSublayer(videoLayer)
 
         let minDim = min(renderSize.width, renderSize.height)
-        let fontSize = minDim * 0.035
+        let dateFontSize = minDim * 0.035  // 우측 하단 보조 라벨
+        let timeFontSize = minDim * 0.18   // 화면 중앙 메인 라벨
         let padX = renderSize.width * 0.04
         let padY = renderSize.height * 0.04
+
+        for entry in entries {
+            // 1) 하단 가운데 — 날짜. X는 정중앙, Y는 화면 하단에서 padY 만큼 떨어진 위치 유지.
+            //    CoreAnimation 좌표계(좌하단 원점) 기준이라 y=padY가 화면 하단 padY 안쪽.
+            let dateLayer = makeOverlayTextLayer(
+                text: dateOnlyFormatter.string(from: entry.capturedAt),
+                fontSize: dateFontSize,
+                timeRange: entry.timeRange
+            ) { size in
+                CGPoint(x: (renderSize.width - size.width) / 2, y: padY)
+            }
+            parentLayer.addSublayer(dateLayer)
+
+            // 2) 화면 정중앙 — 시각 (큰 글씨, 반투명 50%).
+            //    X·Y 모두 50% 지점에 텍스트 중심이 오게.
+            //    CoreAnimation 좌표계(좌하단 원점)에서 origin = ((W-textW)/2, (H-textH)/2).
+            let timeLayer = makeOverlayTextLayer(
+                text: timeOnlyFormatter.string(from: entry.capturedAt),
+                fontSize: timeFontSize,
+                timeRange: entry.timeRange,
+                opacity: 0.5
+            ) { size in
+                CGPoint(
+                    x: (renderSize.width - size.width) / 2,
+                    y: (renderSize.height - size.height) / 2
+                )
+            }
+            parentLayer.addSublayer(timeLayer)
+        }
+
+        return AVVideoCompositionCoreAnimationTool(
+            postProcessingAsVideoLayer: videoLayer,
+            in: parentLayer
+        )
+    }
+
+    /// 흰색 KERISKEDU(없으면 시스템 bold) 텍스트에 검은 그림자를 입혀 만든 `CATextLayer`.
+    /// `placement` 클로저는 실측 텍스트 사이즈를 받아 좌하단 원점(CoreAnimation) 기준 좌측 하단 좌표를 반환한다.
+    /// timeRange 구간 동안만 `opacity` 값으로 표시, 그 외엔 model value(0)로 복귀.
+    private static func makeOverlayTextLayer(
+        text: String,
+        fontSize: CGFloat,
+        timeRange: CMTimeRange,
+        opacity: CGFloat = 1.0,
+        placement: (CGSize) -> CGPoint
+    ) -> CATextLayer {
+        let textLayer = CATextLayer()
+        let textSize: CGSize
 
         // KERISKEDU UIFont. UIAppFonts에 등록되어 있고 PostScript name 매칭이 성공하면
         // 커스텀 폰트, 실패하면 시스템 bold로 fallback. CATextLayer.font 에 CGFont 를
@@ -293,85 +355,70 @@ public actor AVFoundationCompositionService: CompositionServicing {
             }
             return .systemFont(ofSize: fontSize, weight: .bold)
         }()
+        let attributed = NSAttributedString(
+            string: text,
+            attributes: [
+                .font: labelUIFont,
+                .foregroundColor: UIColor.white,
+            ]
+        )
+        textLayer.string = attributed
+        let measured = attributed.size()
+        textSize = CGSize(width: ceil(measured.width), height: ceil(measured.height))
+        #else
+        textLayer.string = text
+        textLayer.fontSize = fontSize
+        // 비-UIKit 환경(테스트): 실측 불가 → 글자 수 기반 대략치.
+        textSize = CGSize(
+            width: fontSize * CGFloat(max(text.count, 5)),
+            height: fontSize * 1.4
+        )
         #endif
 
-        let blackCG = CGColor(red: 0, green: 0, blue: 0, alpha: 1)
+        textLayer.contentsScale = 2.0
+        textLayer.isWrapped = false
+        // CoreAnimation 좌표계는 좌하단 원점. 아래쪽으로 떨어지는 그림자는 -y 오프셋.
+        textLayer.shadowColor = CGColor(red: 0, green: 0, blue: 0, alpha: 1)
+        textLayer.shadowOpacity = 0.5
+        textLayer.shadowOffset = CGSize(width: 0, height: -2)
+        textLayer.shadowRadius = 4
 
-        for entry in entries {
-            let textLayer = CATextLayer()
-            let labelString = dateLabelFormatter.string(from: entry.capturedAt)
+        let origin = placement(textSize)
+        textLayer.frame = CGRect(origin: origin, size: textSize)
+        textLayer.opacity = 0
 
-            #if canImport(UIKit)
-            let attributed = NSAttributedString(
-                string: labelString,
-                attributes: [
-                    .font: labelUIFont,
-                    .foregroundColor: UIColor.white,
-                ]
-            )
-            textLayer.string = attributed
-            // 실측 텍스트 사이즈에 딱 맞춰 frame을 잡고 그 frame 자체를 우측 padX 안쪽에 붙인다.
-            // 이러면 CATextLayer / paragraphStyle alignment 동작과 무관하게 정확히 우측 정렬됨.
-            let measured = attributed.size()
-            let textWidth = ceil(measured.width)
-            let textHeight = ceil(measured.height)
-            #else
-            textLayer.string = labelString
-            textLayer.fontSize = fontSize
-            textLayer.alignmentMode = .right
-            let textWidth = fontSize * 9   // "yyyy/MM/dd HH:mm" ≈ 16 글자 대략치
-            let textHeight = fontSize * 1.4
-            #endif
+        // 해당 클립의 timeRange 동안만 보이게. `AVCoreAnimationBeginTimeAtZero` 는
+        // CoreAnimation에서 "합성 0초"를 의미하는 매직값 (0은 "즉시"라 의미가 다름).
+        // fillMode = .removed: 활성 구간 밖에서는 model value(opacity=0)로 복귀해 다음 클립과 겹치지 않게 함.
+        let show = CABasicAnimation(keyPath: "opacity")
+        show.fromValue = opacity
+        show.toValue = opacity
+        show.beginTime = AVCoreAnimationBeginTimeAtZero + CMTimeGetSeconds(timeRange.start)
+        show.duration = max(0.01, CMTimeGetSeconds(timeRange.duration))
+        show.fillMode = .removed
+        show.isRemovedOnCompletion = false
+        textLayer.add(show, forKey: "show")
 
-            textLayer.contentsScale = 2.0
-            textLayer.isWrapped = false
-            // CoreAnimation 좌표계는 좌하단 원점. 아래쪽으로 떨어지는 그림자는 -y 오프셋.
-            textLayer.shadowColor = blackCG
-            textLayer.shadowOpacity = 0.5
-            textLayer.shadowOffset = CGSize(width: 0, height: -2)
-            textLayer.shadowRadius = 4
-            textLayer.frame = CGRect(
-                x: renderSize.width - textWidth - padX,
-                y: padY,
-                width: textWidth,
-                height: textHeight
-            )
-            textLayer.opacity = 0
-
-            // 해당 클립의 timeRange 동안만 보이게. `AVCoreAnimationBeginTimeAtZero` 는
-            // CoreAnimation에서 "합성 0초"를 의미하는 매직값 (0은 "즉시"라 의미가 다름).
-            // fillMode = .removed: 애니메이션 활성 구간 밖에서는 layer model value(opacity=0)로
-            // 복귀해 다음 클립의 라벨과 겹치지 않게 함. isRemovedOnCompletion = false 는
-            // 비디오 렌더링 시 애니메이션이 evaluated 되도록 유지하기 위함.
-            let show = CABasicAnimation(keyPath: "opacity")
-            show.fromValue = 1.0
-            show.toValue = 1.0
-            show.beginTime = AVCoreAnimationBeginTimeAtZero + CMTimeGetSeconds(entry.timeRange.start)
-            show.duration = max(0.01, CMTimeGetSeconds(entry.timeRange.duration))
-            show.fillMode = .removed
-            show.isRemovedOnCompletion = false
-            textLayer.add(show, forKey: "show")
-
-            parentLayer.addSublayer(textLayer)
-        }
-
-        return AVVideoCompositionCoreAnimationTool(
-            postProcessingAsVideoLayer: videoLayer,
-            in: parentLayer
-        )
+        return textLayer
     }
 
     // MARK: - RenderSize
 
-    /// 모든 클립의 effectiveSize에 사용자 회전을 적용한 뒤 면적이 가장 큰 클립을 출력 캔버스로 사용.
-    /// 동률은 첫 등장 우선. 모두 사이즈 추출 실패 시 기본 9:16 (1080×1920).
+    /// 출력 캔버스 결정 — "비율을 최대한 길게(가장 큰 높이를 가진 클립 기준)":
+    /// 1) 모든 클립의 oriented size를 모은다 (사용자 회전 r90/r270이 axes를 swap한 뒤).
+    /// 2) 그 중 **height가 가장 큰 클립의 W × H를 그대로 캔버스로 사용**.
+    ///    동률은 처음 등장한 클립이 우선 (덮어쓰기 안 함).
+    /// 3) mp4 인코더가 짝수 픽셀을 선호하므로 2의 배수로 스냅(올림).
+    /// 4) 모든 클립의 사이즈 추출 실패 시 fallback 9:16 세로(1080×1920).
+    ///
+    /// 비율이 다른 클립은 `transform()`이 aspectFit + 가운데 정렬해 자동 letterbox/pillarbox 처리한다.
     public static func resolveRenderSize(
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation]
     ) async -> CGSize {
         let fallback = CGSize(width: 1080, height: 1920)
         var best: CGSize? = nil
-        var bestArea: CGFloat = 0
+        var bestHeight: CGFloat = 0
 
         for clip in clips {
             guard let raw = await effectiveSize(for: clip) else { continue }
@@ -379,13 +426,20 @@ public actor AVFoundationCompositionService: CompositionServicing {
             let oriented = rot.swapsAxes
                 ? CGSize(width: raw.height, height: raw.width)
                 : raw
-            let area = oriented.width * oriented.height
-            if area > bestArea {                  // 동률은 갱신 안 함 → 첫 등장 우선
-                bestArea = area
+            if oriented.height > bestHeight {     // 동률은 갱신 안 함 → 첫 등장 우선
+                bestHeight = oriented.height
                 best = oriented
             }
         }
-        return best ?? fallback
+
+        guard let pick = best else { return fallback }
+        return CGSize(width: snapEven(pick.width), height: snapEven(pick.height))
+    }
+
+    /// 정수 픽셀 중에서 2의 배수로 절상 스냅. H.264 인코더의 짝수 dim 선호를 만족시키기 위해.
+    private static func snapEven(_ v: CGFloat) -> CGFloat {
+        let r = round(v)
+        return r.truncatingRemainder(dividingBy: 2) == 0 ? r : r + 1
     }
 
     /// 한 클립의 "preferredTransform 적용 후 displaySize"를 계산.
