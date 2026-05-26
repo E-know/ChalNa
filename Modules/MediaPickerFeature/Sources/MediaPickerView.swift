@@ -97,12 +97,77 @@ public struct MediaPickerView: View {
         .sheet(
             isPresented: $store.isSystemPhotoPickerPresented.sending(\.systemPhotoPickerPresentedChanged)
         ) {
-            SystemPhotoPicker { media in
-                store.send(.photosPickedFromSystemPicker(media: media))
-            }
+            SystemPhotoPicker(
+                onLoadingStarted: { total in
+                    store.send(.pickedMediaLoadingStarted(total: total))
+                },
+                onProgress: { done in
+                    store.send(.pickedMediaProgressUpdated(done: done))
+                },
+                onPicked: { media in
+                    store.send(.photosPickedFromSystemPicker(media: media))
+                }
+            )
             .ignoresSafeArea()
         }
+        .overlay {
+            if store.isPreparingPickedMedia {
+                pickedMediaLoadingOverlay
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.18), value: store.isPreparingPickedMedia)
         .task { await store.send(.task).finish() }
+    }
+
+    // MARK: - Picked media loading overlay
+
+    private var pickedMediaLoadingOverlay: some View {
+        ZStack {
+            ChalNaColor.ink.opacity(0.32)
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture { } // 하단 화면 탭 차단
+
+            VStack(spacing: 16) {
+                ProgressView()
+                    .controlSize(.large)
+                    .tint(ChalNaColor.coral)
+
+                VStack(spacing: 6) {
+                    Text("사진을 불러오는 중")
+                        .font(ChalNaTypography.krSemibold(15))
+                        .foregroundColor(ChalNaColor.ink)
+
+                    if let progress = store.preparingPickedMediaProgress, progress.total > 0 {
+                        Text("\(progress.done) / \(progress.total)")
+                            .font(ChalNaTypography.monoFallback(22, weight: .bold))
+                            .foregroundColor(ChalNaColor.coral)
+                            .monospacedDigit()
+                            .contentTransition(.numericText(value: Double(progress.done)))
+                            .animation(.easeOut(duration: 0.2), value: progress.done)
+                            .accessibilityLabel("\(progress.total)개 중 \(progress.done)개 완료")
+                    }
+
+                    Text("Live Photo와 영상을 정성껏 추출하고 있어요")
+                        .font(ChalNaTypography.krBody(12))
+                        .foregroundColor(ChalNaColor.taupe)
+                        .multilineTextAlignment(.center)
+                }
+            }
+            .padding(.horizontal, 28)
+            .padding(.vertical, 24)
+            .frame(minWidth: 220)
+            .background(
+                RoundedRectangle(cornerRadius: ChalNaRadius.sheet, style: .continuous)
+                    .fill(ChalNaColor.cream)
+            )
+            .chalNaShadow(ChalNaShadow.lg)
+            .padding(.horizontal, 48)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isModal)
+        .accessibilityLabel("사진을 불러오는 중이에요")
     }
 
     // MARK: - Header
@@ -727,6 +792,8 @@ public struct MediaPickerView: View {
 /// `.limited` 권한에서도 picker 가 임시로 부여하는 NSItemProvider 접근권으로
 /// 권한 밖 사진의 paired video / movie 파일을 임시 디렉토리에 미리 추출해 둔다.
 private struct SystemPhotoPicker: UIViewControllerRepresentable {
+    let onLoadingStarted: (Int) -> Void
+    let onProgress: (Int) -> Void
     let onPicked: ([PickedMedia]) -> Void
 
     func makeUIViewController(context: Context) -> PHPickerViewController {
@@ -741,11 +808,28 @@ private struct SystemPhotoPicker: UIViewControllerRepresentable {
 
     func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
 
-    func makeCoordinator() -> Coordinator { Coordinator(onPicked: onPicked) }
+    func makeCoordinator() -> Coordinator {
+        Coordinator(
+            onLoadingStarted: onLoadingStarted,
+            onProgress: onProgress,
+            onPicked: onPicked
+        )
+    }
 
     final class Coordinator: NSObject, PHPickerViewControllerDelegate {
+        let onLoadingStarted: (Int) -> Void
+        let onProgress: (Int) -> Void
         let onPicked: ([PickedMedia]) -> Void
-        init(onPicked: @escaping ([PickedMedia]) -> Void) { self.onPicked = onPicked }
+
+        init(
+            onLoadingStarted: @escaping (Int) -> Void,
+            onProgress: @escaping (Int) -> Void,
+            onPicked: @escaping ([PickedMedia]) -> Void
+        ) {
+            self.onLoadingStarted = onLoadingStarted
+            self.onProgress = onProgress
+            self.onPicked = onPicked
+        }
 
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
             picker.dismiss(animated: true)
@@ -753,8 +837,16 @@ private struct SystemPhotoPicker: UIViewControllerRepresentable {
                 onPicked([])
                 return
             }
+            // picker가 닫히는 직후부터 PickedMediaLoader가 끝날 때까지 MediaPickerView 위에 로딩 오버레이 표출.
+            // total = picker 선택 개수. PickedMediaLoader 추출 도중 비-사진 항목은 nil 로 떨어질 수 있지만
+            // "총 N개 중 X 처리 완료" 카운트는 picker 선택 수 기준으로 안내한다.
+            let total = results.count
+            onLoadingStarted(total)
+            let progress = onProgress
             Task { [onPicked] in
-                let media = await PickedMediaLoader.load(from: results)
+                let media = await PickedMediaLoader.load(from: results) { done in
+                    Task { @MainActor in progress(done) }
+                }
                 await MainActor.run { onPicked(media) }
             }
         }

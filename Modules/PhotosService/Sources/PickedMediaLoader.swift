@@ -42,11 +42,28 @@ public struct PickedMedia: Sendable, Identifiable, Hashable {
 public enum PickedMediaLoader {
     /// PHPicker 결과 배열을 picker 가 띄운 순서 그대로 `PickedMedia` 배열로 변환.
     /// 권한 밖 사진도 picker 의 `NSItemProvider` 가 부여한 임시 접근으로 추출 가능.
-    public static func load(from results: [PHPickerResult]) async -> [PickedMedia] {
-        await withTaskGroup(of: (Int, PickedMedia?).self) { group in
+    ///
+    /// - Parameter onProgress: 한 항목 추출이 끝날 때마다 누적 완료 개수(1...N)를 콜백으로 흘려보낸다.
+    ///   비동기 동시 추출이라 호출 순서는 picker 순서와 다를 수 있고, MainActor 보장은 호출자 책임.
+    public static func load(
+        from results: [PHPickerResult],
+        onProgress: (@Sendable (Int) -> Void)? = nil
+    ) async -> [PickedMedia] {
+        actor Counter {
+            private(set) var done: Int = 0
+            func increment() -> Int {
+                done += 1
+                return done
+            }
+        }
+        let counter = Counter()
+
+        return await withTaskGroup(of: (Int, PickedMedia?).self) { group in
             for (idx, result) in results.enumerated() {
                 group.addTask {
                     let media = await loadOne(result: result)
+                    let done = await counter.increment()
+                    onProgress?(done)
                     return (idx, media)
                 }
             }
