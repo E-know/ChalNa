@@ -23,12 +23,12 @@ public struct RootView: View {
         NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
             HomeView(store: store.scope(state: \.home, action: \.home))
                 .toolbar(.hidden, for: .navigationBar)
-                .momentsSwipeBack()
+                .chalNaSwipeBack()
         } destination: { childStore in
             destinationView(for: childStore)
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationBarBackButtonHidden(true)
-                .momentsSwipeBack()
+                .chalNaSwipeBack()
         }
         .environment(router)
         .environment(session)

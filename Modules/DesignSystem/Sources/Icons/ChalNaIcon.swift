@@ -1,6 +1,6 @@
 import SwiftUI
 
-public enum MomentsIconKind: String, CaseIterable, Sendable {
+public enum ChalNaIconKind: String, CaseIterable, Sendable {
     case play, pause, plus, share, download, heart, calendar, film
     case chevronLeft, chevronRight, close, check
     case skipBack, skipForward
@@ -10,12 +10,12 @@ public enum MomentsIconKind: String, CaseIterable, Sendable {
 }
 
 /// Lucide 스타일 라인 아이콘. 1.5pt stroke, 24x24 viewBox, round cap/join.
-public struct MomentsIcon: View {
-    public let kind: MomentsIconKind
+public struct ChalNaIcon: View {
+    public let kind: ChalNaIconKind
     public var size: CGFloat
     public var strokeWidth: CGFloat
 
-    public init(_ kind: MomentsIconKind, size: CGFloat = 24, strokeWidth: CGFloat = 1.5) {
+    public init(_ kind: ChalNaIconKind, size: CGFloat = 24, strokeWidth: CGFloat = 1.5) {
         self.kind = kind
         self.size = size
         self.strokeWidth = strokeWidth
@@ -39,7 +39,7 @@ public struct MomentsIcon: View {
 // MARK: - Shape
 
 private struct LucideShape: Shape {
-    let kind: MomentsIconKind
+    let kind: ChalNaIconKind
 
     func path(in rect: CGRect) -> Path {
         let scale = min(rect.width, rect.height) / 24
@@ -55,7 +55,7 @@ private struct LucideShape: Shape {
         return p
     }
 
-    private func subpaths(for kind: MomentsIconKind) -> [Path] {
+    private func subpaths(for kind: ChalNaIconKind) -> [Path] {
         switch kind {
         case .play:
             return [Path { p in
@@ -281,17 +281,17 @@ private struct LucideShape: Shape {
 
 #Preview {
     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 24) {
-        ForEach(MomentsIconKind.allCases, id: \.self) { kind in
+        ForEach(ChalNaIconKind.allCases, id: \.self) { kind in
             VStack(spacing: 8) {
-                MomentsIcon(kind, size: 28)
-                    .foregroundColor(MomentsColor.ink)
+                ChalNaIcon(kind, size: 28)
+                    .foregroundColor(ChalNaColor.ink)
                 Text(kind.rawValue)
-                    .font(MomentsTypography.monoFallback(10, weight: .medium))
+                    .font(ChalNaTypography.monoFallback(10, weight: .medium))
                     .tracking(1)
-                    .foregroundColor(MomentsColor.taupe)
+                    .foregroundColor(ChalNaColor.taupe)
             }
         }
     }
     .padding(32)
-    .background(MomentsColor.cream)
+    .background(ChalNaColor.cream)
 }

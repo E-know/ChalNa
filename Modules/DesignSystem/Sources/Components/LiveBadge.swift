@@ -16,7 +16,7 @@ public struct LiveBadge: View {
     }
 
     public var body: some View {
-        let color: Color = (style == .light) ? .white : MomentsColor.danger
+        let color: Color = (style == .light) ? .white : ChalNaColor.danger
         return ZStack {
             Circle()
                 .stroke(color, lineWidth: size * 0.11)
@@ -35,6 +35,6 @@ public struct LiveBadge: View {
             .background(Color.black)
         LiveBadge(size: 18, style: .dark)
             .padding(16)
-            .background(MomentsColor.cream)
+            .background(ChalNaColor.cream)
     }
 }

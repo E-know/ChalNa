@@ -28,7 +28,7 @@ In `MediaPickerView.bottomBar`, both buttons apply `.frame(maxWidth: .infinity)`
 
 This keeps the hit target valid, but visually the bottom bar reads like two floating small buttons rather than a stable native bottom action row. For a selection flow, the primary action should usually be easier to scan and predict.
 
-Suggested fix: make the label content fill before the button style, or add a full-width Moments button variant for bottom bars.
+Suggested fix: make the label content fill before the button style, or add a full-width ChalNa button variant for bottom bars.
 
 ### 2. Export completion has duplicate navigation outcomes
 

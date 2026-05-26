@@ -1,14 +1,14 @@
 import SwiftUI
 
-// Danawa DDS Mobile v2.0 색상 토큰. Moments 식별자명은 그대로 두고 값만 다나와 톤으로 교체.
-public enum MomentsColor {
-    public static let cream = Color("MomentsCream", bundle: .module)  // White (#FFFFFF) - Background
-    public static let ivory = Color("MomentsIvory", bundle: .module)  // Gray-50 (#F8F8F8) - Surface
-    public static let coral = Color("MomentsCoral", bundle: .module)  // Purple-600 (#8B38E5) - Primary
-    public static let sage  = Color("MomentsSage",  bundle: .module)  // Cyan (#02B8D3) - Success / Info accent
-    public static let denim = Color("MomentsDenim", bundle: .module)  // Blue-500 (#2070EB) - Link / Secondary
-    public static let ink   = Color("MomentsInk",   bundle: .module)  // Gray-900 (#1A1A1A) - Text Primary
-    public static let taupe = Color("MomentsTaupe", bundle: .module)  // Gray-500 (#919191) - Text Sub
+// Danawa DDS Mobile v2.0 색상 토큰. ChalNa 식별자명은 그대로 두고 값만 다나와 톤으로 교체.
+public enum ChalNaColor {
+    public static let cream = Color("ChalNaCream", bundle: .module)  // White (#FFFFFF) - Background
+    public static let ivory = Color("ChalNaIvory", bundle: .module)  // Gray-50 (#F8F8F8) - Surface
+    public static let coral = Color("ChalNaCoral", bundle: .module)  // Purple-600 (#8B38E5) - Primary
+    public static let sage  = Color("ChalNaSage",  bundle: .module)  // Cyan (#02B8D3) - Success / Info accent
+    public static let denim = Color("ChalNaDenim", bundle: .module)  // Blue-500 (#2070EB) - Link / Secondary
+    public static let ink   = Color("ChalNaInk",   bundle: .module)  // Gray-900 (#1A1A1A) - Text Primary
+    public static let taupe = Color("ChalNaTaupe", bundle: .module)  // Gray-500 (#919191) - Text Sub
 
     // MARK: - Purple scale (Primary line, 9 step)
     public enum Purple {

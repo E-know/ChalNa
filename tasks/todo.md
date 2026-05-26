@@ -50,7 +50,7 @@
 
 ## Plan
 
-- [x] Add DEBUG-only app mode detection for `MOMENTS_APP_MODE=devMock`.
+- [x] Add DEBUG-only app mode detection for `CHALNA_APP_MODE=devMock`.
 - [x] Add bundled dev media fixtures and a `PhotosService` source that resolves them into exportable `Clip` values.
 - [x] Wire `MediaPickerView` to switch between real PhotosPicker and dev fixture selection.
 - [x] Update Tuist configuration for `PhotosService` resources, tests, feature dependency, and a `OneSecMovie Dev` scheme.
@@ -60,12 +60,12 @@
 ## Notes
 
 - Keep the real PhotoKit path behavior unchanged except for source switching.
-- Dev mode is only active for DEBUG builds with `MOMENTS_APP_MODE=devMock`; Release must remain real.
+- Dev mode is only active for DEBUG builds with `CHALNA_APP_MODE=devMock`; Release must remain real.
 - Fixture media must be real mp4 files so export uses the production composition path.
 
 ## Review
 
-- Added `OneSecMovie Dev` as a shared Tuist/Xcode scheme with `MOMENTS_APP_MODE=devMock`, and gated app-mode detection so Release remains on the real Photos path.
+- Added `OneSecMovie Dev` as a shared Tuist/Xcode scheme with `CHALNA_APP_MODE=devMock`, and gated app-mode detection so Release remains on the real Photos path.
 - Added bundled mp4 fixtures plus `BundledDevMediaSource` in `PhotosService`, resolving selected dev assets into exportable `Clip` values with URL, thumbnail, duration, and display size.
 - Updated `MediaPickerView` to switch between the existing PhotoKit picker and a Dev fixture grid while preserving the title, selected-count, CTA, and captured-date ordering flow.
 - Fixed an export edge case discovered by the fixtures: silent videos must not create an empty composition audio track.
@@ -104,7 +104,7 @@
 
 - [x] Research current Apple Human Interface Guidelines from official sources.
 - [x] Inspect the current SwiftUI screens and the Figma design for clear UI/UX gaps.
-- [x] Select conservative improvements that are HIG-aligned and fit the existing Moments design system.
+- [x] Select conservative improvements that are HIG-aligned and fit the existing ChalNa design system.
 - [x] Implement the selected improvements in code.
 - [x] Verify with build/tests and simulator/UI checks where possible.
 - [x] Reflect the final UI/UX changes back into Figma if the file is writable.
@@ -112,7 +112,7 @@
 ## Notes
 
 - Avoid broad visual redesign unless a HIG issue or usability gap is clear.
-- Preserve the existing Moments brand direction and design-system tokens.
+- Preserve the existing ChalNa brand direction and design-system tokens.
 - Ask the user before proceeding only if the implementation choice is genuinely ambiguous or risky.
 - HIG anchors: 44x44 pt minimum hit regions for buttons, visible press states, Dynamic Type for custom fonts, VoiceOver labels for key elements, determinate progress for export, grabbers/dismiss conventions for sheets, and original aspect ratio for video.
 - Selected scope: Dynamic Type-friendly typography helpers, 44pt hit targets, higher contrast primary button labels, explicit VoiceOver labels, dimmed toolbar non-interactivity, delete confirmation, accessible film-strip reorder actions, sheet detents/grabber, accessible export progress.
@@ -122,7 +122,7 @@
 - HIG sources reviewed: Apple Layout, Buttons, Sheets, Typography, Accessibility, VoiceOver, Progress indicators, and Playing video guidance.
 - Implemented HIG-aligned code changes: scalable typography helpers, shared 44pt hit-target helper, higher-contrast button/action text, VoiceOver labels/hints, disabled dimmed toolbar, delete confirmation, accessible film-strip reorder actions, adaptive sheets, and accessible export progress.
 - Verification: `OneSecMovie` simulator build passed, `TimelineFeature` tests passed 9/9, `OneSecMovie` build/run succeeded on iPhone 17 Pro simulator, and MediaPicker accessibility snapshot confirmed 44pt top/bottom controls.
-- Figma was updated for contrast: `MomentsButton` text and targeted action labels now use `ink`; final Figma audit found 0 remaining targeted white/coral action labels.
+- Figma was updated for contrast: `ChalNaButton` text and targeted action labels now use `ink`; final Figma audit found 0 remaining targeted white/coral action labels.
 
 ---
 
@@ -196,13 +196,13 @@
 
 ## Notes
 
-- Preserve `momentsHeaderBar(scrollProgress:)` signature and existing `NavigationStack` / hidden system toolbar flow.
+- Preserve `chalNaHeaderBar(scrollProgress:)` signature and existing `NavigationStack` / hidden system toolbar flow.
 - Do not revert existing dirty working-tree changes in `MediaPickerView.swift` or `FilmStripCollectionView.swift`.
 
 ## Review
 
-- Shared header surface now uses iOS 26 Liquid Glass through `GlassEffectContainer` and falls back to `.ultraThinMaterial` with Moments cream tint on iOS 18-25.
-- Added standard and primary Moments header action button styles, then applied them to MediaPicker, Timeline, and Export headers.
-- Timeline and Export call `momentsHeaderBar(scrollProgress: 1)` so the glass header is visible immediately.
+- Shared header surface now uses iOS 26 Liquid Glass through `GlassEffectContainer` and falls back to `.ultraThinMaterial` with ChalNa cream tint on iOS 18-25.
+- Added standard and primary ChalNa header action button styles, then applied them to MediaPicker, Timeline, and Export headers.
+- Timeline and Export call `chalNaHeaderBar(scrollProgress: 1)` so the glass header is visible immediately.
 - Fixed the flaky timeline playback test by extracting deterministic playhead advancement for direct Swift Testing coverage.
 - Verification passed: `tuist generate`, `OneSecMovie` build, `OneSecMovie-Workspace` full test run, and iPhone 17 Pro simulator screenshots for Home and MediaPicker headers.

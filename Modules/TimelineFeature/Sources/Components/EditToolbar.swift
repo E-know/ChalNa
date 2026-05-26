@@ -31,7 +31,7 @@ struct EditToolbar: View {
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(dimmed ? Color.white.opacity(0.7) : .white)
-                .momentsShadow(MomentsShadow.md)
+                .chalNaShadow(ChalNaShadow.md)
         )
         .overlay(
             dimmed
@@ -60,7 +60,7 @@ struct EditToolbar: View {
     }
 
     private func item(
-        icon: MomentsIconKind,
+        icon: ChalNaIconKind,
         label: String,
         action: @escaping () -> Void,
         dotIndicator: Bool = false,
@@ -70,18 +70,18 @@ struct EditToolbar: View {
         Button(action: action) {
             VStack(spacing: 4) {
                 ZStack(alignment: .topTrailing) {
-                    MomentsIcon(icon, size: 20)
+                    ChalNaIcon(icon, size: 20)
                         .foregroundColor(tone.foregroundColor)
                     if dotIndicator {
                         Circle()
-                            .fill(MomentsColor.coral)
+                            .fill(ChalNaColor.coral)
                             .frame(width: 6, height: 6)
                             .offset(x: 4, y: -2)
                     }
                 }
                 if !dimmed {
                     Text(label)
-                        .font(MomentsTypography.krBody(10, weight: .medium))
+                        .font(ChalNaTypography.krBody(10, weight: .medium))
                         .foregroundColor(tone.foregroundColor)
                 }
             }
@@ -89,7 +89,7 @@ struct EditToolbar: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.plain)
-        .momentsHitTarget()
+        .chalNaHitTarget()
         .disabled(dimmed || disabled)
         .accessibilityLabel(label)
         .accessibilityHint(tone.accessibilityHint)
@@ -97,7 +97,7 @@ struct EditToolbar: View {
 
     @available(iOS 26.0, *)
     private func glassItem(
-        icon: MomentsIconKind,
+        icon: ChalNaIconKind,
         label: String,
         action: @escaping () -> Void,
         dotIndicator: Bool = false,
@@ -107,18 +107,18 @@ struct EditToolbar: View {
         Button(action: action) {
             VStack(spacing: 4) {
                 ZStack(alignment: .topTrailing) {
-                    MomentsIcon(icon, size: 20)
+                    ChalNaIcon(icon, size: 20)
                         .foregroundColor(tone.foregroundColor)
                     if dotIndicator {
                         Circle()
-                            .fill(MomentsColor.coral)
+                            .fill(ChalNaColor.coral)
                             .frame(width: 6, height: 6)
                             .offset(x: 4, y: -2)
                     }
                 }
                 if !dimmed {
                     Text(label)
-                        .font(MomentsTypography.krBody(10, weight: .medium))
+                        .font(ChalNaTypography.krBody(10, weight: .medium))
                         .foregroundColor(tone.foregroundColor)
                 }
             }
@@ -140,8 +140,8 @@ private enum ToolbarItemTone {
 
     var foregroundColor: Color {
         switch self {
-        case .normal:      return MomentsColor.ink
-        case .destructive: return MomentsColor.coral
+        case .normal:      return ChalNaColor.ink
+        case .destructive: return ChalNaColor.coral
         }
     }
 

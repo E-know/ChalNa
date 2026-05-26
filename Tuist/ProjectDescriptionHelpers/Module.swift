@@ -1,7 +1,7 @@
 import ProjectDescription
 
 public enum Module {
-    public static let bundleIdPrefix = "ios.inho.Moments"
+    public static let bundleIdPrefix = "ios.inho.ChalNa"
     public static let deploymentTargets: DeploymentTargets = .iOS("18.0")
 
     public static func framework(

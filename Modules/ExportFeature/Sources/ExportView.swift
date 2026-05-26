@@ -22,7 +22,7 @@ public struct ExportView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            header.momentsHeaderBar(scrollProgress: 1)
+            header.chalNaHeaderBar(scrollProgress: 1)
 
             GeometryReader { proxy in
                 VStack(spacing: 0) {
@@ -43,7 +43,7 @@ public struct ExportView: View {
                 .frame(width: proxy.size.width, height: proxy.size.height)
             }
         }
-        .momentsScreen()
+        .chalNaScreen()
         .onAppear {
             guard store.phase == .idle else { return }
             store.send(.startExport(clips: session.clips, rotations: session.rotations))
@@ -60,11 +60,11 @@ public struct ExportView: View {
         .overlay(alignment: .bottom) {
             if let toast = store.saveToast {
                 Text(toast)
-                    .font(MomentsTypography.krBody(13, weight: .medium))
+                    .font(ChalNaTypography.krBody(13, weight: .medium))
                     .foregroundColor(.white)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
-                    .background(Capsule().fill(MomentsColor.ink.opacity(0.9)))
+                    .background(Capsule().fill(ChalNaColor.ink.opacity(0.9)))
                     .padding(.bottom, 64)
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
                     .task(id: toast) {
@@ -90,7 +90,7 @@ public struct ExportView: View {
 
         let liveCount = clips.filter { $0.kind == .live }.count
         let totalDuration = clips.reduce(0) { $0 + $1.duration }
-        let title = session.title.isEmpty ? "Moments" : session.title
+        let title = session.title.isEmpty ? "ChalNa" : session.title
         let thumbnail = clips.first?.thumbnailData
 
         let film = Film(
@@ -112,8 +112,8 @@ public struct ExportView: View {
     private var header: some View {
         VStack(spacing: 2) {
             Text(store.phase.title)
-                .font(MomentsTypography.krSemibold(15))
-                .foregroundColor(MomentsColor.ink)
+                .font(ChalNaTypography.krSemibold(15))
+                .foregroundColor(ChalNaColor.ink)
             Text(store.phase.tag)
                 .tagLabel(color: tagColor)
         }
@@ -122,9 +122,9 @@ public struct ExportView: View {
 
     private var tagColor: Color {
         switch store.phase {
-        case .idle, .exporting: return MomentsColor.coral
-        case .done:             return MomentsColor.sage
-        case .failed:           return MomentsColor.taupe
+        case .idle, .exporting: return ChalNaColor.coral
+        case .done:             return ChalNaColor.sage
+        case .failed:           return ChalNaColor.taupe
         }
     }
 
@@ -148,34 +148,34 @@ public struct ExportView: View {
                 ZStack(alignment: .topTrailing) {
                     clip.thumbnailView()
                         .frame(width: width, height: width * 9 / 16)
-                        .clipShape(RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
-                                .strokeBorder(MomentsColor.Gray.g100, lineWidth: 0.5)
+                            RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
+                                .strokeBorder(ChalNaColor.Gray.g100, lineWidth: 0.5)
                         )
 
                     if store.phase == .done {
-                        MomentsChip("DONE", variant: .selected, icon: .check)
+                        ChalNaChip("DONE", variant: .selected, icon: .check)
                             .padding(12)
                     }
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(session.title.isEmpty ? SampleData.filmTitle : session.title)
-                        .font(MomentsTypography.title(MomentsTypography.Size.h2, weight: .semibold))
-                        .foregroundColor(MomentsColor.ink)
+                        .font(ChalNaTypography.title(ChalNaTypography.Size.h2, weight: .semibold))
+                        .foregroundColor(ChalNaColor.ink)
                         .lineLimit(1)
                     Text(metaLine)
-                        .font(MomentsTypography.monoFallback(MomentsTypography.Size.caption))
-                        .foregroundColor(MomentsColor.taupe)
+                        .font(ChalNaTypography.monoFallback(ChalNaTypography.Size.caption))
+                        .foregroundColor(ChalNaColor.taupe)
                 }
             }
             .frame(width: width)
             .frame(maxWidth: .infinity)
         } else {
             Text("내보낼 클립이 없어요")
-                .font(MomentsTypography.krBody(MomentsTypography.Size.body, weight: .semibold))
-                .foregroundColor(MomentsColor.taupe)
+                .font(ChalNaTypography.krBody(ChalNaTypography.Size.body, weight: .semibold))
+                .foregroundColor(ChalNaColor.taupe)
         }
     }
 
@@ -198,18 +198,18 @@ public struct ExportView: View {
                 Spacer()
                 if store.phase != .failed {
                     Text("\(Int(store.progress * 100))%")
-                        .font(MomentsTypography.monoFallback(12, weight: .semibold))
-                        .foregroundColor(MomentsColor.ink)
+                        .font(ChalNaTypography.monoFallback(12, weight: .semibold))
+                        .foregroundColor(ChalNaColor.ink)
                 }
             }
 
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(MomentsColor.ivory)
+                        .fill(ChalNaColor.ivory)
                         .frame(height: 6)
                     Capsule()
-                        .fill(store.phase == .failed ? MomentsColor.taupe : MomentsColor.coral)
+                        .fill(store.phase == .failed ? ChalNaColor.taupe : ChalNaColor.coral)
                         .frame(width: max(0, proxy.size.width * store.progress), height: 6)
                 }
             }
@@ -219,8 +219,8 @@ public struct ExportView: View {
             .accessibilityValue("\(Int(store.progress * 100))퍼센트")
 
             Text(statusLine)
-                .font(MomentsTypography.krBody(13))
-                .foregroundColor(MomentsColor.taupe)
+                .font(ChalNaTypography.krBody(13))
+                .foregroundColor(ChalNaColor.taupe)
         }
     }
 
@@ -250,10 +250,10 @@ public struct ExportView: View {
         switch store.phase {
         case .idle, .exporting:
             HStack(spacing: 8) {
-                MomentsIcon(.film, size: 14).foregroundColor(MomentsColor.taupe)
+                ChalNaIcon(.film, size: 14).foregroundColor(ChalNaColor.taupe)
                 Text("잠깐만 기다려주세요")
-                    .font(MomentsTypography.krBody(MomentsTypography.Size.body))
-                    .foregroundColor(MomentsColor.taupe)
+                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
+                    .foregroundColor(ChalNaColor.taupe)
             }
             .frame(maxWidth: .infinity, alignment: .center)
         case .done:
@@ -278,12 +278,12 @@ public struct ExportView: View {
                 HStack(spacing: 12) {
                     ShareLink(item: url) {
                         HStack(spacing: 6) {
-                            MomentsIcon(.share, size: 14)
+                            ChalNaIcon(.share, size: 14)
                             Text("공유하기")
                         }
                         .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.momentsOutline)
+                    .buttonStyle(.chalNaOutline)
                     .frame(maxWidth: .infinity)
 
                     Button {
@@ -291,15 +291,15 @@ public struct ExportView: View {
                     } label: {
                         HStack(spacing: 6) {
                             if store.isSaving {
-                                ProgressView().controlSize(.small).tint(MomentsColor.ink)
+                                ProgressView().controlSize(.small).tint(ChalNaColor.ink)
                             } else {
-                                MomentsIcon(.download, size: 14)
+                                ChalNaIcon(.download, size: 14)
                             }
                             Text(store.isSaving ? "저장 중…" : "저장하기")
                         }
                         .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.momentsCoral)
+                    .buttonStyle(.chalNaCoral)
                     .frame(maxWidth: .infinity)
                     .disabled(store.isSaving)
                 }
@@ -307,14 +307,14 @@ public struct ExportView: View {
 
             HStack(spacing: 12) {
                 Button("다른 영상 만들기") { startAnotherFilm() }
-                    .buttonStyle(.momentsOutline)
+                    .buttonStyle(.chalNaOutline)
                     .frame(maxWidth: .infinity)
 
                 Button("홈으로 →") {
                     store.send(.homeTapped)
                     router.popToRoot()
                 }
-                .buttonStyle(.momentsText)
+                .buttonStyle(.chalNaText)
                 .frame(maxWidth: .infinity)
             }
         }
@@ -328,10 +328,10 @@ public struct ExportView: View {
                     HStack(spacing: 12) {
                         ShareLink(item: url) {
                             HStack(spacing: 6) {
-                                MomentsIcon(.share, size: 14)
+                                ChalNaIcon(.share, size: 14)
                                 Text("공유하기")
                             }
-                            .foregroundStyle(MomentsColor.ink)
+                            .foregroundStyle(ChalNaColor.ink)
                             .frame(maxWidth: .infinity, minHeight: 44)
                         }
                         .buttonStyle(.glass)
@@ -342,17 +342,17 @@ public struct ExportView: View {
                         } label: {
                             HStack(spacing: 6) {
                                 if store.isSaving {
-                                    ProgressView().controlSize(.small).tint(MomentsColor.ink)
+                                    ProgressView().controlSize(.small).tint(ChalNaColor.ink)
                                 } else {
-                                    MomentsIcon(.download, size: 14)
+                                    ChalNaIcon(.download, size: 14)
                                 }
                                 Text(store.isSaving ? "저장 중…" : "저장하기")
                             }
-                            .foregroundStyle(MomentsColor.ink)
+                            .foregroundStyle(ChalNaColor.ink)
                             .frame(maxWidth: .infinity, minHeight: 44)
                         }
                         .buttonStyle(.glassProminent)
-                        .tint(MomentsColor.coral)
+                        .tint(ChalNaColor.coral)
                         .frame(maxWidth: .infinity)
                         .disabled(store.isSaving)
                     }
@@ -363,7 +363,7 @@ public struct ExportView: View {
                         startAnotherFilm()
                     } label: {
                         Text("다른 영상 만들기")
-                            .foregroundStyle(MomentsColor.ink)
+                            .foregroundStyle(ChalNaColor.ink)
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
                     .buttonStyle(.glass)
@@ -374,7 +374,7 @@ public struct ExportView: View {
                         router.popToRoot()
                     } label: {
                         Text("홈으로 →")
-                            .foregroundStyle(MomentsColor.ink)
+                            .foregroundStyle(ChalNaColor.ink)
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
                     .buttonStyle(.glass)
@@ -399,15 +399,15 @@ public struct ExportView: View {
                 store.send(.retryTapped(clips: session.clips, rotations: session.rotations))
             } label: {
                 HStack(spacing: 8) {
-                    MomentsIcon(.plus, size: 14)
+                    ChalNaIcon(.plus, size: 14)
                     Text("다시 시도")
                 }
                 .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.momentsCoral)
+            .buttonStyle(.chalNaCoral)
 
             Button("편집으로 돌아가기") { router.pop() }
-                .buttonStyle(.momentsOutline)
+                .buttonStyle(.chalNaOutline)
                 .frame(maxWidth: .infinity)
         }
     }
@@ -420,20 +420,20 @@ public struct ExportView: View {
                     store.send(.retryTapped(clips: session.clips, rotations: session.rotations))
                 } label: {
                     HStack(spacing: 8) {
-                        MomentsIcon(.plus, size: 14)
+                        ChalNaIcon(.plus, size: 14)
                         Text("다시 시도")
                     }
-                    .foregroundStyle(MomentsColor.ink)
+                    .foregroundStyle(ChalNaColor.ink)
                     .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.glassProminent)
-                .tint(MomentsColor.coral)
+                .tint(ChalNaColor.coral)
 
                 Button {
                     router.pop()
                 } label: {
                     Text("편집으로 돌아가기")
-                        .foregroundStyle(MomentsColor.ink)
+                        .foregroundStyle(ChalNaColor.ink)
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.glass)

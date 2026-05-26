@@ -2,7 +2,7 @@ import SwiftUI
 
 // Danawa DDS Mobile v2.0 칩/태그.
 // Live(Red) · Video(Purple) · Film(Blue) · Selected · Dashed · Custom.
-public enum MomentsChipVariant {
+public enum ChalNaChipVariant {
     case live
     case video
     case film
@@ -11,12 +11,12 @@ public enum MomentsChipVariant {
     case custom(background: Color, foreground: Color, border: Color?)
 }
 
-public struct MomentsChip: View {
+public struct ChalNaChip: View {
     public let label: String
-    public let variant: MomentsChipVariant
-    public let icon: MomentsIconKind?
+    public let variant: ChalNaChipVariant
+    public let icon: ChalNaIconKind?
 
-    public init(_ label: String, variant: MomentsChipVariant, icon: MomentsIconKind? = nil) {
+    public init(_ label: String, variant: ChalNaChipVariant, icon: ChalNaIconKind? = nil) {
         self.label = label
         self.variant = variant
         self.icon = icon
@@ -27,7 +27,7 @@ public struct MomentsChip: View {
             leadingGlyph
                 .frame(width: 10, height: 10)
             Text(label)
-                .font(MomentsTypography.krBody(MomentsTypography.Size.tag, weight: .semibold))
+                .font(ChalNaTypography.krBody(ChalNaTypography.Size.tag, weight: .semibold))
                 .tracking(-0.20)
         }
         .padding(.horizontal, 8)
@@ -42,10 +42,10 @@ public struct MomentsChip: View {
 
     private var background: Color {
         switch variant {
-            case .live:     return MomentsColor.Chip.liveBackground
-            case .video:    return MomentsColor.Chip.videoBackground
-            case .film:     return MomentsColor.Chip.filmBackground
-            case .selected: return MomentsColor.ink
+            case .live:     return ChalNaColor.Chip.liveBackground
+            case .video:    return ChalNaColor.Chip.videoBackground
+            case .film:     return ChalNaColor.Chip.filmBackground
+            case .selected: return ChalNaColor.ink
             case .dashed:   return Color.white
             case .custom(let bg, _, _): return bg
         }
@@ -53,22 +53,22 @@ public struct MomentsChip: View {
 
     private var foreground: Color {
         switch variant {
-            case .live:     return MomentsColor.Chip.liveForeground
-            case .video:    return MomentsColor.Chip.videoForeground
-            case .film:     return MomentsColor.Chip.filmForeground
+            case .live:     return ChalNaColor.Chip.liveForeground
+            case .video:    return ChalNaColor.Chip.videoForeground
+            case .film:     return ChalNaColor.Chip.filmForeground
             case .selected: return .white
-            case .dashed:   return MomentsColor.taupe
+            case .dashed:   return ChalNaColor.taupe
             case .custom(_, let fg, _): return fg
         }
     }
 
     private var borderColor: Color? {
         switch variant {
-            case .live:     return MomentsColor.Chip.liveForeground.opacity(0.25)
-            case .video:    return MomentsColor.Chip.videoForeground.opacity(0.25)
-            case .film:     return MomentsColor.Chip.filmForeground.opacity(0.25)
+            case .live:     return ChalNaColor.Chip.liveForeground.opacity(0.25)
+            case .video:    return ChalNaColor.Chip.videoForeground.opacity(0.25)
+            case .film:     return ChalNaColor.Chip.filmForeground.opacity(0.25)
             case .selected: return nil
-            case .dashed:   return MomentsColor.Gray.g300
+            case .dashed:   return ChalNaColor.Gray.g300
             case .custom(_, _, let b): return b
         }
     }
@@ -90,19 +90,19 @@ public struct MomentsChip: View {
                     .resizable()
                     .scaledToFit()
             default:
-                MomentsIcon(icon ?? .download).frame(width: 10, height: 10)
+                ChalNaIcon(icon ?? .download).frame(width: 10, height: 10)
         }
     }
 }
 
 #Preview {
     HStack {
-        MomentsChip("LIVE", variant: .live)
-        MomentsChip("VIDEO", variant: .video, icon: .film)
-        MomentsChip("FILM", variant: .film, icon: .film)
-        MomentsChip("SELECTED", variant: .selected, icon: .plus)
-        MomentsChip("+ 날짜", variant: .dashed)
+        ChalNaChip("LIVE", variant: .live)
+        ChalNaChip("VIDEO", variant: .video, icon: .film)
+        ChalNaChip("FILM", variant: .film, icon: .film)
+        ChalNaChip("SELECTED", variant: .selected, icon: .plus)
+        ChalNaChip("+ 날짜", variant: .dashed)
     }
     .padding(32)
-    .background(MomentsColor.cream)
+    .background(ChalNaColor.cream)
 }

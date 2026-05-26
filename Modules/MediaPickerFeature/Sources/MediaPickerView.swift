@@ -30,7 +30,7 @@ public struct MediaPickerView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            header.momentsHeaderBar(scrollProgress: store.scrollProgress)
+            header.chalNaHeaderBar(scrollProgress: store.scrollProgress)
                 .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
                 .zIndex(1)
 
@@ -75,7 +75,7 @@ public struct MediaPickerView: View {
                     .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
             }
         }
-        .momentsScreen()
+        .chalNaScreen()
         .alert(
             "Live Photo 권한이 필요해요",
             isPresented: $store.isPhotoPermissionAlertPresented.sending(\.permissionAlertPresentedChanged),
@@ -115,30 +115,30 @@ public struct MediaPickerView: View {
                 router.pop()
             } label: {
                 HStack(spacing: 2) {
-                    MomentsIcon(.chevronLeft, size: 14)
-                    Text("뒤로").font(MomentsTypography.krBody(14, weight: .medium))
+                    ChalNaIcon(.chevronLeft, size: 14)
+                    Text("뒤로").font(ChalNaTypography.krBody(14, weight: .medium))
                 }
-                .foregroundColor(MomentsColor.taupe)
+                .foregroundColor(ChalNaColor.taupe)
             }
-            .buttonStyle(.momentsHeaderAction)
+            .buttonStyle(.chalNaHeaderAction)
             .accessibilityLabel("뒤로")
 
             Spacer()
 
             VStack(spacing: 2) {
                 Text("미디어 선택")
-                    .font(MomentsTypography.krSemibold(15))
-                    .foregroundColor(MomentsColor.ink)
+                    .font(ChalNaTypography.krSemibold(15))
+                    .foregroundColor(ChalNaColor.ink)
                 Text("LIVE · VIDEO")
-                    .tagLabel(color: MomentsColor.coral)
+                    .tagLabel(color: ChalNaColor.coral)
             }
 
             Spacer()
 
             // 헤더 좌우 균형용 빈 영역 (뒤로 버튼과 같은 크기)
             HStack(spacing: 2) {
-                MomentsIcon(.chevronLeft, size: 14)
-                Text("뒤로").font(MomentsTypography.krBody(14, weight: .medium))
+                ChalNaIcon(.chevronLeft, size: 14)
+                Text("뒤로").font(ChalNaTypography.krBody(14, weight: .medium))
             }
             .opacity(0)
             .accessibilityHidden(true)
@@ -150,14 +150,14 @@ public struct MediaPickerView: View {
 
     private var intro: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("PICK · YOUR MOMENTS").tagLabel()
-            (Text("여행의 순간을\n").font(MomentsTypography.displayKR(26))
-             + Text("천천히 골라보세요.").font(MomentsTypography.krBody(22, weight: .medium)))
-                .foregroundColor(MomentsColor.ink)
+            Text("PICK · YOUR CHALNA").tagLabel()
+            (Text("여행의 순간을\n").font(ChalNaTypography.displayKR(26))
+             + Text("천천히 골라보세요.").font(ChalNaTypography.krBody(22, weight: .medium)))
+                .foregroundColor(ChalNaColor.ink)
                 .lineSpacing(2)
             Text("Live Photo와 짧은 영상을 불러올 수 있어요. Live Photo는 내부의 영상 부분을 사용합니다.")
-                .font(MomentsTypography.krBody(13))
-                .foregroundColor(MomentsColor.taupe)
+                .font(ChalNaTypography.krBody(13))
+                .foregroundColor(ChalNaColor.taupe)
                 .padding(.top, 4)
         }
     }
@@ -172,12 +172,12 @@ public struct MediaPickerView: View {
                 "",
                 text: $store.titleInput.sending(\.titleChanged),
                 prompt: Text("예: 제주도, 우리의 봄")
-                    .font(MomentsTypography.krBody(15))
-                    .foregroundColor(MomentsColor.taupe.opacity(0.6))
+                    .font(ChalNaTypography.krBody(15))
+                    .foregroundColor(ChalNaColor.taupe.opacity(0.6))
             )
             .textFieldStyle(.plain)
-            .font(MomentsTypography.krBody(16, weight: .medium))
-            .foregroundColor(MomentsColor.ink)
+            .font(ChalNaTypography.krBody(16, weight: .medium))
+            .foregroundColor(ChalNaColor.ink)
             .submitLabel(.done)
             .onSubmit { isTitleFocused = false }
             .autocorrectionDisabled(true)
@@ -188,22 +188,22 @@ public struct MediaPickerView: View {
             .padding(.vertical, 14)
             .frame(minHeight: 52)
             .background(
-                RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
+                RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
                     .fill(Color.white)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
+                RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
                     .strokeBorder(
                         isTitleFocused
-                            ? MomentsColor.coral.opacity(0.55)
-                            : MomentsColor.taupe.opacity(0.18),
+                            ? ChalNaColor.coral.opacity(0.55)
+                            : ChalNaColor.taupe.opacity(0.18),
                         lineWidth: 1
                     )
             )
 
             Text("비워두면 나중에 자동으로 채워져요.")
-                .font(MomentsTypography.krBody(12))
-                .foregroundColor(MomentsColor.taupe)
+                .font(ChalNaTypography.krBody(12))
+                .foregroundColor(ChalNaColor.taupe)
         }
     }
 
@@ -223,26 +223,26 @@ public struct MediaPickerView: View {
             store.send(.photoLauncherTapped)
         } label: {
             HStack(spacing: 12) {
-                MomentsIcon(.plus, size: 18).foregroundColor(MomentsColor.coral)
+                ChalNaIcon(.plus, size: 18).foregroundColor(ChalNaColor.coral)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(photoLauncherTitle)
-                        .font(MomentsTypography.krSemibold(15))
-                        .foregroundColor(MomentsColor.ink)
+                        .font(ChalNaTypography.krSemibold(15))
+                        .foregroundColor(ChalNaColor.ink)
                     Text(photoLauncherSubtitle)
-                        .font(MomentsTypography.krBody(12))
-                        .foregroundColor(MomentsColor.taupe)
+                        .font(ChalNaTypography.krBody(12))
+                        .foregroundColor(ChalNaColor.taupe)
                 }
                 Spacer()
-                MomentsIcon(.chevronRight, size: 14).foregroundColor(MomentsColor.taupe)
+                ChalNaIcon(.chevronRight, size: 14).foregroundColor(ChalNaColor.taupe)
             }
             .padding(16)
             .background(
-                RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
+                RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
                     .fill(Color.white)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
-                    .strokeBorder(MomentsColor.coral.opacity(0.5),
+                RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
+                    .strokeBorder(ChalNaColor.coral.opacity(0.5),
                                   style: .init(lineWidth: 1.2,
                                                dash: store.selectedAssetIDs.isEmpty ? [5, 3] : []))
             )
@@ -255,34 +255,34 @@ public struct MediaPickerView: View {
     private var devLauncher: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
-                MomentsIcon(.film, size: 18).foregroundColor(MomentsColor.coral)
+                ChalNaIcon(.film, size: 18).foregroundColor(ChalNaColor.coral)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Dev 미디어 소스")
-                        .font(MomentsTypography.krSemibold(15))
-                        .foregroundColor(MomentsColor.ink)
+                        .font(ChalNaTypography.krSemibold(15))
+                        .foregroundColor(ChalNaColor.ink)
                     Text(store.selectedDevAssetIDs.isEmpty
                          ? "번들 fixture로 실제 export까지 확인"
                          : "\(store.selectedDevAssetIDs.count)개 fixture 선택됨")
-                        .font(MomentsTypography.krBody(12))
-                        .foregroundColor(MomentsColor.taupe)
+                        .font(ChalNaTypography.krBody(12))
+                        .foregroundColor(ChalNaColor.taupe)
                 }
                 Spacer()
-                MomentsChip("DEV", variant: .dashed)
+                ChalNaChip("DEV", variant: .dashed)
             }
             .padding(16)
             .background(
-                RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
+                RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
                     .fill(Color.white)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
-                    .strokeBorder(MomentsColor.coral.opacity(0.45), lineWidth: 1.2)
+                RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
+                    .strokeBorder(ChalNaColor.coral.opacity(0.45), lineWidth: 1.2)
             )
 
             if let devErrorMessage = store.devErrorMessage {
                 Text(devErrorMessage)
-                    .font(MomentsTypography.krBody(12))
-                    .foregroundColor(MomentsColor.coral)
+                    .font(ChalNaTypography.krBody(12))
+                    .foregroundColor(ChalNaColor.coral)
             }
         }
     }
@@ -304,36 +304,36 @@ public struct MediaPickerView: View {
                 Text("선택한 미디어 · \(selectedAssets.count)").tagLabel()
                 Spacer()
                 if selectedLiveCount > 0 {
-                    MomentsChip("\(selectedLiveCount) LIVE", variant: .live)
+                    ChalNaChip("\(selectedLiveCount) LIVE", variant: .live)
                 }
                 if selectedVideoCount > 0 {
-                    MomentsChip("\(selectedVideoCount) VIDEO", variant: .video, icon: .film)
+                    ChalNaChip("\(selectedVideoCount) VIDEO", variant: .video, icon: .film)
                 }
             }
 
             if let statusMessage = photoStatusMessage {
                 HStack(spacing: 8) {
                     if isPreparingMedia || store.isPhotoLibraryLoading {
-                        ProgressView().controlSize(.small).tint(MomentsColor.coral)
+                        ProgressView().controlSize(.small).tint(ChalNaColor.coral)
                     } else {
-                        MomentsIcon(.download, size: 12)
+                        ChalNaIcon(.download, size: 12)
                     }
                     Text(statusMessage)
-                        .font(MomentsTypography.krBody(12, weight: .medium))
+                        .font(ChalNaTypography.krBody(12, weight: .medium))
                 }
                 .foregroundColor(photoStatusColor)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(
-                    RoundedRectangle(cornerRadius: MomentsRadius.button, style: .continuous)
-                        .fill(MomentsColor.ivory.opacity(0.75))
+                    RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
+                        .fill(ChalNaColor.ivory.opacity(0.75))
                 )
             }
 
             if selectedAssets.isEmpty {
                 Text(photoEmptyMessage)
-                    .font(MomentsTypography.krBody(MomentsTypography.Size.body))
-                    .foregroundColor(MomentsColor.taupe)
+                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
+                    .foregroundColor(ChalNaColor.taupe)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 24)
             } else {
@@ -361,9 +361,9 @@ public struct MediaPickerView: View {
                             }
                             .overlay(alignment: .topTrailing) {
                                 Circle()
-                                    .fill(MomentsColor.coral)
+                                    .fill(ChalNaColor.coral)
                                     .frame(width: 22, height: 22)
-                                    .overlay(MomentsIcon(.close, size: 10).foregroundColor(.white))
+                                    .overlay(ChalNaIcon(.close, size: 10).foregroundColor(.white))
                                     .padding(2)
                             }
                         }
@@ -386,17 +386,17 @@ public struct MediaPickerView: View {
                 Text("DEV FIXTURES · \(store.selectedDevAssetIDs.count)").tagLabel()
                 Spacer()
                 if devLiveCount > 0 {
-                    MomentsChip("\(devLiveCount) LIVE", variant: .live)
+                    ChalNaChip("\(devLiveCount) LIVE", variant: .live)
                 }
                 if devVideoCount > 0 {
-                    MomentsChip("\(devVideoCount) VIDEO", variant: .video, icon: .film)
+                    ChalNaChip("\(devVideoCount) VIDEO", variant: .video, icon: .film)
                 }
             }
 
             if store.devAssets.isEmpty {
                 Text("Dev 미디어를 준비하고 있어요")
-                    .font(MomentsTypography.krBody(MomentsTypography.Size.body))
-                    .foregroundColor(MomentsColor.taupe)
+                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
+                    .foregroundColor(ChalNaColor.taupe)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 24)
             } else {
@@ -430,27 +430,27 @@ public struct MediaPickerView: View {
                 Image(uiImage: ui).resizable().scaledToFill()
             } else if state.thumbnailFailed {
                 ZStack {
-                    MomentsColor.ivory
-                    MomentsIcon(.close, size: 14).foregroundColor(MomentsColor.taupe)
+                    ChalNaColor.ivory
+                    ChalNaIcon(.close, size: 14).foregroundColor(ChalNaColor.taupe)
                 }
             } else {
-                MomentsColor.ivory
-                ProgressView().tint(MomentsColor.coral)
+                ChalNaColor.ivory
+                ProgressView().tint(ChalNaColor.coral)
             }
 
             if state.kind == .video {
                 Circle()
                     .fill(Color.white.opacity(0.92))
                     .frame(width: 22, height: 22)
-                    .overlay(MomentsIcon(.play, size: 9).foregroundColor(MomentsColor.ink).offset(x: 1))
+                    .overlay(ChalNaIcon(.play, size: 9).foregroundColor(ChalNaColor.ink).offset(x: 1))
             }
 
             if state.videoFailed && state.thumbnail != nil {
                 Text("영상 X")
-                    .font(MomentsTypography.monoFallback(8, weight: .bold))
+                    .font(ChalNaTypography.monoFallback(8, weight: .bold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 5).padding(.vertical, 2)
-                    .background(Capsule().fill(MomentsColor.taupe.opacity(0.9)))
+                    .background(Capsule().fill(ChalNaColor.taupe.opacity(0.9)))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                     .padding(4)
             }
@@ -460,8 +460,8 @@ public struct MediaPickerView: View {
     @ViewBuilder
     private func kindChip(for kind: PhotoLibraryAssetKind) -> some View {
         switch kind {
-        case .livePhoto: MomentsChip("LIVE", variant: .live)
-        case .video:     MomentsChip("VIDEO", variant: .video, icon: .film)
+        case .livePhoto: ChalNaChip("LIVE", variant: .live)
+        case .video:     ChalNaChip("VIDEO", variant: .video, icon: .film)
         case .image, .unknown: EmptyView()
         }
     }
@@ -481,7 +481,7 @@ public struct MediaPickerView: View {
         if #available(iOS 26.0, *) {
             liquidGlassBottomBar
         } else {
-            momentsBottomBar
+            chalNaBottomBar
         }
     }
 
@@ -495,7 +495,7 @@ public struct MediaPickerView: View {
                     router.pop()
                 } label: {
                     Text("취소")
-                        .foregroundStyle(MomentsColor.ink)
+                        .foregroundStyle(ChalNaColor.ink)
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.glass)
@@ -505,11 +505,11 @@ public struct MediaPickerView: View {
                     store.send(.primaryActionTapped)
                 } label: {
                     confirmBottomLabel
-                        .foregroundStyle(MomentsColor.ink)
+                        .foregroundStyle(ChalNaColor.ink)
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.glassProminent)
-                .tint(MomentsColor.coral)
+                .tint(ChalNaColor.coral)
                 .frame(maxWidth: .infinity)
                 .disabled(!canUsePrimaryAction || store.isResolving)
                 .opacity(canUsePrimaryAction ? 1 : 0.5)
@@ -517,7 +517,7 @@ public struct MediaPickerView: View {
         }
     }
 
-    private var momentsBottomBar: some View {
+    private var chalNaBottomBar: some View {
         HStack(spacing: 8) {
             Button {
                 dismissTitleKeyboard()
@@ -526,7 +526,7 @@ public struct MediaPickerView: View {
             } label: {
                 Text("취소").frame(maxWidth: .infinity)
             }
-            .buttonStyle(.momentsOutline)
+            .buttonStyle(.chalNaOutline)
             .frame(maxWidth: .infinity)
 
             Button {
@@ -534,7 +534,7 @@ public struct MediaPickerView: View {
             } label: {
                 confirmBottomLabel.frame(maxWidth: .infinity)
             }
-            .buttonStyle(.momentsCoral)
+            .buttonStyle(.chalNaCoral)
             .frame(maxWidth: .infinity)
             .disabled(!canUsePrimaryAction || store.isResolving)
             .opacity(canUsePrimaryAction ? 1 : 0.5)
@@ -544,9 +544,9 @@ public struct MediaPickerView: View {
     private var confirmBottomLabel: some View {
         HStack(spacing: 6) {
             if store.isResolving || isPreparingMedia {
-                ProgressView().controlSize(.small).tint(MomentsColor.ink)
+                ProgressView().controlSize(.small).tint(ChalNaColor.ink)
             } else {
-                MomentsIcon(.check, size: 14)
+                ChalNaIcon(.check, size: 14)
             }
             Text(confirmButtonTitle)
         }
@@ -615,9 +615,9 @@ public struct MediaPickerView: View {
 
     private var photoStatusColor: Color {
         if hasUnavailableMedia || store.photoAuthorizationStatus == .denied || store.photoAuthorizationStatus == .restricted {
-            return MomentsColor.coral
+            return ChalNaColor.coral
         }
-        return MomentsColor.taupe
+        return ChalNaColor.taupe
     }
 
     private var confirmButtonTitle: String {
@@ -776,7 +776,7 @@ private struct DevMediaAssetCard: View {
                 ZStack {
                     asset.preset.view()
                     LinearGradient(
-                        colors: [.clear, MomentsColor.ink.opacity(0.5)],
+                        colors: [.clear, ChalNaColor.ink.opacity(0.5)],
                         startPoint: .center,
                         endPoint: .bottom
                     )
@@ -788,8 +788,8 @@ private struct DevMediaAssetCard: View {
                             .fill(Color.white.opacity(0.92))
                             .frame(width: 24, height: 24)
                             .overlay(
-                                MomentsIcon(.play, size: 10)
-                                    .foregroundColor(MomentsColor.ink)
+                                ChalNaIcon(.play, size: 10)
+                                    .foregroundColor(ChalNaColor.ink)
                                     .offset(x: 1)
                             )
                     }
@@ -799,32 +799,32 @@ private struct DevMediaAssetCard: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(asset.title)
-                    .font(MomentsTypography.krSemibold(13))
-                    .foregroundColor(MomentsColor.ink)
+                    .font(ChalNaTypography.krSemibold(13))
+                    .foregroundColor(ChalNaColor.ink)
                     .lineLimit(1)
                 Text(asset.locationNote ?? String(format: "%.1fs", asset.duration))
-                    .font(MomentsTypography.krBody(11))
-                    .foregroundColor(MomentsColor.taupe)
+                    .font(ChalNaTypography.krBody(11))
+                    .foregroundColor(ChalNaColor.taupe)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(8)
         .background(
-            RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
+            RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
                 .fill(Color.white.opacity(isSelected ? 1 : 0.72))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
-                .strokeBorder(isSelected ? MomentsColor.coral : MomentsColor.taupe.opacity(0.16), lineWidth: 1)
+            RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
+                .strokeBorder(isSelected ? ChalNaColor.coral : ChalNaColor.taupe.opacity(0.16), lineWidth: 1)
         )
     }
 
     @ViewBuilder
     private var kindChip: some View {
         switch asset.kind {
-        case .live:  MomentsChip("LIVE", variant: .live).scaleEffect(0.72, anchor: .topLeading)
-        case .video: MomentsChip("VIDEO", variant: .video, icon: .film).scaleEffect(0.72, anchor: .topLeading)
+        case .live:  ChalNaChip("LIVE", variant: .live).scaleEffect(0.72, anchor: .topLeading)
+        case .video: ChalNaChip("VIDEO", variant: .video, icon: .film).scaleEffect(0.72, anchor: .topLeading)
         }
     }
 }

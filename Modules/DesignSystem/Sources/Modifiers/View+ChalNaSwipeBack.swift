@@ -9,7 +9,7 @@ public extension View {
     /// `.toolbar(.hidden, for: .navigationBar)` 또는 `navigationBarBackButtonHidden(true)`
     /// 을 걸면 시스템이 `interactivePopGestureRecognizer.delegate` 를 분리해
     /// 제스처가 비활성화되는데, 이 모디파이어는 화면이 표시될 때마다 delegate 를 재바인딩한다.
-    func momentsSwipeBack() -> some View {
+    func chalNaSwipeBack() -> some View {
         background(SwipeBackInstaller())
     }
 }

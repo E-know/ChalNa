@@ -1,6 +1,6 @@
 import SwiftUI
 
-public struct MomentsShadowLayer {
+public struct ChalNaShadowLayer {
     public let color: Color
     public let radius: CGFloat
     public let x: CGFloat
@@ -15,21 +15,21 @@ public struct MomentsShadowLayer {
 }
 
 // Danawa DDS Mobile v2.0: drop shadow #000000 20% blur 6 표준.
-public enum MomentsShadow {
+public enum ChalNaShadow {
 
     private static let black10 = Color.black.opacity(0.10)
     private static let black20 = Color.black.opacity(0.20)
 
-    public static let sm: [MomentsShadowLayer] = [
+    public static let sm: [ChalNaShadowLayer] = [
         .init(black10, radius: 2, y: 1),
     ]
 
     /// 다나와 탭바 표준: #000000 20% blur 6
-    public static let md: [MomentsShadowLayer] = [
+    public static let md: [ChalNaShadowLayer] = [
         .init(black20, radius: 6, y: 2),
     ]
 
-    public static let lg: [MomentsShadowLayer] = [
+    public static let lg: [ChalNaShadowLayer] = [
         .init(black10, radius: 4, y: 2),
         .init(black20, radius: 16, y: 8),
     ]
@@ -37,7 +37,7 @@ public enum MomentsShadow {
 
 public extension View {
     @ViewBuilder
-    func momentsShadow(_ layers: [MomentsShadowLayer]) -> some View {
+    func chalNaShadow(_ layers: [ChalNaShadowLayer]) -> some View {
         layers.reduce(AnyView(self)) { partial, layer in
             AnyView(partial.shadow(color: layer.color,
                                     radius: layer.radius,

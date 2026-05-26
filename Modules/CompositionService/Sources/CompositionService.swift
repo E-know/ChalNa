@@ -483,6 +483,6 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
     private static func makeOutputURL() -> URL {
         FileManager.default.temporaryDirectory
-            .appendingPathComponent("moments-\(UUID().uuidString).mp4")
+            .appendingPathComponent("chalNa-\(UUID().uuidString).mp4")
     }
 }

@@ -16,30 +16,30 @@ struct TransportControls: View {
         }
     }
 
-    private func sideButton(icon: MomentsIconKind, label: String, action: @escaping () -> Void) -> some View {
+    private func sideButton(icon: ChalNaIconKind, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             ZStack {
-                Circle().fill(MomentsColor.ivory).frame(width: 40, height: 40)
-                MomentsIcon(icon, size: 14).foregroundColor(MomentsColor.ink)
+                Circle().fill(ChalNaColor.ivory).frame(width: 40, height: 40)
+                ChalNaIcon(icon, size: 14).foregroundColor(ChalNaColor.ink)
             }
         }
         .buttonStyle(.plain)
-        .momentsHitTarget()
+        .chalNaHitTarget()
         .accessibilityLabel(label)
     }
 
     private var centerButton: some View {
         Button(action: onToggle) {
             ZStack {
-                Circle().fill(MomentsColor.coral).frame(width: 56, height: 56)
-                MomentsIcon(isPlaying ? .pause : .play, size: 18)
-                    .foregroundColor(MomentsColor.ink)
+                Circle().fill(ChalNaColor.coral).frame(width: 56, height: 56)
+                ChalNaIcon(isPlaying ? .pause : .play, size: 18)
+                    .foregroundColor(ChalNaColor.ink)
                     .offset(x: isPlaying ? 0 : 2)
             }
-            .shadow(color: MomentsColor.coral.opacity(0.6), radius: 16, x: 0, y: 8)
+            .shadow(color: ChalNaColor.coral.opacity(0.6), radius: 16, x: 0, y: 8)
         }
         .buttonStyle(.plain)
-        .momentsHitTarget(minSize: 56)
+        .chalNaHitTarget(minSize: 56)
         .accessibilityLabel(isPlaying ? "일시정지" : "재생")
         .accessibilityHint("현재 클립 재생 상태를 전환합니다.")
     }

@@ -21,7 +21,7 @@ import PackageDescription
 #endif
 
 let package = Package(
-    name: "Moments",
+    name: "ChalNa",
     dependencies: [
         .package(
             url: "https://github.com/pointfreeco/swift-composable-architecture",

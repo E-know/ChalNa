@@ -68,7 +68,7 @@ final class FilmStripVC: UIViewController,
     private func setupCollectionView() {
         let layout = makeLayout()
         collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
-        collectionView.backgroundColor = UIColor(named: "MomentsInk") ?? .black
+        collectionView.backgroundColor = UIColor(named: "ChalNaInk") ?? .black
         collectionView.layer.cornerRadius = 16
         collectionView.layer.cornerCurve = .continuous
         collectionView.showsHorizontalScrollIndicator = false
@@ -151,10 +151,10 @@ final class FilmStripVC: UIViewController,
                     }
                 }
                 Text(clip.durationSecondsLabel)
-                    .font(MomentsTypography.monoFallback(9, weight: .medium))
+                    .font(ChalNaTypography.monoFallback(9, weight: .medium))
                     .foregroundColor(visualState == .selected || visualState == .playing
-                        ? MomentsColor.coral
-                        : MomentsColor.cream.opacity(0.7))
+                        ? ChalNaColor.coral
+                        : ChalNaColor.cream.opacity(0.7))
             }
         }
         .margins(.all, 0)

@@ -29,13 +29,13 @@ struct PreviewPanel: View {
 
     private var previewCard: some View {
         ZStack {
-            MomentsColor.ink
+            ChalNaColor.ink
             thumbnail.overlay(hudOverlay)
         }
         .frame(maxWidth: .infinity)
         .frame(height: Self.previewHeight)
-        .clipShape(RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous))
-        .momentsShadow(MomentsShadow.md)
+        .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous))
+        .chalNaShadow(ChalNaShadow.md)
     }
 
     @ViewBuilder
@@ -50,7 +50,7 @@ struct PreviewPanel: View {
                     }
                 }
             } else {
-                MomentsColor.ivory
+                ChalNaColor.ivory
             }
         }
     }
@@ -74,20 +74,20 @@ struct PreviewPanel: View {
     @ViewBuilder
     private var topRightClipIndex: some View {
         if #available(iOS 26.0, *) {
-            Text(topRightIndexAttributed(foreground: MomentsColor.ink, tail: MomentsColor.taupe))
-                .font(MomentsTypography.monoFallback(10, weight: .semibold))
-                .foregroundColor(MomentsColor.ink)
+            Text(topRightIndexAttributed(foreground: ChalNaColor.ink, tail: ChalNaColor.taupe))
+                .font(ChalNaTypography.monoFallback(10, weight: .semibold))
+                .foregroundColor(ChalNaColor.ink)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
                 .glassEffect(
-                    .regular.tint(MomentsColor.ivory.opacity(0.32)),
+                    .regular.tint(ChalNaColor.ivory.opacity(0.32)),
                     in: Capsule(style: .continuous)
                 )
                 .padding(12)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
         } else {
             Text(topRightIndexAttributed(foreground: .white, tail: .white.opacity(0.6)))
-                .font(MomentsTypography.monoFallback(10, weight: .semibold))
+                .font(ChalNaTypography.monoFallback(10, weight: .semibold))
                 .foregroundColor(.white)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
@@ -112,19 +112,19 @@ struct PreviewPanel: View {
             playPauseButtonLabel
         }
         .buttonStyle(.plain)
-        .momentsHitTarget(minSize: 64)
+        .chalNaHitTarget(minSize: 64)
         .accessibilityLabel(store.isPlaying ? "일시정지" : "재생")
     }
 
     @ViewBuilder
     private var playPauseButtonLabel: some View {
         if #available(iOS 26.0, *) {
-            MomentsIcon(store.isPlaying ? .pause : .play, size: 22)
-                .foregroundColor(MomentsColor.ink)
+            ChalNaIcon(store.isPlaying ? .pause : .play, size: 22)
+                .foregroundColor(ChalNaColor.ink)
                 .offset(x: store.isPlaying ? 0 : 2)
                 .frame(width: 64, height: 64)
                 .glassEffect(
-                    .regular.tint(MomentsColor.ivory.opacity(0.34)).interactive(),
+                    .regular.tint(ChalNaColor.ivory.opacity(0.34)).interactive(),
                     in: Circle()
                 )
         } else {
@@ -133,8 +133,8 @@ struct PreviewPanel: View {
                     .fill(Color.white.opacity(0.94))
                     .frame(width: 64, height: 64)
                     .shadow(color: .black.opacity(0.3), radius: 14, y: 10)
-                MomentsIcon(store.isPlaying ? .pause : .play, size: 22)
-                    .foregroundColor(MomentsColor.ink)
+                ChalNaIcon(store.isPlaying ? .pause : .play, size: 22)
+                    .foregroundColor(ChalNaColor.ink)
                     .offset(x: store.isPlaying ? 0 : 2)
             }
         }
@@ -182,33 +182,33 @@ private struct ScrubBar: View {
 
     private var paperBody: some View {
         scrubContent(
-            textColor: MomentsColor.ink,
-            secondaryTextColor: MomentsColor.taupe,
-            trackColor: MomentsColor.ink.opacity(0.16),
-            knobColor: MomentsColor.ivory
+            textColor: ChalNaColor.ink,
+            secondaryTextColor: ChalNaColor.taupe,
+            trackColor: ChalNaColor.ink.opacity(0.16),
+            knobColor: ChalNaColor.ivory
         )
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: MomentsRadius.button, style: .continuous)
-                .fill(MomentsColor.ivory.opacity(0.92))
-                .momentsShadow(MomentsShadow.sm)
+            RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
+                .fill(ChalNaColor.ivory.opacity(0.92))
+                .chalNaShadow(ChalNaShadow.sm)
         )
     }
 
     @available(iOS 26.0, *)
     private var liquidGlassBody: some View {
         scrubContent(
-            textColor: MomentsColor.ink,
-            secondaryTextColor: MomentsColor.taupe,
-            trackColor: MomentsColor.ink.opacity(0.18),
-            knobColor: MomentsColor.ivory
+            textColor: ChalNaColor.ink,
+            secondaryTextColor: ChalNaColor.taupe,
+            trackColor: ChalNaColor.ink.opacity(0.18),
+            knobColor: ChalNaColor.ivory
         )
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .glassEffect(
-            .regular.tint(MomentsColor.ivory.opacity(0.3)),
-            in: RoundedRectangle(cornerRadius: MomentsRadius.button, style: .continuous)
+            .regular.tint(ChalNaColor.ivory.opacity(0.3)),
+            in: RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
         )
     }
 
@@ -220,7 +220,7 @@ private struct ScrubBar: View {
     ) -> some View {
         HStack(spacing: 8) {
             Text(currentLabel)
-                .font(MomentsTypography.monoFallback(11, weight: .semibold))
+                .font(ChalNaTypography.monoFallback(11, weight: .semibold))
                 .foregroundColor(textColor)
 
             GeometryReader { proxy in
@@ -229,13 +229,13 @@ private struct ScrubBar: View {
                         .fill(trackColor)
                         .frame(height: 3)
                     Capsule()
-                        .fill(MomentsColor.coral)
+                        .fill(ChalNaColor.coral)
                         .frame(width: max(0, proxy.size.width * progress), height: 3)
                     Circle()
                         .fill(knobColor)
                         .frame(width: 12, height: 12)
-                        .overlay(Circle().stroke(MomentsColor.coral, lineWidth: 2))
-                        .overlay(Circle().stroke(MomentsColor.coral.opacity(0.3), lineWidth: 3).padding(-2))
+                        .overlay(Circle().stroke(ChalNaColor.coral, lineWidth: 2))
+                        .overlay(Circle().stroke(ChalNaColor.coral.opacity(0.3), lineWidth: 3).padding(-2))
                         .offset(x: max(0, proxy.size.width * progress) - 6)
                 }
                 .frame(height: 12)
@@ -243,7 +243,7 @@ private struct ScrubBar: View {
             .frame(height: 12)
 
             Text(totalLabel)
-                .font(MomentsTypography.monoFallback(11, weight: .semibold))
+                .font(ChalNaTypography.monoFallback(11, weight: .semibold))
                 .foregroundColor(secondaryTextColor)
         }
     }

@@ -20,7 +20,7 @@ public struct HomeView: View {
     public var body: some View {
         VStack(spacing: 0) {
             header
-                .momentsHeaderBar(scrollProgress: store.scrollProgress)
+                .chalNaHeaderBar(scrollProgress: store.scrollProgress)
                 .zIndex(1)
 
             ScrollView {
@@ -45,7 +45,7 @@ public struct HomeView: View {
                 }
             }
         }
-        .momentsScreen()
+        .chalNaScreen()
         .onAppear { store.send(.onAppear) }
     }
 
@@ -53,18 +53,18 @@ public struct HomeView: View {
 
     private var header: some View {
         HStack(alignment: .center) {
-            Text("Moments")
-                .font(MomentsTypography.title(MomentsTypography.Size.h1))
-                .foregroundColor(MomentsColor.ink)
+            Text("ChalNa")
+                .font(ChalNaTypography.title(ChalNaTypography.Size.h1))
+                .foregroundColor(ChalNaColor.ink)
             Spacer()
             Button {
                 store.send(.settingsButtonTapped)
             } label: {
                 Image(systemName: "gearshape")
                     .font(.system(size: 20, weight: .regular))
-                    .foregroundColor(MomentsColor.ink)
+                    .foregroundColor(ChalNaColor.ink)
             }
-            .buttonStyle(.momentsHeaderAction)
+            .buttonStyle(.chalNaHeaderAction)
             .accessibilityLabel("설정")
         }
     }
@@ -74,11 +74,11 @@ public struct HomeView: View {
     private var hero: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("오늘의 순간들")
-                .font(MomentsTypography.title(MomentsTypography.Size.h1, weight: .bold))
-                .foregroundColor(MomentsColor.ink)
+                .font(ChalNaTypography.title(ChalNaTypography.Size.h1, weight: .bold))
+                .foregroundColor(ChalNaColor.ink)
             Text("Live Photo와 짧은 영상을 촬영일 순서로 이어붙여\n한 편의 필름처럼 기록해요.")
-                .font(MomentsTypography.krBody(MomentsTypography.Size.body))
-                .foregroundColor(MomentsColor.taupe)
+                .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
+                .foregroundColor(ChalNaColor.taupe)
                 .lineSpacing(4)
         }
     }
@@ -92,11 +92,11 @@ public struct HomeView: View {
             router.push(.mediaPicker)
         } label: {
             HStack(spacing: 8) {
-                MomentsIcon(.plus, size: 16)
+                ChalNaIcon(.plus, size: 16)
                 Text("새 Vlog 만들기")
             }
         }
-        .buttonStyle(.moments(.filled, size: .xl, fillWidth: true))
+        .buttonStyle(.chalNa(.filled, size: .xl, fillWidth: true))
         .accessibilityLabel("새 Vlog 만들기")
     }
 
@@ -106,12 +106,12 @@ public struct HomeView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .firstTextBaseline) {
                 Text("최근 필름")
-                    .font(MomentsTypography.title(MomentsTypography.Size.h2, weight: .semibold))
-                    .foregroundColor(MomentsColor.ink)
+                    .font(ChalNaTypography.title(ChalNaTypography.Size.h2, weight: .semibold))
+                    .foregroundColor(ChalNaColor.ink)
                 Spacer()
                 Text("\(films.count)편")
-                    .font(MomentsTypography.krBody(MomentsTypography.Size.small))
-                    .foregroundColor(MomentsColor.taupe)
+                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
+                    .foregroundColor(ChalNaColor.taupe)
             }
             .padding(.horizontal, 24)
 
@@ -137,17 +137,17 @@ public struct HomeView: View {
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("아직 만든 필름이 없어요.")
-                .font(MomentsTypography.krBody(MomentsTypography.Size.body, weight: .medium))
-                .foregroundColor(MomentsColor.ink)
+                .font(ChalNaTypography.krBody(ChalNaTypography.Size.body, weight: .medium))
+                .foregroundColor(ChalNaColor.ink)
             Text("첫 Vlog를 시작해보세요.")
-                .font(MomentsTypography.krBody(MomentsTypography.Size.body2))
-                .foregroundColor(MomentsColor.taupe)
+                .font(ChalNaTypography.krBody(ChalNaTypography.Size.body2))
+                .foregroundColor(ChalNaColor.taupe)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
-                .fill(MomentsColor.ivory)
+            RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
+                .fill(ChalNaColor.ivory)
         )
     }
 }
@@ -161,35 +161,35 @@ private struct FilmRow: View {
         HStack(spacing: 16) {
             thumbnail
                 .frame(width: 96, height: 54)
-                .clipShape(RoundedRectangle(cornerRadius: MomentsRadius.film, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.film, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: MomentsRadius.film, style: .continuous)
-                        .strokeBorder(MomentsColor.Gray.g100, lineWidth: 0.5)
+                    RoundedRectangle(cornerRadius: ChalNaRadius.film, style: .continuous)
+                        .strokeBorder(ChalNaColor.Gray.g100, lineWidth: 0.5)
                 )
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(film.title)
-                    .font(MomentsTypography.krBody(MomentsTypography.Size.body, weight: .semibold))
-                    .foregroundColor(MomentsColor.ink)
+                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.body, weight: .semibold))
+                    .foregroundColor(ChalNaColor.ink)
                     .lineLimit(1)
                 Text(film.metaLabel)
-                    .font(MomentsTypography.krBody(MomentsTypography.Size.small))
-                    .foregroundColor(MomentsColor.taupe)
+                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
+                    .foregroundColor(ChalNaColor.taupe)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            MomentsIcon(.chevronRight, size: 16)
-                .foregroundColor(MomentsColor.Gray.g400)
+            ChalNaIcon(.chevronRight, size: 16)
+                .foregroundColor(ChalNaColor.Gray.g400)
         }
         .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
+            RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
                 .fill(Color.white)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
-                .strokeBorder(MomentsColor.Gray.g100, lineWidth: 1)
+            RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
+                .strokeBorder(ChalNaColor.Gray.g100, lineWidth: 1)
         )
     }
 

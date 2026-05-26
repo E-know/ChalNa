@@ -7,7 +7,7 @@ import SwiftUI
 //   Title Big3/Big4 22px (LH 32) / Medium 20px (LH 30)
 //   Header 19px / List 16px
 //   Body1 16px (LH 22) / Body2 15px (LH 20) / Spec 14px (LH 22)
-public enum MomentsTypography {
+public enum ChalNaTypography {
 
     private enum FontName {
         static let systemMono = "SF Mono"
@@ -42,7 +42,7 @@ public enum MomentsTypography {
         Font.custom(FontName.systemMono, size: size, relativeTo: textStyle(for: size)).weight(weight)
     }
 
-    // MARK: - Legacy stubs (Moments 무드 제거: Fraunces/Caveat/BradleyHand 의존 삭제, Pretendard 로 매핑)
+    // MARK: - Legacy stubs (ChalNa 무드 제거: Fraunces/Caveat/BradleyHand 의존 삭제, Pretendard 로 매핑)
     // Phase 2~5 에서 호출처 정리될 때까지 빌드 호환용으로 둔다.
 
     public static func displayEN(_ size: CGFloat, italic: Bool = false, weight: Font.Weight = .regular) -> Font {
@@ -107,9 +107,9 @@ public enum MomentsTypography {
 // MARK: - View helpers for tag labels
 
 public extension Text {
-    func tagLabel(color: Color = MomentsColor.taupe) -> Text {
-        self.font(MomentsTypography.monoFallback(MomentsTypography.Size.tag, weight: .medium))
-            .tracking(MomentsTypography.Tracking.tagLabel)
+    func tagLabel(color: Color = ChalNaColor.taupe) -> Text {
+        self.font(ChalNaTypography.monoFallback(ChalNaTypography.Size.tag, weight: .medium))
+            .tracking(ChalNaTypography.Tracking.tagLabel)
             .foregroundColor(color)
     }
 }

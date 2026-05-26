@@ -33,11 +33,11 @@ public struct ClipThumbCard<Content: View>: View {
 
     public var body: some View {
         if case .ghost = state {
-            RoundedRectangle(cornerRadius: MomentsRadius.film, style: .continuous)
-                .strokeBorder(MomentsColor.coral.opacity(0.6), style: .init(lineWidth: 2, dash: [4, 3]))
+            RoundedRectangle(cornerRadius: ChalNaRadius.film, style: .continuous)
+                .strokeBorder(ChalNaColor.coral.opacity(0.6), style: .init(lineWidth: 2, dash: [4, 3]))
                 .background(
-                    RoundedRectangle(cornerRadius: MomentsRadius.film, style: .continuous)
-                        .fill(MomentsColor.coral.opacity(0.08))
+                    RoundedRectangle(cornerRadius: ChalNaRadius.film, style: .continuous)
+                        .fill(ChalNaColor.coral.opacity(0.08))
                 )
                 .frame(width: size.width + 4, height: size.height + 6)
         } else {
@@ -48,7 +48,7 @@ public struct ClipThumbCard<Content: View>: View {
     private var card: some View {
         content()
             .frame(width: size.width, height: size.height)
-            .clipShape(RoundedRectangle(cornerRadius: MomentsRadius.film, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.film, style: .continuous))
             .overlay(selectionOverlay)
             .shadow(color: shadowColor, radius: shadowRadius, x: 0, y: shadowY)
             .scaleEffect(scale, anchor: .bottom)
@@ -60,8 +60,8 @@ public struct ClipThumbCard<Content: View>: View {
     private var selectionOverlay: some View {
         switch state {
         case .selected, .playing:
-            RoundedRectangle(cornerRadius: MomentsRadius.film, style: .continuous)
-                .strokeBorder(MomentsColor.coral, lineWidth: 2)
+            RoundedRectangle(cornerRadius: ChalNaRadius.film, style: .continuous)
+                .strokeBorder(ChalNaColor.coral, lineWidth: 2)
         default:
             EmptyView()
         }
@@ -89,7 +89,7 @@ public struct ClipThumbCard<Content: View>: View {
     private var shadowColor: Color {
         switch state {
         case .lifted:  return Color.black.opacity(0.30)
-        case .playing: return MomentsColor.coral.opacity(0.4)
+        case .playing: return ChalNaColor.coral.opacity(0.4)
         default:       return Color.black.opacity(0.10)
         }
     }
@@ -127,5 +127,5 @@ public struct ClipThumbCard<Content: View>: View {
         }
     }
     .padding(32)
-    .background(MomentsColor.ivory)
+    .background(ChalNaColor.ivory)
 }

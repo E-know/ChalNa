@@ -6,7 +6,7 @@ import FirebaseCore
 import AnalyticsService
 
 @main
-struct MomentsApp: App {
+struct ChalNaApp: App {
     init() {
         // GoogleService-Info.plist 가 번들에 포함돼 있어야 한다.
         // plist 부재 시 Firebase 초기화를 건너뛰고 Noop tracker 로 fallback.

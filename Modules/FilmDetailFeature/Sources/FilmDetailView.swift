@@ -27,7 +27,7 @@ public struct FilmDetailView: View {
     public var body: some View {
         VStack(spacing: 0) {
             header
-                .momentsHeaderBar(scrollProgress: scrollProgress)
+                .chalNaHeaderBar(scrollProgress: scrollProgress)
                 .zIndex(1)
 
             if let film = films.first {
@@ -36,7 +36,7 @@ public struct FilmDetailView: View {
                 missingFilmState
             }
         }
-        .momentsScreen()
+        .chalNaScreen()
         .onAppear { store.send(.onAppear) }
     }
 
@@ -47,15 +47,15 @@ public struct FilmDetailView: View {
             Button {
                 router.pop()
             } label: {
-                MomentsIcon(.chevronLeft, size: 24)
-                    .foregroundColor(MomentsColor.ink)
+                ChalNaIcon(.chevronLeft, size: 24)
+                    .foregroundColor(ChalNaColor.ink)
             }
-            .buttonStyle(.momentsHeaderAction)
+            .buttonStyle(.chalNaHeaderAction)
             .accessibilityLabel("뒤로")
 
             Text("필름 정보")
-                .font(MomentsTypography.title(MomentsTypography.Size.h2, weight: .semibold))
-                .foregroundColor(MomentsColor.ink)
+                .font(ChalNaTypography.title(ChalNaTypography.Size.h2, weight: .semibold))
+                .foregroundColor(ChalNaColor.ink)
 
             Spacer()
         }
@@ -132,23 +132,23 @@ public struct FilmDetailView: View {
         }
         .aspectRatio(16.0 / 9.0, contentMode: .fit)
         .frame(maxWidth: .infinity)
-        .clipShape(RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
-                .strokeBorder(MomentsColor.Gray.g100, lineWidth: 1)
+            RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
+                .strokeBorder(ChalNaColor.Gray.g100, lineWidth: 1)
         )
     }
 
     private func titleSection(for film: Film) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(film.title)
-                .font(MomentsTypography.title(MomentsTypography.Size.h1, weight: .bold))
-                .foregroundColor(MomentsColor.ink)
+                .font(ChalNaTypography.title(ChalNaTypography.Size.h1, weight: .bold))
+                .foregroundColor(ChalNaColor.ink)
                 .lineLimit(2)
 
             Text(Self.dateFormatter.string(from: film.createdAt))
-                .font(MomentsTypography.krBody(MomentsTypography.Size.body))
-                .foregroundColor(MomentsColor.taupe)
+                .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
+                .foregroundColor(ChalNaColor.taupe)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -167,43 +167,43 @@ public struct FilmDetailView: View {
     private func metaCell(label: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
-                .font(MomentsTypography.krBody(MomentsTypography.Size.small))
-                .foregroundColor(MomentsColor.taupe)
+                .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
+                .foregroundColor(ChalNaColor.taupe)
             Text(value)
-                .font(MomentsTypography.title(MomentsTypography.Size.h2, weight: .bold))
-                .foregroundColor(MomentsColor.ink)
+                .font(ChalNaTypography.title(ChalNaTypography.Size.h2, weight: .bold))
+                .foregroundColor(ChalNaColor.ink)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
+            RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
                 .fill(Color.white)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
-                .strokeBorder(MomentsColor.Gray.g100, lineWidth: 1)
+            RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
+                .strokeBorder(ChalNaColor.Gray.g100, lineWidth: 1)
         )
     }
 
     private var missingFileNotice: some View {
         HStack(alignment: .top, spacing: 12) {
-            MomentsIcon(.film, size: 20)
-                .foregroundColor(MomentsColor.taupe)
+            ChalNaIcon(.film, size: 20)
+                .foregroundColor(ChalNaColor.taupe)
             VStack(alignment: .leading, spacing: 4) {
                 Text("영상 파일을 찾을 수 없어요")
-                    .font(MomentsTypography.krBody(MomentsTypography.Size.body, weight: .semibold))
-                    .foregroundColor(MomentsColor.ink)
+                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.body, weight: .semibold))
+                    .foregroundColor(ChalNaColor.ink)
                 Text("앱을 다시 설치하셨거나 파일이 삭제되었어요. 재생과 공유는 불가능하고, 라이브러리에서 항목을 정리할 수 있어요.")
-                    .font(MomentsTypography.krBody(MomentsTypography.Size.small))
-                    .foregroundColor(MomentsColor.taupe)
+                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
+                    .foregroundColor(ChalNaColor.taupe)
                     .lineSpacing(2)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: MomentsRadius.card, style: .continuous)
-                .fill(MomentsColor.ivory)
+            RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
+                .fill(ChalNaColor.ivory)
         )
     }
 
@@ -213,11 +213,11 @@ public struct FilmDetailView: View {
                 store.send(.playTapped)
             } label: {
                 HStack(spacing: 8) {
-                    MomentsIcon(.play, size: 18)
+                    ChalNaIcon(.play, size: 18)
                     Text("재생")
                 }
             }
-            .buttonStyle(.moments(.filled, size: .lg, fillWidth: true))
+            .buttonStyle(.chalNa(.filled, size: .lg, fillWidth: true))
             .disabled(!canPlayOrShare)
             .opacity(canPlayOrShare ? 1 : 0.5)
 
@@ -225,11 +225,11 @@ public struct FilmDetailView: View {
                 store.send(.shareTapped)
             } label: {
                 HStack(spacing: 8) {
-                    MomentsIcon(.share, size: 18)
+                    ChalNaIcon(.share, size: 18)
                     Text("공유")
                 }
             }
-            .buttonStyle(.moments(.standardOutlined, size: .lg, fillWidth: true))
+            .buttonStyle(.chalNa(.standardOutlined, size: .lg, fillWidth: true))
             .disabled(!canPlayOrShare)
             .opacity(canPlayOrShare ? 1 : 0.5)
 
@@ -237,11 +237,11 @@ public struct FilmDetailView: View {
                 store.send(.deleteTapped)
             } label: {
                 HStack(spacing: 8) {
-                    MomentsIcon(.trash, size: 16)
+                    ChalNaIcon(.trash, size: 16)
                     Text("필름 삭제")
                 }
             }
-            .buttonStyle(.momentsText)
+            .buttonStyle(.chalNaText)
         }
     }
 
@@ -251,14 +251,14 @@ public struct FilmDetailView: View {
         VStack(alignment: .center, spacing: 12) {
             Spacer()
             Text("필름을 찾을 수 없어요")
-                .font(MomentsTypography.title(MomentsTypography.Size.h2, weight: .semibold))
-                .foregroundColor(MomentsColor.ink)
+                .font(ChalNaTypography.title(ChalNaTypography.Size.h2, weight: .semibold))
+                .foregroundColor(ChalNaColor.ink)
             Text("이미 삭제되었거나 다른 기기에서 동기화 중일 수 있어요.")
-                .font(MomentsTypography.krBody(MomentsTypography.Size.body))
-                .foregroundColor(MomentsColor.taupe)
+                .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
+                .foregroundColor(ChalNaColor.taupe)
                 .multilineTextAlignment(.center)
             Button("홈으로") { router.pop() }
-                .buttonStyle(.moments(.outlined, size: .md))
+                .buttonStyle(.chalNa(.outlined, size: .md))
                 .padding(.top, 8)
             Spacer()
         }

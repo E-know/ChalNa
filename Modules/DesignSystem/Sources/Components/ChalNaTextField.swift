@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Danawa DDS Mobile 텍스트필드 (단일 라인 + 라벨 + helper/error 상태).
-public struct MomentsTextField: View {
+public struct ChalNaTextField: View {
     public let label: String?
     public let placeholder: String
     public let helper: String?
@@ -27,40 +27,40 @@ public struct MomentsTextField: View {
         VStack(alignment: .leading, spacing: 8) {
             if let label {
                 Text(label)
-                    .font(MomentsTypography.krBody(MomentsTypography.Size.small, weight: .medium))
-                    .foregroundColor(MomentsColor.ink)
+                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.small, weight: .medium))
+                    .foregroundColor(ChalNaColor.ink)
             }
 
             TextField(placeholder, text: $text)
                 .focused($isFocused)
-                .font(MomentsTypography.krBody(MomentsTypography.Size.body, weight: .regular))
-                .foregroundColor(MomentsColor.ink)
+                .font(ChalNaTypography.krBody(ChalNaTypography.Size.body, weight: .regular))
+                .foregroundColor(ChalNaColor.ink)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .background(
-                    RoundedRectangle(cornerRadius: MomentsRadius.button, style: .continuous)
+                    RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
                         .fill(Color.white)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: MomentsRadius.button, style: .continuous)
+                    RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
                         .strokeBorder(borderColor, lineWidth: borderWidth)
                 )
 
             if let errorText {
                 Text(errorText)
-                    .font(MomentsTypography.krBody(MomentsTypography.Size.caption))
-                    .foregroundColor(MomentsColor.danger)
+                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.caption))
+                    .foregroundColor(ChalNaColor.danger)
             } else if let helper {
                 Text(helper)
-                    .font(MomentsTypography.krBody(MomentsTypography.Size.caption))
-                    .foregroundColor(MomentsColor.taupe)
+                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.caption))
+                    .foregroundColor(ChalNaColor.taupe)
             }
         }
     }
 
     private var borderColor: Color {
-        if errorText != nil { return MomentsColor.danger }
-        return isFocused ? MomentsColor.coral : MomentsColor.Gray.g200
+        if errorText != nil { return ChalNaColor.danger }
+        return isFocused ? ChalNaColor.coral : ChalNaColor.Gray.g200
     }
 
     private var borderWidth: CGFloat {
@@ -72,9 +72,9 @@ public struct MomentsTextField: View {
     @Previewable @State var title = ""
     @Previewable @State var failing = "유효하지 않은 입력"
     return VStack(spacing: 16) {
-        MomentsTextField(label: "필름 제목", placeholder: "예: 제주도, 우리의 봄", helper: "비워두면 자동으로 채워져요.", text: $title)
-        MomentsTextField(label: "Error 상태", placeholder: "값을 입력하세요", errorText: "30자 이내로 입력해 주세요.", text: $failing)
+        ChalNaTextField(label: "필름 제목", placeholder: "예: 제주도, 우리의 봄", helper: "비워두면 자동으로 채워져요.", text: $title)
+        ChalNaTextField(label: "Error 상태", placeholder: "값을 입력하세요", errorText: "30자 이내로 입력해 주세요.", text: $failing)
     }
     .padding(24)
-    .background(MomentsColor.cream)
+    .background(ChalNaColor.cream)
 }

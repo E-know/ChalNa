@@ -2,7 +2,7 @@ import ProjectDescription
 import ProjectDescriptionHelpers
 
 let project = Project(
-    name: "Moments",
+    name: "ChalNa",
     targets: [
         Module.framework(
             name: "DesignSystem",
@@ -100,7 +100,7 @@ let project = Project(
             ]
         ),
         .target(
-            name: "Moments",
+            name: "ChalNa",
             destinations: .iOS,
             product: .app,
             bundleId: Module.bundleIdPrefix,
@@ -120,8 +120,8 @@ let project = Project(
                 ]
             ),
             buildableFolders: [
-                "Moments/Sources",
-                "Moments/Resources",
+                "ChalNa/Sources",
+                "ChalNa/Resources",
                 "Modules/PhotosService/Resources",
             ],
             dependencies: [
@@ -177,14 +177,14 @@ let project = Project(
     ],
     schemes: [
         .scheme(
-            name: "Moments Dev",
+            name: "ChalNa Dev",
             shared: true,
-            buildAction: .buildAction(targets: ["Moments"]),
+            buildAction: .buildAction(targets: ["ChalNa"]),
             runAction: .runAction(
                 configuration: .debug,
-                executable: "Moments",
+                executable: "ChalNa",
                 arguments: .arguments(environmentVariables: [
-                    "MOMENTS_APP_MODE": "devMock",
+                    "CHALNA_APP_MODE": "devMock",
                 ])
             )
         ),

@@ -10,8 +10,8 @@ struct DaySprocket: View {
     var body: some View {
         VStack(spacing: 6) {
             Text(label)
-                .font(MomentsTypography.handFallback(13))
-                .foregroundColor(highlighted ? MomentsColor.coral : MomentsColor.cream)
+                .font(ChalNaTypography.handFallback(13))
+                .foregroundColor(highlighted ? ChalNaColor.coral : ChalNaColor.cream)
             SprocketLine()
                 .frame(width: 2, height: 64)
         }
@@ -27,7 +27,7 @@ private struct SprocketLine: View {
             VStack(spacing: 3) {
                 ForEach(0..<count, id: \.self) { _ in
                     Circle()
-                        .fill(MomentsColor.cream)
+                        .fill(ChalNaColor.cream)
                         .frame(width: 2.2, height: 2.2)
                 }
             }

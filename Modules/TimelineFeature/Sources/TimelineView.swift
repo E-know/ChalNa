@@ -19,7 +19,7 @@ public struct TimelineView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            header.momentsHeaderBar(scrollProgress: 1)
+            header.chalNaHeaderBar(scrollProgress: 1)
 
             preview
                 .padding(.horizontal, 16)
@@ -57,7 +57,7 @@ public struct TimelineView: View {
 
             Spacer(minLength: 0)
         }
-        .momentsScreen()
+        .chalNaScreen()
         .safeAreaInset(edge: .bottom) { bottomBar.padding(.horizontal, 16) }
         .onAppear {
             syncFromSessionIfNeeded()
@@ -128,12 +128,12 @@ public struct TimelineView: View {
                 router.pop()
             } label: {
                 HStack(spacing: 2) {
-                    MomentsIcon(.chevronLeft, size: 14)
-                    Text("뒤로").font(MomentsTypography.krBody(14, weight: .medium))
+                    ChalNaIcon(.chevronLeft, size: 14)
+                    Text("뒤로").font(ChalNaTypography.krBody(14, weight: .medium))
                 }
-                .foregroundColor(MomentsColor.taupe)
+                .foregroundColor(ChalNaColor.taupe)
             }
-            .buttonStyle(.momentsHeaderAction)
+            .buttonStyle(.chalNaHeaderAction)
             .accessibilityLabel("뒤로")
 
             Spacer()
@@ -142,19 +142,19 @@ public struct TimelineView: View {
                 HStack(spacing: 6) {
                     if store.isPlaying { PulseDot() }
                     Text(headerTitle)
-                        .font(MomentsTypography.krSemibold(15))
-                        .foregroundColor(MomentsColor.ink)
+                        .font(ChalNaTypography.krSemibold(15))
+                        .foregroundColor(ChalNaColor.ink)
                 }
                 Text(headerSubtitle)
-                    .tagLabel(color: store.isPlaying ? MomentsColor.coral : MomentsColor.taupe)
+                    .tagLabel(color: store.isPlaying ? ChalNaColor.coral : ChalNaColor.taupe)
             }
 
             Spacer()
 
             // 헤더 좌우 균형용 빈 영역 (뒤로 버튼과 같은 크기)
             HStack(spacing: 2) {
-                MomentsIcon(.chevronLeft, size: 14)
-                Text("뒤로").font(MomentsTypography.krBody(14, weight: .medium))
+                ChalNaIcon(.chevronLeft, size: 14)
+                Text("뒤로").font(ChalNaTypography.krBody(14, weight: .medium))
             }
             .opacity(0)
             .accessibilityHidden(true)
@@ -184,15 +184,15 @@ public struct TimelineView: View {
     private var dateSticker: some View {
         if let clip = store.currentClip {
             HStack(spacing: 4) {
-                MomentsIcon(.calendar, size: 12)
-                    .foregroundColor(MomentsColor.taupe)
+                ChalNaIcon(.calendar, size: 12)
+                    .foregroundColor(ChalNaColor.taupe)
                 Text(dateStickerText(for: clip))
-                    .font(MomentsTypography.monoFallback(MomentsTypography.Size.small, weight: .medium))
-                    .foregroundColor(MomentsColor.taupe)
+                    .font(ChalNaTypography.monoFallback(ChalNaTypography.Size.small, weight: .medium))
+                    .foregroundColor(ChalNaColor.taupe)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(Capsule(style: .continuous).fill(MomentsColor.ivory))
+            .background(Capsule(style: .continuous).fill(ChalNaColor.ivory))
         }
     }
 
@@ -224,7 +224,7 @@ public struct TimelineView: View {
     }
 
     private var labelLeftColor: Color {
-        store.isPlaying ? MomentsColor.coral : MomentsColor.taupe
+        store.isPlaying ? ChalNaColor.coral : ChalNaColor.taupe
     }
 
     @ViewBuilder
@@ -232,10 +232,10 @@ public struct TimelineView: View {
         if store.isPlaying {
             Text("\(store.playheadLabel) / \(store.totalClockLabel)").tagLabel()
         } else {
-            (Text("총 ").tagLabel(color: MomentsColor.taupe)
+            (Text("총 ").tagLabel(color: ChalNaColor.taupe)
              + Text(store.totalDurationLabel)
-                .font(MomentsTypography.krBody(13, weight: .medium))
-                .foregroundColor(MomentsColor.ink))
+                .font(ChalNaTypography.krBody(13, weight: .medium))
+                .foregroundColor(ChalNaColor.ink))
         }
     }
 
@@ -245,8 +245,8 @@ public struct TimelineView: View {
     private var hintRow: some View {
         if !store.isPlaying {
             Text("클립을 탭해 편집 · 길게 눌러서 끌어 이동")
-                .font(MomentsTypography.krBody(MomentsTypography.Size.small))
-                .foregroundColor(MomentsColor.taupe)
+                .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
+                .foregroundColor(ChalNaColor.taupe)
                 .frame(maxWidth: .infinity, alignment: .center)
         }
     }
@@ -293,9 +293,9 @@ public struct TimelineView: View {
 private struct PulseDot: View {
     var body: some View {
         Circle()
-            .fill(MomentsColor.coral)
+            .fill(ChalNaColor.coral)
             .frame(width: 6, height: 6)
-            .overlay(Circle().stroke(MomentsColor.coral.opacity(0.3), lineWidth: 3).padding(-3))
+            .overlay(Circle().stroke(ChalNaColor.coral.opacity(0.3), lineWidth: 3).padding(-3))
     }
 }
 

@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Danawa DDS Mobile 팝업/바텀시트 컨테이너.
 /// SwiftUI `.sheet(...)` / `.fullScreenCover(...)` 내부에서 그리드/시트 모서리를 일관되게 잡는 용도.
-public struct MomentsBottomSheet<Content: View>: View {
+public struct ChalNaBottomSheet<Content: View>: View {
     public let title: String?
     public let subtitle: String?
     public let showsGrabber: Bool
@@ -24,7 +24,7 @@ public struct MomentsBottomSheet<Content: View>: View {
         VStack(alignment: .leading, spacing: 16) {
             if showsGrabber {
                 Capsule()
-                    .fill(MomentsColor.Gray.g200)
+                    .fill(ChalNaColor.Gray.g200)
                     .frame(width: 36, height: 4)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.top, 8)
@@ -32,14 +32,14 @@ public struct MomentsBottomSheet<Content: View>: View {
 
             if let title {
                 Text(title)
-                    .font(MomentsTypography.title(MomentsTypography.Size.h1))
-                    .foregroundColor(MomentsColor.ink)
+                    .font(ChalNaTypography.title(ChalNaTypography.Size.h1))
+                    .foregroundColor(ChalNaColor.ink)
             }
 
             if let subtitle {
                 Text(subtitle)
-                    .font(MomentsTypography.krBody(MomentsTypography.Size.body2))
-                    .foregroundColor(MomentsColor.taupe)
+                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.body2))
+                    .foregroundColor(ChalNaColor.taupe)
             }
 
             content()
@@ -49,28 +49,28 @@ public struct MomentsBottomSheet<Content: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             UnevenRoundedRectangle(
-                topLeadingRadius: MomentsRadius.sheet,
+                topLeadingRadius: ChalNaRadius.sheet,
                 bottomLeadingRadius: 0,
                 bottomTrailingRadius: 0,
-                topTrailingRadius: MomentsRadius.sheet,
+                topTrailingRadius: ChalNaRadius.sheet,
                 style: .continuous
             )
             .fill(Color.white)
         )
-        .momentsShadow(MomentsShadow.lg)
+        .chalNaShadow(ChalNaShadow.lg)
     }
 }
 
 #Preview {
-    MomentsBottomSheet(
+    ChalNaBottomSheet(
         title: "내보내기 준비됨",
         subtitle: "Vlog가 저장되었어요. 공유하거나 한 번 더 확인하세요."
     ) {
         VStack(spacing: 12) {
-            Button("공유하기") {}.buttonStyle(.moments(.filled, size: .lg, fillWidth: true))
-            Button("나중에") {}.buttonStyle(.moments(.standardOutlined, size: .lg, fillWidth: true))
+            Button("공유하기") {}.buttonStyle(.chalNa(.filled, size: .lg, fillWidth: true))
+            Button("나중에") {}.buttonStyle(.chalNa(.standardOutlined, size: .lg, fillWidth: true))
         }
     }
     .padding(24)
-    .background(MomentsColor.ivory)
+    .background(ChalNaColor.ivory)
 }
