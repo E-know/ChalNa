@@ -26,6 +26,10 @@ public struct MediaPickerFeature {
         public var isPhotoLibraryLoading: Bool = false
         public var isPhotoPermissionAlertPresented: Bool = false
         public var isSystemPhotoPickerPresented: Bool = false
+        /// PHPicker가 닫히고 PickedMediaLoader가 비동기 추출을 끝낼 때까지의 짧은 공백 구간을 채우는 오버레이용.
+        public var isPreparingPickedMedia: Bool = false
+        /// 사진 추출 진행 카운트 (완료, 전체). 오버레이가 떠 있는 동안에만 non-nil.
+        public var preparingPickedMediaProgress: PreparingPickedMediaProgress?
 
         // Dev fixtures
         public var devAssets: [DevMediaAsset] = []
@@ -77,6 +81,8 @@ public struct MediaPickerFeature {
         case systemPhotoPickerPresentedChanged(Bool)
 
         // Library data
+        case pickedMediaLoadingStarted(total: Int)
+        case pickedMediaProgressUpdated(done: Int)
         case photosPickedFromSystemPicker(media: [PickedMedia])
         case photoAssetTapped(PhotoLibraryAsset)
 
@@ -199,9 +205,23 @@ public struct MediaPickerFeature {
                 state.isSystemPhotoPickerPresented = value
                 return .none
 
+            case let .pickedMediaLoadingStarted(total):
+                state.isPreparingPickedMedia = true
+                state.preparingPickedMediaProgress = .init(done: 0, total: max(total, 0))
+                return .none
+
+            case let .pickedMediaProgressUpdated(done):
+                if var progress = state.preparingPickedMediaProgress {
+                    progress.done = min(max(done, 0), progress.total)
+                    state.preparingPickedMediaProgress = progress
+                }
+                return .none
+
             case let .photosPickedFromSystemPicker(media):
                 state.isSystemPhotoPickerPresented = false
                 state.isPhotoLibraryLoading = false
+                state.isPreparingPickedMedia = false
+                state.preparingPickedMediaProgress = nil
                 guard !media.isEmpty else { return .none }
 
                 for item in media {
@@ -396,6 +416,17 @@ public struct MediaPickerFeature {
 public enum MediaPickerSource: Sendable {
     case photoLibrary
     case devFixtures(any DevMediaSourcing)
+}
+
+/// PHPicker 결과 추출 진행 상태 (완료 개수 / 전체 개수). 오버레이 카운트 표시용.
+public struct PreparingPickedMediaProgress: Equatable, Sendable {
+    public var done: Int
+    public var total: Int
+
+    public init(done: Int, total: Int) {
+        self.done = done
+        self.total = total
+    }
 }
 
 public struct MediaLoadState: Equatable {
