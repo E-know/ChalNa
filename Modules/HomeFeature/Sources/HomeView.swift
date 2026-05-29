@@ -57,16 +57,16 @@ public struct HomeView: View {
                 .font(ChalNaTypography.title(ChalNaTypography.Size.h1))
                 .foregroundColor(ChalNaColor.ink)
             Spacer()
-            // TODO: 설정 화면 구현 후 다시 노출
-            // Button {
-            //     store.send(.settingsButtonTapped)
-            // } label: {
-            //     Image(systemName: "gearshape")
-            //         .font(.system(size: 20, weight: .regular))
-            //         .foregroundColor(ChalNaColor.ink)
-            // }
-            // .buttonStyle(.chalNaHeaderAction)
-            // .accessibilityLabel("설정")
+            Button {
+                store.send(.settingsButtonTapped)
+                router.push(.settings)
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(ChalNaTypography.krBody(20))
+                    .foregroundColor(ChalNaColor.ink)
+            }
+            .buttonStyle(.chalNaHeaderAction)
+            .accessibilityLabel("설정")
         }
     }
 
