@@ -1,62 +1,30 @@
 import ComposableArchitecture
-import Models
 import AnalyticsService
 
+/// 설정 최상위 메뉴. 현재는 '라벨' 항목 1개. 향후 다른 메뉴를 여기에 추가.
 @Reducer
 public struct SettingsFeature {
     public init() {}
 
     @ObservableState
     public struct State: Equatable {
-        @Shared(.appStorage("labelTimeEnabled")) public var timeEnabled = true
-        @Shared(.appStorage("labelTimePosition")) public var timePosition = LabelPosition.center
-        @Shared(.appStorage("labelDateEnabled")) public var dateEnabled = true
-        @Shared(.appStorage("labelDatePosition")) public var datePosition = LabelPosition.bottomCenter
-        @Shared(.appStorage("labelTimeOpacity")) public var timeOpacity = 0.5
-        @Shared(.appStorage("labelDateOpacity")) public var dateOpacity = 1.0
-
         public init() {}
     }
 
     public enum Action {
         case onAppear
-        case timeToggled(Bool)
-        case dateToggled(Bool)
-        // 네비게이션 intent — View 가 router.push(.labelPosition(kind)) 처리
-        case timePositionRowTapped
-        case datePositionRowTapped
-        case timeOpacityChanged(Double)
-        case dateOpacityChanged(Double)
+        case labelMenuTapped   // View 가 router.push(.labelSettings)
     }
 
     @Dependency(\.analyticsTracker) var analyticsTracker
 
     public var body: some ReducerOf<Self> {
-        Reduce { state, action in
+        Reduce { _, action in
             switch action {
             case .onAppear:
                 analyticsTracker.log(.settingsOpened)
                 return .none
-
-            case let .timeToggled(on):
-                state.$timeEnabled.withLock { $0 = on }
-                analyticsTracker.log(.labelToggled(kind: LabelKind.time.rawValue, on: on))
-                return .none
-
-            case let .dateToggled(on):
-                state.$dateEnabled.withLock { $0 = on }
-                analyticsTracker.log(.labelToggled(kind: LabelKind.date.rawValue, on: on))
-                return .none
-
-            case .timePositionRowTapped, .datePositionRowTapped:
-                return .none
-
-            case let .timeOpacityChanged(value):
-                state.$timeOpacity.withLock { $0 = value }
-                return .none
-
-            case let .dateOpacityChanged(value):
-                state.$dateOpacity.withLock { $0 = value }
+            case .labelMenuTapped:
                 return .none
             }
         }
