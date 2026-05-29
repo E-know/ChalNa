@@ -26,6 +26,11 @@ public enum AnalyticsEvent: Sendable, Equatable {
     // 라이브러리
     case filmDeleted(filmID: UUID)
 
+    // 설정 / 라벨
+    case settingsOpened
+    case labelToggled(kind: String, on: Bool)
+    case labelPositionChanged(kind: String, position: Int)
+
     /// Firebase Analytics 에 보낼 이벤트 이름 (snake_case).
     public var name: String {
         switch self {
@@ -42,13 +47,16 @@ public enum AnalyticsEvent: Sendable, Equatable {
         case .vlogSavedToLibrary:  return "vlog_saved_to_library"
         case .vlogSaveFailed:      return "vlog_save_failed"
         case .filmDeleted:         return "film_deleted"
+        case .settingsOpened:        return "settings_opened"
+        case .labelToggled:          return "label_toggled"
+        case .labelPositionChanged:  return "label_position_changed"
         }
     }
 
     /// Firebase Analytics 파라미터 (Sendable primitives 만 허용).
     public var parameters: [String: AnalyticsParameterValue] {
         switch self {
-        case .homeViewed, .newVlogTapped, .timelineOpened, .exportScreenOpened, .vlogSavedToLibrary:
+        case .homeViewed, .newVlogTapped, .timelineOpened, .exportScreenOpened, .vlogSavedToLibrary, .settingsOpened:
             return [:]
         case let .mediaPickerOpened(source):
             return ["source": .string(source.rawValue)]
@@ -67,6 +75,10 @@ public enum AnalyticsEvent: Sendable, Equatable {
             return ["film_id": .string(filmID.uuidString)]
         case let .filmDeleted(filmID):
             return ["film_id": .string(filmID.uuidString)]
+        case let .labelToggled(kind, on):
+            return ["kind": .string(kind), "on": .bool(on)]
+        case let .labelPositionChanged(kind, position):
+            return ["kind": .string(kind), "position": .int(position)]
         }
     }
 }

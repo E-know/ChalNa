@@ -8,6 +8,8 @@ import FilmDetailFeature
 import AppCore
 import DesignSystem
 import PhotosService
+import Models
+import SettingsFeature
 
 /// 앱 루트. TCA AppFeature 의 StackState 로 navigation 을 통합. AppRouter 는 호환용 thin wrapper.
 public struct RootView: View {
@@ -42,6 +44,9 @@ public struct RootView: View {
         case let .timeline(s):    TimelineView(store: s)
         case let .export(s):      ExportView(store: s)
         case let .filmDetail(s):  FilmDetailView(store: s)
+        case let .settings(s):      SettingsView(store: s)
+        case let .labelSettings(s): LabelSettingsView(store: s)
+        case let .labelPosition(s): LabelPositionPickerView(store: s)
         }
     }
 
@@ -56,6 +61,12 @@ public struct RootView: View {
                 store.send(.routerPushedExport)
             case let .filmDetail(filmID):
                 store.send(.routerPushedFilmDetail(filmID: filmID))
+            case .settings:
+                store.send(.routerPushedSettings)
+            case .labelSettings:
+                store.send(.routerPushedLabelSettings)
+            case let .labelPosition(kind):
+                store.send(.routerPushedLabelPosition(kind: kind))
             }
         }
         router.popHandler = { [store] in store.send(.routerPopped) }

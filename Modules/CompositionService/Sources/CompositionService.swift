@@ -35,15 +35,18 @@ public enum ExportError: LocalizedError {
 }
 
 public protocol CompositionServicing: Sendable {
-    /// 클립 배열과 사용자 회전 dict를 받아 mp4를 만들고 진행률/완료/실패를 스트림으로 흘려보낸다.
-    /// renderSize는 첫 클립의 displaySize × 사용자 회전을 따른다.
-    func export(clips: [Clip], rotations: [Clip.ID: ClipRotation]) -> AsyncStream<ExportEvent>
+    /// 클립 배열·회전·라벨 설정을 받아 mp4를 만들고 진행률/완료/실패를 스트림으로 흘려보낸다.
+    func export(clips: [Clip], rotations: [Clip.ID: ClipRotation], labelSettings: LabelSettings) -> AsyncStream<ExportEvent>
 }
 
 public extension CompositionServicing {
-    /// 회전 정보 없는 호출. 모든 클립이 r0(원본 그대로)로 처리된다. 테스트/구버전 호출 호환용.
+    /// 라벨 설정 없는 호출 → 기본값(현행 동작). 테스트/구버전 호환용.
+    func export(clips: [Clip], rotations: [Clip.ID: ClipRotation]) -> AsyncStream<ExportEvent> {
+        export(clips: clips, rotations: rotations, labelSettings: .default)
+    }
+    /// 회전·라벨 설정 없는 호출.
     func export(clips: [Clip]) -> AsyncStream<ExportEvent> {
-        export(clips: clips, rotations: [:])
+        export(clips: clips, rotations: [:], labelSettings: .default)
     }
 }
 
@@ -53,7 +56,8 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
     public nonisolated func export(
         clips: [Clip],
-        rotations: [Clip.ID: ClipRotation]
+        rotations: [Clip.ID: ClipRotation],
+        labelSettings: LabelSettings
     ) -> AsyncStream<ExportEvent> {
         AsyncStream { continuation in
             let task = Task { [weak self] in
@@ -61,7 +65,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
                     continuation.finish()
                     return
                 }
-                await self.run(clips: clips, rotations: rotations, continuation: continuation)
+                await self.run(clips: clips, rotations: rotations, labelSettings: labelSettings, continuation: continuation)
             }
             continuation.onTermination = { _ in task.cancel() }
         }
@@ -72,10 +76,11 @@ public actor AVFoundationCompositionService: CompositionServicing {
     private func run(
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation],
+        labelSettings: LabelSettings,
         continuation: AsyncStream<ExportEvent>.Continuation
     ) async {
         do {
-            let built = try await buildComposition(clips: clips, rotations: rotations)
+            let built = try await buildComposition(clips: clips, rotations: rotations, labelSettings: labelSettings)
             guard built.hasContent else {
                 throw ExportError.noVideoClips
             }
@@ -131,7 +136,8 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
     private func buildComposition(
         clips: [Clip],
-        rotations: [Clip.ID: ClipRotation]
+        rotations: [Clip.ID: ClipRotation],
+        labelSettings: LabelSettings
     ) async throws -> BuiltComposition {
         let composition = AVMutableComposition()
         guard let compVideoTrack = composition.addMutableTrack(
@@ -214,11 +220,12 @@ public actor AVFoundationCompositionService: CompositionServicing {
             return inst
         }
 
-        // 4) 각 클립의 placedRange 동안 우측하단에 촬영일시 라벨을 오버레이.
-        if hasContent {
+        // 4) 각 클립 placedRange 동안 라벨 오버레이 (설정에 따라 표시/위치 결정).
+        if hasContent && (labelSettings.timeEnabled || labelSettings.dateEnabled) {
             videoComposition.animationTool = Self.makeDateLabelAnimationTool(
                 renderSize: renderSize,
-                entries: layerInstructions.map { ($0.timeRange, $0.capturedAt) }
+                entries: layerInstructions.map { ($0.timeRange, $0.capturedAt) },
+                labelSettings: labelSettings
             )
         }
 
@@ -275,13 +282,34 @@ public actor AVFoundationCompositionService: CompositionServicing {
         return ""
     }()
 
-    /// 클립별 촬영일시를 두 위치에 오버레이로 합성하는 `AVVideoCompositionCoreAnimationTool` 생성.
-    /// - 우측 하단(작은 글씨): 날짜 `yyyy/MM/dd`
-    /// - 화면 정중앙(큰 글씨): 시각 `HH:mm`
-    /// 각 라벨은 자신의 `timeRange` 동안만 opacity 1, 그 외엔 0.
+    /// 두 라벨이 같은 구역일 때 세로 스택 배치 좌표(CoreAnimation 좌하단 원점).
+    /// 시각이 위, 날짜가 아래. 그룹 전체 박스를 `position` 앵커로 정렬하고 각 라벨을 가로 가운데 정렬.
+    public static func stackedOrigins(
+        position: LabelPosition,
+        timeSize: CGSize,
+        dateSize: CGSize,
+        gap: CGFloat,
+        renderSize: CGSize,
+        padding: CGSize
+    ) -> (time: CGPoint, date: CGPoint) {
+        let groupW = max(timeSize.width, dateSize.width)
+        let groupH = timeSize.height + gap + dateSize.height
+        let groupOrigin = position.origin(renderSize: renderSize, textSize: CGSize(width: groupW, height: groupH), padding: padding)
+        // CoreAnimation y-up: 날짜가 아래(=groupOrigin.y), 시각이 위.
+        let dateOrigin = CGPoint(x: groupOrigin.x + (groupW - dateSize.width) / 2, y: groupOrigin.y)
+        let timeOrigin = CGPoint(x: groupOrigin.x + (groupW - timeSize.width) / 2, y: groupOrigin.y + dateSize.height + gap)
+        return (timeOrigin, dateOrigin)
+    }
+
+    /// 클립별 촬영일시를 설정에 따라 오버레이로 합성하는 `AVVideoCompositionCoreAnimationTool`.
+    /// - 시각 `HH:mm`: 큰 글씨(minDim×0.18), opacity 0.5
+    /// - 날짜 `yyyy/MM/dd`: 작은 글씨(minDim×0.035), opacity 1.0
+    /// 표시 여부·위치는 `labelSettings`를 따른다. 각 라벨은 자신의 timeRange 동안만 보인다.
+    /// 시각·날짜가 모두 켜져 있고 위치가 같으면 세로 스택(시각 위 / 날짜 아래)으로 묶어 배치한다.
     private static func makeDateLabelAnimationTool(
         renderSize: CGSize,
-        entries: [(timeRange: CMTimeRange, capturedAt: Date)]
+        entries: [(timeRange: CMTimeRange, capturedAt: Date)],
+        labelSettings: LabelSettings
     ) -> AVVideoCompositionCoreAnimationTool {
         let parentLayer = CALayer()
         let videoLayer = CALayer()
@@ -290,44 +318,107 @@ public actor AVFoundationCompositionService: CompositionServicing {
         parentLayer.addSublayer(videoLayer)
 
         let minDim = min(renderSize.width, renderSize.height)
-        let dateFontSize = minDim * 0.035  // 우측 하단 보조 라벨
-        let timeFontSize = minDim * 0.18   // 화면 중앙 메인 라벨
-        let padX = renderSize.width * 0.04
-        let padY = renderSize.height * 0.04
+        let dateFontSize = minDim * 0.035
+        let timeFontSize = minDim * 0.18
+        let padding = CGSize(width: renderSize.width * 0.04, height: renderSize.height * 0.04)
+        let stackGap = minDim * 0.02
+        // 둘 다 켜져 있고 같은 구역이면 겹치므로 세로 스택으로 묶는다.
+        let stacked = labelSettings.timeEnabled && labelSettings.dateEnabled
+            && labelSettings.timePosition == labelSettings.datePosition
 
         for entry in entries {
-            // 1) 하단 가운데 — 날짜. X는 정중앙, Y는 화면 하단에서 padY 만큼 떨어진 위치 유지.
-            //    CoreAnimation 좌표계(좌하단 원점) 기준이라 y=padY가 화면 하단 padY 안쪽.
-            let dateLayer = makeOverlayTextLayer(
-                text: dateOnlyFormatter.string(from: entry.capturedAt),
-                fontSize: dateFontSize,
-                timeRange: entry.timeRange
-            ) { size in
-                CGPoint(x: (renderSize.width - size.width) / 2, y: padY)
-            }
-            parentLayer.addSublayer(dateLayer)
+            let dateText = dateOnlyFormatter.string(from: entry.capturedAt)
+            let timeText = timeOnlyFormatter.string(from: entry.capturedAt)
 
-            // 2) 화면 정중앙 — 시각 (큰 글씨, 반투명 50%).
-            //    X·Y 모두 50% 지점에 텍스트 중심이 오게.
-            //    CoreAnimation 좌표계(좌하단 원점)에서 origin = ((W-textW)/2, (H-textH)/2).
-            let timeLayer = makeOverlayTextLayer(
-                text: timeOnlyFormatter.string(from: entry.capturedAt),
-                fontSize: timeFontSize,
-                timeRange: entry.timeRange,
-                opacity: 0.5
-            ) { size in
-                CGPoint(
-                    x: (renderSize.width - size.width) / 2,
-                    y: (renderSize.height - size.height) / 2
+            if stacked {
+                let timeSize = measureOverlayText(timeText, fontSize: timeFontSize)
+                let dateSize = measureOverlayText(dateText, fontSize: dateFontSize)
+                let origins = stackedOrigins(
+                    position: labelSettings.timePosition,
+                    timeSize: timeSize,
+                    dateSize: dateSize,
+                    gap: stackGap,
+                    renderSize: renderSize,
+                    padding: padding
                 )
+                let dateLayer = makeOverlayTextLayer(
+                    text: dateText,
+                    fontSize: dateFontSize,
+                    timeRange: entry.timeRange,
+                    opacity: labelSettings.dateOpacity
+                ) { _ in origins.date }
+                parentLayer.addSublayer(dateLayer)
+
+                let timeLayer = makeOverlayTextLayer(
+                    text: timeText,
+                    fontSize: timeFontSize,
+                    timeRange: entry.timeRange,
+                    opacity: labelSettings.timeOpacity
+                ) { _ in origins.time }
+                parentLayer.addSublayer(timeLayer)
+                continue
             }
-            parentLayer.addSublayer(timeLayer)
+
+            if labelSettings.dateEnabled {
+                let dateLayer = makeOverlayTextLayer(
+                    text: dateText,
+                    fontSize: dateFontSize,
+                    timeRange: entry.timeRange,
+                    opacity: labelSettings.dateOpacity
+                ) { size in
+                    labelSettings.datePosition.origin(renderSize: renderSize, textSize: size, padding: padding)
+                }
+                parentLayer.addSublayer(dateLayer)
+            }
+
+            if labelSettings.timeEnabled {
+                let timeLayer = makeOverlayTextLayer(
+                    text: timeText,
+                    fontSize: timeFontSize,
+                    timeRange: entry.timeRange,
+                    opacity: labelSettings.timeOpacity
+                ) { size in
+                    labelSettings.timePosition.origin(renderSize: renderSize, textSize: size, padding: padding)
+                }
+                parentLayer.addSublayer(timeLayer)
+            }
         }
 
         return AVVideoCompositionCoreAnimationTool(
             postProcessingAsVideoLayer: videoLayer,
             in: parentLayer
         )
+    }
+
+    #if canImport(UIKit)
+    /// 오버레이 라벨용 UIFont. KERISKEDU(UIAppFonts 등록, PostScript name 매칭 성공 시)
+    /// 커스텀 폰트, 실패하면 시스템 bold로 fallback.
+    private static func overlayUIFont(fontSize: CGFloat) -> UIFont {
+        if !kerisLabelFontName.isEmpty,
+           let f = UIFont(name: kerisLabelFontName, size: fontSize) {
+            return f
+        }
+        return .systemFont(ofSize: fontSize, weight: .bold)
+    }
+    #endif
+
+    /// 오버레이 텍스트의 실측 사이즈. `makeOverlayTextLayer`와 동일한 폰트/측정 규칙을 공유한다.
+    /// - UIKit: 위 폰트로 만든 NSAttributedString의 `.size()`를 `ceil`.
+    /// - 비-UIKit(테스트): 실측 불가 → 글자 수 기반 대략치 `fontSize * max(count,5)` × `fontSize*1.4`.
+    private static func measureOverlayText(_ text: String, fontSize: CGFloat) -> CGSize {
+        #if canImport(UIKit)
+        let attributed = NSAttributedString(
+            string: text,
+            attributes: [.font: overlayUIFont(fontSize: fontSize)]
+        )
+        let measured = attributed.size()
+        return CGSize(width: ceil(measured.width), height: ceil(measured.height))
+        #else
+        return CGSize(
+            width: fontSize * CGFloat(max(text.count, 5)),
+            height: fontSize * 1.4
+        )
+        #endif
     }
 
     /// 흰색 KERISKEDU(없으면 시스템 bold) 텍스트에 검은 그림자를 입혀 만든 `CATextLayer`.
@@ -341,38 +432,21 @@ public actor AVFoundationCompositionService: CompositionServicing {
         placement: (CGSize) -> CGPoint
     ) -> CATextLayer {
         let textLayer = CATextLayer()
-        let textSize: CGSize
+        let textSize = measureOverlayText(text, fontSize: fontSize)
 
-        // KERISKEDU UIFont. UIAppFonts에 등록되어 있고 PostScript name 매칭이 성공하면
-        // 커스텀 폰트, 실패하면 시스템 bold로 fallback. CATextLayer.font 에 CGFont 를
-        // 직접 할당하는 패턴은 Swift에서 wrapping 이슈로 무시되는 사례가 있어,
-        // NSAttributedString의 .font attribute 로 적용한다.
+        // CATextLayer.font 에 CGFont 를 직접 할당하는 패턴은 Swift에서 wrapping 이슈로
+        // 무시되는 사례가 있어, NSAttributedString의 .font attribute 로 적용한다.
         #if canImport(UIKit)
-        let labelUIFont: UIFont = {
-            if !kerisLabelFontName.isEmpty,
-               let f = UIFont(name: kerisLabelFontName, size: fontSize) {
-                return f
-            }
-            return .systemFont(ofSize: fontSize, weight: .bold)
-        }()
-        let attributed = NSAttributedString(
+        textLayer.string = NSAttributedString(
             string: text,
             attributes: [
-                .font: labelUIFont,
+                .font: overlayUIFont(fontSize: fontSize),
                 .foregroundColor: UIColor.white,
             ]
         )
-        textLayer.string = attributed
-        let measured = attributed.size()
-        textSize = CGSize(width: ceil(measured.width), height: ceil(measured.height))
         #else
         textLayer.string = text
         textLayer.fontSize = fontSize
-        // 비-UIKit 환경(테스트): 실측 불가 → 글자 수 기반 대략치.
-        textSize = CGSize(
-            width: fontSize * CGFloat(max(text.count, 5)),
-            height: fontSize * 1.4
-        )
         #endif
 
         textLayer.contentsScale = 2.0
