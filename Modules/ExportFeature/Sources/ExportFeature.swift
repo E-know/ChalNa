@@ -29,6 +29,8 @@ public struct ExportFeature {
         @Shared(.appStorage("labelTimePosition")) public var timePosition = LabelPosition.center
         @Shared(.appStorage("labelDateEnabled")) public var dateEnabled = true
         @Shared(.appStorage("labelDatePosition")) public var datePosition = LabelPosition.bottomCenter
+        @Shared(.appStorage("labelTimeOpacity")) public var timeOpacity = 0.5
+        @Shared(.appStorage("labelDateOpacity")) public var dateOpacity = 1.0
 
         public init(
             phase: ExportPhase = .idle,
@@ -106,8 +108,10 @@ public struct ExportFeature {
                 let labelSettings = LabelSettings(
                     timeEnabled: state.timeEnabled,
                     timePosition: state.timePosition,
+                    timeOpacity: state.timeOpacity,
                     dateEnabled: state.dateEnabled,
-                    datePosition: state.datePosition
+                    datePosition: state.datePosition,
+                    dateOpacity: state.dateOpacity
                 )
                 return .run { send in
                     for await event in compositionClient.export(clips, rotations, labelSettings) {

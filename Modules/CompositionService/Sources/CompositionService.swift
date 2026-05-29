@@ -344,7 +344,8 @@ public actor AVFoundationCompositionService: CompositionServicing {
                 let dateLayer = makeOverlayTextLayer(
                     text: dateText,
                     fontSize: dateFontSize,
-                    timeRange: entry.timeRange
+                    timeRange: entry.timeRange,
+                    opacity: labelSettings.dateOpacity
                 ) { _ in origins.date }
                 parentLayer.addSublayer(dateLayer)
 
@@ -352,7 +353,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
                     text: timeText,
                     fontSize: timeFontSize,
                     timeRange: entry.timeRange,
-                    opacity: 0.5
+                    opacity: labelSettings.timeOpacity
                 ) { _ in origins.time }
                 parentLayer.addSublayer(timeLayer)
                 continue
@@ -362,7 +363,8 @@ public actor AVFoundationCompositionService: CompositionServicing {
                 let dateLayer = makeOverlayTextLayer(
                     text: dateText,
                     fontSize: dateFontSize,
-                    timeRange: entry.timeRange
+                    timeRange: entry.timeRange,
+                    opacity: labelSettings.dateOpacity
                 ) { size in
                     labelSettings.datePosition.origin(renderSize: renderSize, textSize: size, padding: padding)
                 }
@@ -374,7 +376,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
                     text: timeText,
                     fontSize: timeFontSize,
                     timeRange: entry.timeRange,
-                    opacity: 0.5
+                    opacity: labelSettings.timeOpacity
                 ) { size in
                     labelSettings.timePosition.origin(renderSize: renderSize, textSize: size, padding: padding)
                 }
