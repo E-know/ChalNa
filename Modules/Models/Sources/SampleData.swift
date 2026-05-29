@@ -23,7 +23,7 @@ public enum SampleData {
         ]
     }()
 
-    public static let filmTitle = "제주 3일"
+    public static let filmTitle = "찰나의 순간 엮는 중"
     public static let filmTotalDuration: TimeInterval = 84  // 01:24
 }
 

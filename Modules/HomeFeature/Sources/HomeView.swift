@@ -74,7 +74,7 @@ public struct HomeView: View {
 
     private var hero: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("오늘의 순간들")
+            Text("오늘 찰나의 순간들")
                 .font(ChalNaTypography.title(ChalNaTypography.Size.h1, weight: .bold))
                 .foregroundColor(ChalNaColor.ink)
             Text("Live Photo와 짧은 영상을 촬영일 순서로 이어붙여\n한 편의 필름처럼 기록해요.")

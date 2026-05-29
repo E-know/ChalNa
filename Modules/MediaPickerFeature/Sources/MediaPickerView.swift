@@ -216,11 +216,11 @@ public struct MediaPickerView: View {
     private var intro: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("PICK · YOUR CHALNA").tagLabel()
-            (Text("여행의 순간을\n").font(ChalNaTypography.displayKR(26))
+            (Text("찰나의 순간을\n").font(ChalNaTypography.displayKR(26))
              + Text("천천히 골라보세요.").font(ChalNaTypography.krBody(22, weight: .medium)))
                 .foregroundColor(ChalNaColor.ink)
                 .lineSpacing(2)
-            Text("Live Photo와 짧은 영상을 불러올 수 있어요. Live Photo는 내부의 영상 부분을 사용합니다.")
+            Text("Live Photo와 짧은 영상을 불러올 수 있어요.\nLive Photo는 내부의 영상 부분을 사용합니다.")
                 .font(ChalNaTypography.krBody(13))
                 .foregroundColor(ChalNaColor.taupe)
                 .padding(.top, 4)
@@ -231,7 +231,7 @@ public struct MediaPickerView: View {
 
     private var titleField: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("TITLE · 이번 필름의 제목").tagLabel()
+            Text("TITLE · 이번 찰나 모음집의 제목").tagLabel()
 
             TextField(
                 "",
