@@ -26,7 +26,8 @@
       "mcp__claude_ai_Figma__create_new_file",
       "Bash(git checkout *)",
       "Bash(git fetch *)",
-      "Bash(git pull *)"
+      "Bash(git pull *)",
+      "Skill(commit)"
     ]
   }
 }
