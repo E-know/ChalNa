@@ -9,6 +9,7 @@ public enum Route: Hashable, Sendable {
     case export
     case filmDetail(filmID: UUID)
     case settings
+    case labelSettings
     case labelPosition(LabelKind)
 }
 
