@@ -1,9 +1,9 @@
 import SwiftUI
 import ComposableArchitecture
 import AppCore
-import Models
 import DesignSystem
 
+/// 설정 최상위 메뉴. 현재 '라벨' 항목 1개 — 향후 다른 메뉴 행을 카드에 추가.
 public struct SettingsView: View {
     @Environment(AppRouter.self) private var router
     let store: StoreOf<SettingsFeature>
@@ -19,57 +19,28 @@ public struct SettingsView: View {
                 .zIndex(1)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("라벨")
-                        .tagLabel()
-                        .padding(.horizontal, 24)
-                        .padding(.top, 8)
-
-                    VStack(spacing: 0) {
-                        labelRows(
-                            kind: .time,
-                            isOn: store.timeEnabled,
-                            position: store.timePosition,
-                            opacity: store.timeOpacity,
-                            onToggle: { store.send(.timeToggled($0)) },
-                            onPositionTap: {
-                                store.send(.timePositionRowTapped)
-                                router.push(.labelPosition(.time))
-                            },
-                            onOpacityChange: { store.send(.timeOpacityChanged($0)) }
-                        )
-                        Divider().overlay(ChalNaColor.Gray.g100)
-                        labelRows(
-                            kind: .date,
-                            isOn: store.dateEnabled,
-                            position: store.datePosition,
-                            opacity: store.dateOpacity,
-                            onToggle: { store.send(.dateToggled($0)) },
-                            onPositionTap: {
-                                store.send(.datePositionRowTapped)
-                                router.push(.labelPosition(.date))
-                            },
-                            onOpacityChange: { store.send(.dateOpacityChanged($0)) }
-                        )
+                VStack(spacing: 0) {
+                    menuRow(title: "라벨", subtitle: "영상에 표시되는 시각·날짜 라벨") {
+                        store.send(.labelMenuTapped)
+                        router.push(.labelSettings)
                     }
-                    .background(
-                        RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                            .fill(Color.white)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                            .strokeBorder(ChalNaColor.Gray.g100, lineWidth: 1)
-                    )
-                    .padding(.horizontal, 24)
+                    // 향후 다른 설정 메뉴 행은 여기에 Divider + menuRow 로 추가
                 }
-                .padding(.bottom, 64)
+                .background(
+                    RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
+                        .fill(Color.white)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
+                        .strokeBorder(ChalNaColor.Gray.g100, lineWidth: 1)
+                )
+                .padding(.horizontal, 24)
+                .padding(.top, 16)
             }
         }
         .chalNaScreen()
         .onAppear { store.send(.onAppear) }
     }
-
-    // MARK: - Header
 
     private var header: some View {
         ZStack {
@@ -88,71 +59,27 @@ public struct SettingsView: View {
         }
     }
 
-    // MARK: - Rows
-
     @ViewBuilder
-    private func labelRows(
-        kind: LabelKind,
-        isOn: Bool,
-        position: LabelPosition,
-        opacity: Double,
-        onToggle: @escaping (Bool) -> Void,
-        onPositionTap: @escaping () -> Void,
-        onOpacityChange: @escaping (Double) -> Void
-    ) -> some View {
-        // 토글 행
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(kind.title)
-                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.body, weight: .semibold))
-                    .foregroundColor(ChalNaColor.ink)
-                Text(kind.subtitle)
-                    .font(ChalNaTypography.monoFallback(ChalNaTypography.Size.caption))
-                    .foregroundColor(ChalNaColor.taupe)
-            }
-            Spacer()
-            Toggle("", isOn: Binding(get: { isOn }, set: onToggle))
-                .labelsHidden()
-                .tint(ChalNaColor.coral)
-        }
-        .padding(.horizontal, 16)
-        .frame(minHeight: 56)
-
-        // 위치 행 (OFF 면 비활성)
-        Button(action: onPositionTap) {
+    private func menuRow(title: String, subtitle: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
             HStack(spacing: 12) {
-                Text("위치")
-                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
-                    .foregroundColor(isOn ? ChalNaColor.ink : ChalNaColor.Gray.g300)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(ChalNaTypography.krBody(ChalNaTypography.Size.body, weight: .semibold))
+                        .foregroundColor(ChalNaColor.ink)
+                    Text(subtitle)
+                        .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
+                        .foregroundColor(ChalNaColor.taupe)
+                }
                 Spacer()
-                Text(position.koreanName)
-                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
-                    .foregroundColor(isOn ? ChalNaColor.taupe : ChalNaColor.Gray.g300)
                 ChalNaIcon(.chevronRight, size: 16)
-                    .foregroundColor(isOn ? ChalNaColor.Gray.g400 : ChalNaColor.Gray.g300)
+                    .foregroundColor(ChalNaColor.Gray.g400)
             }
-            .padding(.horizontal, 16)
-            .frame(minHeight: 48)
+            .padding(16)
+            .frame(minHeight: 60)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(!isOn)
-
-        // 투명도 행 (OFF 면 비활성)
-        HStack(spacing: 12) {
-            Text("투명도")
-                .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
-                .foregroundColor(isOn ? ChalNaColor.ink : ChalNaColor.Gray.g300)
-            Slider(value: Binding(get: { opacity }, set: onOpacityChange), in: 0...1, step: 0.05)
-                .tint(ChalNaColor.coral)
-            Text("\(Int((opacity * 100).rounded()))%")
-                .font(ChalNaTypography.monoFallback(ChalNaTypography.Size.caption))
-                .foregroundColor(isOn ? ChalNaColor.taupe : ChalNaColor.Gray.g300)
-                .frame(width: 44, alignment: .trailing)
-        }
-        .padding(.horizontal, 16)
-        .frame(minHeight: 48)
-        .disabled(!isOn)
     }
 }
 
