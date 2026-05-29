@@ -67,8 +67,14 @@ struct PreviewPanel: View {
     private var hudStack: some View {
         ZStack {
             topRightClipIndex
-            playPauseButton
+            // 재생 중엔 영상 위 컨트롤을 숨겨 콘텐츠를 가리지 않는다.
+            // 정지(idle)일 때만 재생 시작용 ▶ 버튼을 노출. 정지 제어는 하단 TransportControls 담당.
+            if !store.isPlaying {
+                playPauseButton
+                    .transition(.opacity.combined(with: .scale))
+            }
         }
+        .animation(.easeInOut(duration: 0.2), value: store.isPlaying)
     }
 
     @ViewBuilder
