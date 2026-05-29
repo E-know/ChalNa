@@ -98,7 +98,7 @@ public struct ExportFeature {
                 state.didAddToLibrary = false
                 analyticsTracker.log(.exportStarted(clipCount: clips.count))
                 return .run { send in
-                    for await event in compositionClient.export(clips, rotations) {
+                    for await event in compositionClient.export(clips, rotations, .default) {
                         switch event {
                         case let .progress(p):
                             await send(.exportProgress(p))

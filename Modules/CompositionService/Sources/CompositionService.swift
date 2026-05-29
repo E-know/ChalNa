@@ -35,15 +35,18 @@ public enum ExportError: LocalizedError {
 }
 
 public protocol CompositionServicing: Sendable {
-    /// 클립 배열과 사용자 회전 dict를 받아 mp4를 만들고 진행률/완료/실패를 스트림으로 흘려보낸다.
-    /// renderSize는 첫 클립의 displaySize × 사용자 회전을 따른다.
-    func export(clips: [Clip], rotations: [Clip.ID: ClipRotation]) -> AsyncStream<ExportEvent>
+    /// 클립 배열·회전·라벨 설정을 받아 mp4를 만들고 진행률/완료/실패를 스트림으로 흘려보낸다.
+    func export(clips: [Clip], rotations: [Clip.ID: ClipRotation], labelSettings: LabelSettings) -> AsyncStream<ExportEvent>
 }
 
 public extension CompositionServicing {
-    /// 회전 정보 없는 호출. 모든 클립이 r0(원본 그대로)로 처리된다. 테스트/구버전 호출 호환용.
+    /// 라벨 설정 없는 호출 → 기본값(현행 동작). 테스트/구버전 호환용.
+    func export(clips: [Clip], rotations: [Clip.ID: ClipRotation]) -> AsyncStream<ExportEvent> {
+        export(clips: clips, rotations: rotations, labelSettings: .default)
+    }
+    /// 회전·라벨 설정 없는 호출.
     func export(clips: [Clip]) -> AsyncStream<ExportEvent> {
-        export(clips: clips, rotations: [:])
+        export(clips: clips, rotations: [:], labelSettings: .default)
     }
 }
 
@@ -53,7 +56,8 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
     public nonisolated func export(
         clips: [Clip],
-        rotations: [Clip.ID: ClipRotation]
+        rotations: [Clip.ID: ClipRotation],
+        labelSettings: LabelSettings
     ) -> AsyncStream<ExportEvent> {
         AsyncStream { continuation in
             let task = Task { [weak self] in
@@ -61,7 +65,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
                     continuation.finish()
                     return
                 }
-                await self.run(clips: clips, rotations: rotations, continuation: continuation)
+                await self.run(clips: clips, rotations: rotations, labelSettings: labelSettings, continuation: continuation)
             }
             continuation.onTermination = { _ in task.cancel() }
         }
@@ -72,10 +76,11 @@ public actor AVFoundationCompositionService: CompositionServicing {
     private func run(
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation],
+        labelSettings: LabelSettings,
         continuation: AsyncStream<ExportEvent>.Continuation
     ) async {
         do {
-            let built = try await buildComposition(clips: clips, rotations: rotations)
+            let built = try await buildComposition(clips: clips, rotations: rotations, labelSettings: labelSettings)
             guard built.hasContent else {
                 throw ExportError.noVideoClips
             }
@@ -131,7 +136,8 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
     private func buildComposition(
         clips: [Clip],
-        rotations: [Clip.ID: ClipRotation]
+        rotations: [Clip.ID: ClipRotation],
+        labelSettings: LabelSettings
     ) async throws -> BuiltComposition {
         let composition = AVMutableComposition()
         guard let compVideoTrack = composition.addMutableTrack(
@@ -214,11 +220,12 @@ public actor AVFoundationCompositionService: CompositionServicing {
             return inst
         }
 
-        // 4) 각 클립의 placedRange 동안 우측하단에 촬영일시 라벨을 오버레이.
-        if hasContent {
+        // 4) 각 클립 placedRange 동안 라벨 오버레이 (설정에 따라 표시/위치 결정).
+        if hasContent && (labelSettings.timeEnabled || labelSettings.dateEnabled) {
             videoComposition.animationTool = Self.makeDateLabelAnimationTool(
                 renderSize: renderSize,
-                entries: layerInstructions.map { ($0.timeRange, $0.capturedAt) }
+                entries: layerInstructions.map { ($0.timeRange, $0.capturedAt) },
+                labelSettings: labelSettings
             )
         }
 
@@ -275,13 +282,14 @@ public actor AVFoundationCompositionService: CompositionServicing {
         return ""
     }()
 
-    /// 클립별 촬영일시를 두 위치에 오버레이로 합성하는 `AVVideoCompositionCoreAnimationTool` 생성.
-    /// - 우측 하단(작은 글씨): 날짜 `yyyy/MM/dd`
-    /// - 화면 정중앙(큰 글씨): 시각 `HH:mm`
-    /// 각 라벨은 자신의 `timeRange` 동안만 opacity 1, 그 외엔 0.
+    /// 클립별 촬영일시를 설정에 따라 오버레이로 합성하는 `AVVideoCompositionCoreAnimationTool`.
+    /// - 시각 `HH:mm`: 큰 글씨(minDim×0.18), opacity 0.5
+    /// - 날짜 `yyyy/MM/dd`: 작은 글씨(minDim×0.035), opacity 1.0
+    /// 표시 여부·위치는 `labelSettings`를 따른다. 각 라벨은 자신의 timeRange 동안만 보인다.
     private static func makeDateLabelAnimationTool(
         renderSize: CGSize,
-        entries: [(timeRange: CMTimeRange, capturedAt: Date)]
+        entries: [(timeRange: CMTimeRange, capturedAt: Date)],
+        labelSettings: LabelSettings
     ) -> AVVideoCompositionCoreAnimationTool {
         let parentLayer = CALayer()
         let videoLayer = CALayer()
@@ -290,38 +298,33 @@ public actor AVFoundationCompositionService: CompositionServicing {
         parentLayer.addSublayer(videoLayer)
 
         let minDim = min(renderSize.width, renderSize.height)
-        let dateFontSize = minDim * 0.035  // 우측 하단 보조 라벨
-        let timeFontSize = minDim * 0.18   // 화면 중앙 메인 라벨
-        let padX = renderSize.width * 0.04
-        let padY = renderSize.height * 0.04
+        let dateFontSize = minDim * 0.035
+        let timeFontSize = minDim * 0.18
+        let padding = CGSize(width: renderSize.width * 0.04, height: renderSize.height * 0.04)
 
         for entry in entries {
-            // 1) 하단 가운데 — 날짜. X는 정중앙, Y는 화면 하단에서 padY 만큼 떨어진 위치 유지.
-            //    CoreAnimation 좌표계(좌하단 원점) 기준이라 y=padY가 화면 하단 padY 안쪽.
-            let dateLayer = makeOverlayTextLayer(
-                text: dateOnlyFormatter.string(from: entry.capturedAt),
-                fontSize: dateFontSize,
-                timeRange: entry.timeRange
-            ) { size in
-                CGPoint(x: (renderSize.width - size.width) / 2, y: padY)
+            if labelSettings.dateEnabled {
+                let dateLayer = makeOverlayTextLayer(
+                    text: dateOnlyFormatter.string(from: entry.capturedAt),
+                    fontSize: dateFontSize,
+                    timeRange: entry.timeRange
+                ) { size in
+                    labelSettings.datePosition.origin(renderSize: renderSize, textSize: size, padding: padding)
+                }
+                parentLayer.addSublayer(dateLayer)
             }
-            parentLayer.addSublayer(dateLayer)
 
-            // 2) 화면 정중앙 — 시각 (큰 글씨, 반투명 50%).
-            //    X·Y 모두 50% 지점에 텍스트 중심이 오게.
-            //    CoreAnimation 좌표계(좌하단 원점)에서 origin = ((W-textW)/2, (H-textH)/2).
-            let timeLayer = makeOverlayTextLayer(
-                text: timeOnlyFormatter.string(from: entry.capturedAt),
-                fontSize: timeFontSize,
-                timeRange: entry.timeRange,
-                opacity: 0.5
-            ) { size in
-                CGPoint(
-                    x: (renderSize.width - size.width) / 2,
-                    y: (renderSize.height - size.height) / 2
-                )
+            if labelSettings.timeEnabled {
+                let timeLayer = makeOverlayTextLayer(
+                    text: timeOnlyFormatter.string(from: entry.capturedAt),
+                    fontSize: timeFontSize,
+                    timeRange: entry.timeRange,
+                    opacity: 0.5
+                ) { size in
+                    labelSettings.timePosition.origin(renderSize: renderSize, textSize: size, padding: padding)
+                }
+                parentLayer.addSublayer(timeLayer)
             }
-            parentLayer.addSublayer(timeLayer)
         }
 
         return AVVideoCompositionCoreAnimationTool(
