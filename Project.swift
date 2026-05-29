@@ -89,6 +89,16 @@ let project = Project(
             ]
         ),
         Module.framework(
+            name: "SettingsFeature",
+            dependencies: [
+                .target(name: "AppCore"),
+                .target(name: "AnalyticsService"),
+                .target(name: "Models"),
+                .target(name: "DesignSystem"),
+                .external(name: "ComposableArchitecture"),
+            ]
+        ),
+        Module.framework(
             name: "FilmDetailFeature",
             dependencies: [
                 .target(name: "AppCore"),
@@ -137,6 +147,7 @@ let project = Project(
                 .target(name: "ExportFeature"),
                 .target(name: "TimelineFeature"),
                 .target(name: "FilmDetailFeature"),
+                .target(name: "SettingsFeature"),
                 .external(name: "ComposableArchitecture"),
                 .external(name: "FirebaseAnalytics"),
             ],
@@ -178,6 +189,9 @@ let project = Project(
             for: "MediaPickerFeature",
             dependencies: [
                 .target(name: "PhotosService"),
+            for: "SettingsFeature",
+            dependencies: [
+                .target(name: "Models"),
                 .external(name: "ComposableArchitecture"),
             ]
         ),
