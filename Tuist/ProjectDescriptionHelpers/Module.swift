@@ -16,7 +16,7 @@ public enum Module {
         }
         return .target(
             name: name,
-            destinations: .iOS,
+            destinations: [.iPhone],
             product: isDynamic ? .framework : .staticFramework,
             bundleId: "\(bundleIdPrefix).\(name)",
             deploymentTargets: deploymentTargets,
@@ -34,7 +34,7 @@ public enum Module {
     ) -> Target {
         return .target(
             name: "\(moduleName)Tests",
-            destinations: .iOS,
+            destinations: [.iPhone],
             product: .unitTests,
             bundleId: "\(bundleIdPrefix).\(moduleName)Tests",
             deploymentTargets: deploymentTargets,

@@ -101,7 +101,7 @@ let project = Project(
         ),
         .target(
             name: "ChalNa",
-            destinations: .iOS,
+            destinations: [.iPhone],
             product: .app,
             bundleId: Module.bundleIdPrefix,
             deploymentTargets: Module.deploymentTargets,
