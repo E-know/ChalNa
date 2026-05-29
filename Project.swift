@@ -186,6 +186,9 @@ let project = Project(
             ]
         ),
         Module.unitTests(
+            for: "MediaPickerFeature",
+            dependencies: [
+                .target(name: "PhotosService"),
             for: "SettingsFeature",
             dependencies: [
                 .target(name: "Models"),
