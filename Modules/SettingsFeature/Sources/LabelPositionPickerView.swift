@@ -74,11 +74,11 @@ public struct LabelPositionPickerView: View {
     private var sampleLabel: some View {
         if store.kind == .time {
             Text(store.kind.sampleText)
-                .font(ChalNaTypography.displayKR(40, weight: .bold))
+                .font(ChalNaTypography.keris(40))
                 .foregroundColor(.white.opacity(0.5))
         } else {
             Text(store.kind.sampleText)
-                .font(ChalNaTypography.monoFallback(13, weight: .medium))
+                .font(ChalNaTypography.keris(13))
                 .foregroundColor(.white)
         }
     }
