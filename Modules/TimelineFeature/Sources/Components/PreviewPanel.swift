@@ -12,7 +12,6 @@ struct PreviewPanel: View {
 
     let store: StoreOf<TimelineFeature>
     let playback: ClipPlaybackController
-    let onTogglePlay: () -> Void
 
     private var currentRotation: ClipRotation {
         guard let id = store.currentClip?.id else { return .r0 }
@@ -55,19 +54,13 @@ struct PreviewPanel: View {
         }
     }
 
+    // 영상 위에는 정보용 인덱스(n / N)만 둔다. 재생/정지/이전/다음 제어는 영상 아래 TransportControls 담당.
     @ViewBuilder
     private var hudOverlay: some View {
         if #available(iOS 26.0, *) {
-            GlassEffectContainer(spacing: 16) { hudStack }
+            GlassEffectContainer(spacing: 16) { topRightClipIndex }
         } else {
-            hudStack
-        }
-    }
-
-    private var hudStack: some View {
-        ZStack {
             topRightClipIndex
-            playPauseButton
         }
     }
 
@@ -104,40 +97,6 @@ struct PreviewPanel: View {
         tail.foregroundColor = tailColor
         s.append(tail)
         return s
-    }
-
-    @ViewBuilder
-    private var playPauseButton: some View {
-        Button(action: onTogglePlay) {
-            playPauseButtonLabel
-        }
-        .buttonStyle(.plain)
-        .chalNaHitTarget(minSize: 64)
-        .accessibilityLabel(store.isPlaying ? "일시정지" : "재생")
-    }
-
-    @ViewBuilder
-    private var playPauseButtonLabel: some View {
-        if #available(iOS 26.0, *) {
-            ChalNaIcon(store.isPlaying ? .pause : .play, size: 22)
-                .foregroundColor(ChalNaColor.ink)
-                .offset(x: store.isPlaying ? 0 : 2)
-                .frame(width: 64, height: 64)
-                .glassEffect(
-                    .regular.tint(ChalNaColor.ivory.opacity(0.34)).interactive(),
-                    in: Circle()
-                )
-        } else {
-            ZStack {
-                Circle()
-                    .fill(Color.white.opacity(0.94))
-                    .frame(width: 64, height: 64)
-                    .shadow(color: .black.opacity(0.3), radius: 14, y: 10)
-                ChalNaIcon(store.isPlaying ? .pause : .play, size: 22)
-                    .foregroundColor(ChalNaColor.ink)
-                    .offset(x: store.isPlaying ? 0 : 2)
-            }
-        }
     }
 
     @ViewBuilder
