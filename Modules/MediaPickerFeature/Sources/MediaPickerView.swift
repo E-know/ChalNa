@@ -437,9 +437,16 @@ public struct MediaPickerView: View {
                             dismissTitleKeyboard()
                             store.send(.previewRequested(asset))
                         }
-                        .accessibilityElement(children: .combine)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityAddTraits(.isButton)
                         .accessibilityLabel(thumbnailAccessibilityLabel(for: asset, index: idx, isSelected: true))
                         .accessibilityHint("탭하면 미리보기가 열려요")
+                        .accessibilityAction {
+                            store.send(.previewRequested(asset))
+                        }
+                        .accessibilityAction(named: "선택에서 제외") {
+                            store.send(.photoAssetTapped(asset))
+                        }
                     }
                 }
                 .padding(.top, 16)
