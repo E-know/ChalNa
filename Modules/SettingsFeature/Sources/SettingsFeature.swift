@@ -12,6 +12,8 @@ public struct SettingsFeature {
         @Shared(.appStorage("labelTimePosition")) public var timePosition = LabelPosition.center
         @Shared(.appStorage("labelDateEnabled")) public var dateEnabled = true
         @Shared(.appStorage("labelDatePosition")) public var datePosition = LabelPosition.bottomCenter
+        @Shared(.appStorage("labelTimeOpacity")) public var timeOpacity = 0.5
+        @Shared(.appStorage("labelDateOpacity")) public var dateOpacity = 1.0
 
         public init() {}
     }
@@ -23,6 +25,8 @@ public struct SettingsFeature {
         // 네비게이션 intent — View 가 router.push(.labelPosition(kind)) 처리
         case timePositionRowTapped
         case datePositionRowTapped
+        case timeOpacityChanged(Double)
+        case dateOpacityChanged(Double)
     }
 
     @Dependency(\.analyticsTracker) var analyticsTracker
@@ -45,6 +49,14 @@ public struct SettingsFeature {
                 return .none
 
             case .timePositionRowTapped, .datePositionRowTapped:
+                return .none
+
+            case let .timeOpacityChanged(value):
+                state.$timeOpacity.withLock { $0 = value }
+                return .none
+
+            case let .dateOpacityChanged(value):
+                state.$dateOpacity.withLock { $0 = value }
                 return .none
             }
         }

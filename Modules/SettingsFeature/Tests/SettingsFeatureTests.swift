@@ -31,4 +31,18 @@ struct SettingsFeatureTests {
         await store.send(.timePositionRowTapped)   // 네비게이션은 View가 처리 → 상태 불변
         await store.send(.datePositionRowTapped)
     }
+
+    @Test func timeOpacityUpdatesShared() async {
+        let store = TestStore(initialState: SettingsFeature.State()) { SettingsFeature() }
+        store.exhaustivity = .off
+        await store.send(.timeOpacityChanged(0.3))
+        #expect(store.state.timeOpacity == 0.3)
+    }
+
+    @Test func dateOpacityUpdatesShared() async {
+        let store = TestStore(initialState: SettingsFeature.State()) { SettingsFeature() }
+        store.exhaustivity = .off
+        await store.send(.dateOpacityChanged(0.2))
+        #expect(store.state.dateOpacity == 0.2)
+    }
 }

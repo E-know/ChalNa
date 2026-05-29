@@ -43,4 +43,9 @@ struct LabelPositionTests {
         #expect(s.timePosition == .center)
         #expect(s.datePosition == .bottomCenter)
     }
+
+    @Test func defaultOpacities() {
+        #expect(LabelSettings.default.timeOpacity == 0.5)
+        #expect(LabelSettings.default.dateOpacity == 1.0)
+    }
 }

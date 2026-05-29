@@ -55,19 +55,25 @@ public enum LabelPosition: Int, CaseIterable, Sendable, Codable {
 public struct LabelSettings: Equatable, Sendable {
     public var timeEnabled: Bool
     public var timePosition: LabelPosition
+    public var timeOpacity: Double
     public var dateEnabled: Bool
     public var datePosition: LabelPosition
+    public var dateOpacity: Double
 
     public init(
         timeEnabled: Bool = true,
         timePosition: LabelPosition = .center,
+        timeOpacity: Double = 0.5,
         dateEnabled: Bool = true,
-        datePosition: LabelPosition = .bottomCenter
+        datePosition: LabelPosition = .bottomCenter,
+        dateOpacity: Double = 1.0
     ) {
         self.timeEnabled = timeEnabled
         self.timePosition = timePosition
+        self.timeOpacity = timeOpacity
         self.dateEnabled = dateEnabled
         self.datePosition = datePosition
+        self.dateOpacity = dateOpacity
     }
 
     public static let `default` = LabelSettings()
