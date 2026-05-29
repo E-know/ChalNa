@@ -30,22 +30,26 @@ public struct SettingsView: View {
                             kind: .time,
                             isOn: store.timeEnabled,
                             position: store.timePosition,
+                            opacity: store.timeOpacity,
                             onToggle: { store.send(.timeToggled($0)) },
                             onPositionTap: {
                                 store.send(.timePositionRowTapped)
                                 router.push(.labelPosition(.time))
-                            }
+                            },
+                            onOpacityChange: { store.send(.timeOpacityChanged($0)) }
                         )
                         Divider().overlay(ChalNaColor.Gray.g100)
                         labelRows(
                             kind: .date,
                             isOn: store.dateEnabled,
                             position: store.datePosition,
+                            opacity: store.dateOpacity,
                             onToggle: { store.send(.dateToggled($0)) },
                             onPositionTap: {
                                 store.send(.datePositionRowTapped)
                                 router.push(.labelPosition(.date))
-                            }
+                            },
+                            onOpacityChange: { store.send(.dateOpacityChanged($0)) }
                         )
                     }
                     .background(
@@ -91,8 +95,10 @@ public struct SettingsView: View {
         kind: LabelKind,
         isOn: Bool,
         position: LabelPosition,
+        opacity: Double,
         onToggle: @escaping (Bool) -> Void,
-        onPositionTap: @escaping () -> Void
+        onPositionTap: @escaping () -> Void,
+        onOpacityChange: @escaping (Double) -> Void
     ) -> some View {
         // 토글 행
         HStack(spacing: 12) {
@@ -130,6 +136,22 @@ public struct SettingsView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(!isOn)
+
+        // 투명도 행 (OFF 면 비활성)
+        HStack(spacing: 12) {
+            Text("투명도")
+                .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
+                .foregroundColor(isOn ? ChalNaColor.ink : ChalNaColor.Gray.g300)
+            Slider(value: Binding(get: { opacity }, set: onOpacityChange), in: 0...1, step: 0.05)
+                .tint(ChalNaColor.coral)
+            Text("\(Int((opacity * 100).rounded()))%")
+                .font(ChalNaTypography.monoFallback(ChalNaTypography.Size.caption))
+                .foregroundColor(isOn ? ChalNaColor.taupe : ChalNaColor.Gray.g300)
+                .frame(width: 44, alignment: .trailing)
+        }
+        .padding(.horizontal, 16)
+        .frame(minHeight: 48)
         .disabled(!isOn)
     }
 }
