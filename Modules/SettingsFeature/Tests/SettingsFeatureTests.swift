@@ -1,0 +1,40 @@
+import Testing
+import ComposableArchitecture
+import Models
+@testable import SettingsFeature
+
+@MainActor
+struct SettingsFeatureTests {
+    @Test func togglingTimeUpdatesShared() async {
+        let store = TestStore(initialState: SettingsFeature.State()) {
+            SettingsFeature()
+        } withDependencies: {
+            $0.appStorageKeyFormatWarningEnabled = false
+        }
+        store.exhaustivity = .off   // @Shared·appStorage 변경만 결과로 확인
+        await store.send(.timeToggled(false))
+        #expect(store.state.timeEnabled == false)
+    }
+
+    @Test func togglingDateUpdatesShared() async {
+        let store = TestStore(initialState: SettingsFeature.State()) {
+            SettingsFeature()
+        } withDependencies: {
+            $0.appStorageKeyFormatWarningEnabled = false
+        }
+        store.exhaustivity = .off
+        await store.send(.dateToggled(false))
+        #expect(store.state.dateEnabled == false)
+    }
+
+    @Test func positionRowTapsAreNoOpInReducer() async {
+        let store = TestStore(initialState: SettingsFeature.State()) {
+            SettingsFeature()
+        } withDependencies: {
+            $0.appStorageKeyFormatWarningEnabled = false
+        }
+        store.exhaustivity = .off
+        await store.send(.timePositionRowTapped)   // 네비게이션은 View가 처리 → 상태 불변
+        await store.send(.datePositionRowTapped)
+    }
+}
