@@ -24,6 +24,11 @@ public struct SettingsView: View {
                         store.send(.labelMenuTapped)
                         router.push(.labelSettings)
                     }
+                    Divider().overlay(ChalNaColor.Gray.g100)
+                    menuRow(title: "문의·신고", subtitle: "불편한 점이나 제안을 보내주세요") {
+                        store.send(.supportMenuTapped)
+                        router.push(.support)
+                    }
                     // 향후 다른 설정 메뉴 행은 여기에 Divider + menuRow 로 추가
                 }
                 .background(
