@@ -8,10 +8,10 @@ public struct SettingsFeature {
 
     @ObservableState
     public struct State: Equatable {
-        @Shared(.appStorage("label.time.enabled")) public var timeEnabled = true
-        @Shared(.appStorage("label.time.position")) public var timePosition = LabelPosition.center
-        @Shared(.appStorage("label.date.enabled")) public var dateEnabled = true
-        @Shared(.appStorage("label.date.position")) public var datePosition = LabelPosition.bottomCenter
+        @Shared(.appStorage("labelTimeEnabled")) public var timeEnabled = true
+        @Shared(.appStorage("labelTimePosition")) public var timePosition = LabelPosition.center
+        @Shared(.appStorage("labelDateEnabled")) public var dateEnabled = true
+        @Shared(.appStorage("labelDatePosition")) public var datePosition = LabelPosition.bottomCenter
 
         public init() {}
     }

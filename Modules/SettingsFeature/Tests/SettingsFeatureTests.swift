@@ -8,8 +8,6 @@ struct SettingsFeatureTests {
     @Test func togglingTimeUpdatesShared() async {
         let store = TestStore(initialState: SettingsFeature.State()) {
             SettingsFeature()
-        } withDependencies: {
-            $0.appStorageKeyFormatWarningEnabled = false
         }
         store.exhaustivity = .off   // @Shared·appStorage 변경만 결과로 확인
         await store.send(.timeToggled(false))
@@ -19,8 +17,6 @@ struct SettingsFeatureTests {
     @Test func togglingDateUpdatesShared() async {
         let store = TestStore(initialState: SettingsFeature.State()) {
             SettingsFeature()
-        } withDependencies: {
-            $0.appStorageKeyFormatWarningEnabled = false
         }
         store.exhaustivity = .off
         await store.send(.dateToggled(false))
@@ -30,8 +26,6 @@ struct SettingsFeatureTests {
     @Test func positionRowTapsAreNoOpInReducer() async {
         let store = TestStore(initialState: SettingsFeature.State()) {
             SettingsFeature()
-        } withDependencies: {
-            $0.appStorageKeyFormatWarningEnabled = false
         }
         store.exhaustivity = .off
         await store.send(.timePositionRowTapped)   // 네비게이션은 View가 처리 → 상태 불변
