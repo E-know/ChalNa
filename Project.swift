@@ -174,6 +174,13 @@ let project = Project(
                 .external(name: "ComposableArchitecture"),
             ]
         ),
+        Module.unitTests(
+            for: "MediaPickerFeature",
+            dependencies: [
+                .target(name: "PhotosService"),
+                .external(name: "ComposableArchitecture"),
+            ]
+        ),
     ],
     schemes: [
         .scheme(
