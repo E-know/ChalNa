@@ -25,6 +25,14 @@ public struct TimelineView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
 
+            TransportControls(
+                isPlaying: store.isPlaying,
+                onPrev: { store.send(.previousTapped) },
+                onToggle: { store.send(.togglePlay) },
+                onNext: { store.send(.nextTapped) }
+            )
+            .padding(.top, 12)
+
             dateSticker
                 .padding(.top, 16)
 
@@ -44,16 +52,6 @@ public struct TimelineView: View {
             hintRow
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
-
-            if store.isPlaying {
-                TransportControls(
-                    isPlaying: true,
-                    onPrev: { store.send(.previousTapped) },
-                    onToggle: { store.send(.togglePlay) },
-                    onNext: { store.send(.nextTapped) }
-                )
-                .padding(.top, 16)
-            }
 
             Spacer(minLength: 0)
         }
@@ -175,7 +173,7 @@ public struct TimelineView: View {
     // MARK: - Preview
 
     private var preview: some View {
-        PreviewPanel(store: store, playback: playback, onTogglePlay: { store.send(.togglePlay) })
+        PreviewPanel(store: store, playback: playback)
     }
 
     // MARK: - Date sticker
