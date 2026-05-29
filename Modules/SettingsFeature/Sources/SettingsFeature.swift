@@ -13,7 +13,8 @@ public struct SettingsFeature {
 
     public enum Action {
         case onAppear
-        case labelMenuTapped   // View 가 router.push(.labelSettings)
+        case labelMenuTapped     // View 가 router.push(.labelSettings)
+        case supportMenuTapped   // View 가 router.push(.support)
     }
 
     @Dependency(\.analyticsTracker) var analyticsTracker
@@ -25,6 +26,8 @@ public struct SettingsFeature {
                 analyticsTracker.log(.settingsOpened)
                 return .none
             case .labelMenuTapped:
+                return .none
+            case .supportMenuTapped:
                 return .none
             }
         }

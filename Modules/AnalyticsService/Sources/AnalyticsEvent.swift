@@ -31,6 +31,10 @@ public enum AnalyticsEvent: Sendable, Equatable {
     case labelToggled(kind: String, on: Bool)
     case labelPositionChanged(kind: String, position: Int)
 
+    // 문의 / 신고
+    case feedbackSubmitted(category: String)
+    case feedbackSendFailed(reason: String)
+
     /// Firebase Analytics 에 보낼 이벤트 이름 (snake_case).
     public var name: String {
         switch self {
@@ -50,6 +54,8 @@ public enum AnalyticsEvent: Sendable, Equatable {
         case .settingsOpened:        return "settings_opened"
         case .labelToggled:          return "label_toggled"
         case .labelPositionChanged:  return "label_position_changed"
+        case .feedbackSubmitted:     return "feedback_submitted"
+        case .feedbackSendFailed:    return "feedback_send_failed"
         }
     }
 
@@ -79,6 +85,10 @@ public enum AnalyticsEvent: Sendable, Equatable {
             return ["kind": .string(kind), "on": .bool(on)]
         case let .labelPositionChanged(kind, position):
             return ["kind": .string(kind), "position": .int(position)]
+        case let .feedbackSubmitted(category):
+            return ["category": .string(category)]
+        case let .feedbackSendFailed(reason):
+            return ["reason": .string(reason)]
         }
     }
 }
