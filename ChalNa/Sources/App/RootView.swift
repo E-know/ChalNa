@@ -45,6 +45,7 @@ public struct RootView: View {
         case let .export(s):      ExportView(store: s)
         case let .filmDetail(s):  FilmDetailView(store: s)
         case let .settings(s):      SettingsView(store: s)
+        case let .labelSettings(s): LabelSettingsView(store: s)
         case let .labelPosition(s): LabelPositionPickerView(store: s)
         }
     }
@@ -62,6 +63,8 @@ public struct RootView: View {
                 store.send(.routerPushedFilmDetail(filmID: filmID))
             case .settings:
                 store.send(.routerPushedSettings)
+            case .labelSettings:
+                store.send(.routerPushedLabelSettings)
             case let .labelPosition(kind):
                 store.send(.routerPushedLabelPosition(kind: kind))
             }

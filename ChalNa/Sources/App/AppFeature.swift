@@ -35,6 +35,7 @@ public struct AppFeature {
         case routerPopped
         case routerPoppedToRoot
         case routerPushedSettings
+        case routerPushedLabelSettings
         case routerPushedLabelPosition(kind: LabelKind)
     }
 
@@ -45,6 +46,7 @@ public struct AppFeature {
         case export(ExportFeature)
         case filmDetail(FilmDetailFeature)
         case settings(SettingsFeature)
+        case labelSettings(LabelSettingsFeature)
         case labelPosition(LabelPositionFeature)
     }
 
@@ -91,6 +93,10 @@ public struct AppFeature {
 
             case .routerPushedSettings:
                 state.path.append(.settings(SettingsFeature.State()))
+                return .none
+
+            case .routerPushedLabelSettings:
+                state.path.append(.labelSettings(LabelSettingsFeature.State()))
                 return .none
 
             case let .routerPushedLabelPosition(kind):
