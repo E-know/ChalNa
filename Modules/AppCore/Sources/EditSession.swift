@@ -9,27 +9,33 @@ public final class EditSession {
     public var clips: [Clip]
     /// 클립별 사용자 회전 상태. 기본은 r0(원본 그대로). dict miss = `.r0`.
     public var rotations: [Clip.ID: ClipRotation]
+    /// 클립별 사용자 라벨. dict miss = `.default`(빈 라벨).
+    public var labels: [Clip.ID: ClipLabel]
 
     public init(
         title: String = "",
         clips: [Clip] = [],
-        rotations: [Clip.ID: ClipRotation] = [:]
+        rotations: [Clip.ID: ClipRotation] = [:],
+        labels: [Clip.ID: ClipLabel] = [:]
     ) {
         self.title = title
         self.clips = clips
         self.rotations = rotations
+        self.labels = labels
     }
 
     public func replace(clips: [Clip], title: String) {
         self.clips = clips
         self.title = title
         self.rotations = [:]
+        self.labels = [:]
     }
 
     public func clear() {
         clips = []
         title = ""
         rotations = [:]
+        labels = [:]
     }
 
     // MARK: - Rotation
@@ -41,5 +47,15 @@ public final class EditSession {
     /// 반시계 방향으로 한 단계 순환. 4번 호출 시 원위치.
     public func cycleRotation(for id: Clip.ID) {
         rotations[id] = rotation(for: id).next()
+    }
+
+    // MARK: - Label
+
+    public func label(for id: Clip.ID) -> ClipLabel {
+        labels[id] ?? .default
+    }
+
+    public func setLabel(_ label: ClipLabel, for id: Clip.ID) {
+        labels[id] = label
     }
 }
