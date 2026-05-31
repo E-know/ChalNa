@@ -46,16 +46,26 @@ public struct ClipLabel: Equatable, Sendable {
     public static let `default` = ClipLabel()
 }
 
-/// 라벨 글꼴 선택.
+/// 라벨 글꼴 선택. `.memoment` 은 신규 번들 폰트 `MemomentKkukkukk.ttf`("꾸꾸"), `.system` 은 기본 시스템 폰트.
 public enum LabelFont: String, Sendable, CaseIterable, Codable {
     case memoment
     case system
-    public var displayName: String { self == .memoment ? "꾸꾸" : "기본" }
+    public var displayName: String {
+        switch self {
+        case .memoment: "꾸꾸"
+        case .system:   "기본"
+        }
+    }
 }
 
 /// 라벨 표시 스타일.
 public enum LabelTextStyle: String, Sendable, CaseIterable, Codable {
     case plain   // 검정 글자, 배경 없음
     case boxed   // 흰 글자 + 검정 배경
-    public var displayName: String { self == .plain ? "검정 글자" : "흰 글자 + 검정 배경" }
+    public var displayName: String {
+        switch self {
+        case .plain: "검정 글자"
+        case .boxed: "흰 글자 + 검정 배경"
+        }
+    }
 }
