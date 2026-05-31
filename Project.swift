@@ -117,6 +117,9 @@ let project = Project(
             deploymentTargets: Module.deploymentTargets,
             infoPlist: .extendingDefault(
                 with: [
+                    // 수출 규정 준수: 표준 HTTPS(TLS) 외 독자 암호화를 쓰지 않으므로 면제 대상.
+                    // 이 키가 있으면 App Store Connect 제출 시 암호화 질문을 매번 묻지 않는다.
+                    "ITSAppUsesNonExemptEncryption": false,
                     "UILaunchScreen": [
                         "UIColorName": "",
                         "UIImageName": "",
