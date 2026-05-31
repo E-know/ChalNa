@@ -377,6 +377,20 @@ public actor AVFoundationCompositionService: CompositionServicing {
                     opacity: labelSettings.timeOpacity
                 ) { _ in origins.time }
                 parentLayer.addSublayer(timeLayer)
+
+                #if canImport(UIKit)
+                let customStacked = clipLabels[entry.clipID] ?? .default
+                if customStacked.isVisible {
+                    for layer in makeCustomLabelLayers(
+                        label: customStacked,
+                        placedRect: entry.placedRect,
+                        renderSize: renderSize,
+                        timeRange: entry.timeRange
+                    ) {
+                        parentLayer.addSublayer(layer)
+                    }
+                }
+                #endif
                 continue
             }
 
