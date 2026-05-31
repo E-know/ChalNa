@@ -12,7 +12,7 @@ public struct TimelineView: View {
     @Bindable var store: StoreOf<TimelineFeature>
     @State private var playback = ClipPlaybackController()
     @State private var didWireController = false
-    @State private var labelEditorClipID: Clip.ID?
+    @State private var labelEditorClip: Clip?
 
     public init(store: StoreOf<TimelineFeature> = Store(initialState: TimelineFeature.State()) { TimelineFeature() }) {
         self.store = store
@@ -86,19 +86,17 @@ public struct TimelineView: View {
         } message: {
             Text("삭제한 클립은 현재 타임라인에서 제거됩니다.")
         }
-        .fullScreenCover(item: $labelEditorClipID) { clipID in
-            if let clip = store.clips.first(where: { $0.id == clipID }) {
-                LabelEditorView(
-                    clip: clip,
-                    rotation: session.rotation(for: clipID),
-                    initialLabel: session.label(for: clipID),
-                    onCommit: { newLabel in
-                        session.setLabel(newLabel, for: clipID)
-                        labelEditorClipID = nil
-                    },
-                    onCancel: { labelEditorClipID = nil }
-                )
-            }
+        .fullScreenCover(item: $labelEditorClip) { clip in
+            LabelEditorView(
+                clip: clip,
+                rotation: session.rotation(for: clip.id),
+                initialLabel: session.label(for: clip.id),
+                onCommit: { newLabel in
+                    session.setLabel(newLabel, for: clip.id)
+                    labelEditorClip = nil
+                },
+                onCancel: { labelEditorClip = nil }
+            )
         }
     }
 
@@ -310,8 +308,7 @@ public struct TimelineView: View {
     }
 
     private func openLabelEditor() {
-        guard let id = store.currentClip?.id else { return }
-        labelEditorClipID = id
+        labelEditorClip = store.currentClip
     }
 }
 
@@ -342,8 +339,4 @@ private struct PulseDot: View {
     )
     .environment(AppRouter())
     .environment(EditSession())
-}
-
-extension UUID: @retroactive Identifiable {
-    public var id: UUID { self }
 }
