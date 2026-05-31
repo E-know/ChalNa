@@ -7,6 +7,7 @@ public enum ChalNaIconKind: String, CaseIterable, Sendable {
     case scissors, reorderLines, trash, music
     case move
     case rotate
+    case textLabel
 }
 
 /// Lucide 스타일 라인 아이콘. 1.5pt stroke, 24x24 viewBox, round cap/join.
@@ -22,8 +23,8 @@ public struct ChalNaIcon: View {
     }
 
     public var body: some View {
-        if kind == .rotate {
-            Image(systemName: "rotate.left")
+        if kind == .rotate || kind == .textLabel {
+            Image(systemName: kind == .rotate ? "rotate.left" : "textformat")
                 .resizable()
                 .scaledToFit()
                 .symbolRenderingMode(.monochrome)
@@ -266,7 +267,7 @@ private struct LucideShape: Shape {
                 Path(ellipseIn: CGRect(x: 9, y: 9, width: 6, height: 6))
             ]
 
-        case .rotate:
+        case .rotate, .textLabel:
             return []
         }
     }

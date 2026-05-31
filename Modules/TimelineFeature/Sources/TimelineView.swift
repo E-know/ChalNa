@@ -12,6 +12,7 @@ public struct TimelineView: View {
     @Bindable var store: StoreOf<TimelineFeature>
     @State private var playback = ClipPlaybackController()
     @State private var didWireController = false
+    @State private var labelEditorClip: Clip?
 
     public init(store: StoreOf<TimelineFeature> = Store(initialState: TimelineFeature.State()) { TimelineFeature() }) {
         self.store = store
@@ -84,6 +85,18 @@ public struct TimelineView: View {
             Button("취소", role: .cancel) { store.send(.deleteCancelled) }
         } message: {
             Text("삭제한 클립은 현재 타임라인에서 제거됩니다.")
+        }
+        .fullScreenCover(item: $labelEditorClip) { clip in
+            LabelEditorView(
+                clip: clip,
+                rotation: session.rotation(for: clip.id),
+                initialLabel: session.label(for: clip.id),
+                onCommit: { newLabel in
+                    session.setLabel(newLabel, for: clip.id)
+                    labelEditorClip = nil
+                },
+                onCancel: { labelEditorClip = nil }
+            )
         }
     }
 
@@ -259,8 +272,10 @@ public struct TimelineView: View {
         } else {
             EditToolbar(
                 rotationActive: currentRotationActive,
+                labelActive: currentLabelActive,
                 canSave: canSave,
                 onRotate: { rotateCurrentClip() },
+                onLabel: { openLabelEditor() },
                 onDelete: { store.send(.deleteCurrentRequested) },
                 onSave: {
                     store.send(.saveTapped)
@@ -283,6 +298,17 @@ public struct TimelineView: View {
         session.cycleRotation(for: id)
         store.send(.rotateCurrentTapped)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    // MARK: - Label
+
+    private var currentLabelActive: Bool {
+        guard let id = store.currentClip?.id else { return false }
+        return session.label(for: id).isVisible
+    }
+
+    private func openLabelEditor() {
+        labelEditorClip = store.currentClip
     }
 }
 
