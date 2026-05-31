@@ -10,7 +10,8 @@ struct ClipLabelTests {
         #expect(l.isVisible == false)
         #expect(l.position == CGPoint(x: 0.5, y: 0.5))
         #expect(l.font == .memoment)
-        #expect(l.style == .plain)
+        #expect(l.background == .transparent)
+        #expect(l.textColor == .white)
         #expect(l.sizeFraction == 0.10)
     }
 
@@ -31,7 +32,10 @@ struct ClipLabelTests {
     @Test func displayNames() {
         #expect(LabelFont.memoment.displayName == "꾸꾸")
         #expect(LabelFont.system.displayName == "기본")
-        #expect(LabelTextStyle.plain.displayName == "검정 글자")
-        #expect(LabelTextStyle.boxed.displayName == "흰 글자 + 검정 배경")
+        #expect(LabelBackground.white.displayName == "흰색")
+        #expect(LabelBackground.black.displayName == "검정색")
+        #expect(LabelBackground.transparent.displayName == "투명")
+        #expect(LabelColor.white.displayName == "흰색")
+        #expect(LabelColor.black.displayName == "검정색")
     }
 }

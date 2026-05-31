@@ -563,7 +563,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
     ) -> [CALayer] {
         let fontSize = max(8, label.clampedSizeFraction * placedRect.height)
         let textSize = measureCustomText(label.text, font: label.font, fontSize: fontSize)
-        let textColor: UIColor = (label.style == .plain) ? .black : .white
+        let textColorUI: UIColor = (label.textColor == .white) ? .white : .black
         let origin = customLabelOrigin(placedRect: placedRect, position: label.position, textSize: textSize, renderSize: renderSize)
 
         let textLayer = CATextLayer()
@@ -571,7 +571,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
             string: label.text,
             attributes: [
                 .font: overlayCustomUIFont(font: label.font, fontSize: fontSize),
-                .foregroundColor: textColor,
+                .foregroundColor: textColorUI,
             ]
         )
         textLayer.contentsScale = 2.0
@@ -581,8 +581,9 @@ public actor AVFoundationCompositionService: CompositionServicing {
         textLayer.opacity = 0
         addShowAnimation(to: textLayer, timeRange: timeRange)
 
-        guard label.style == .boxed else { return [textLayer] }
+        guard label.background != .transparent else { return [textLayer] }
 
+        let bgColorUI: UIColor = (label.background == .white) ? .white : .black
         let padX = fontSize * 0.35
         let padY = fontSize * 0.22
         let bgLayer = CALayer()
@@ -592,7 +593,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
             width: textSize.width + padX * 2,
             height: textSize.height + padY * 2
         )
-        bgLayer.backgroundColor = UIColor.black.cgColor
+        bgLayer.backgroundColor = bgColorUI.cgColor
         bgLayer.cornerRadius = min(bgLayer.frame.height * 0.18, 12)
         bgLayer.opacity = 0
         addShowAnimation(to: bgLayer, timeRange: timeRange)

@@ -16,7 +16,7 @@ struct EditSessionLabelTests {
     @Test func setAndReadLabel() {
         let session = EditSession()
         let id = UUID()
-        var l = ClipLabel(text: "성산일출봉", font: .system, style: .boxed)
+        var l = ClipLabel(text: "성산일출봉", font: .system, background: .black, textColor: .white)
         l.position = CGPoint(x: 0.2, y: 0.8)
         session.setLabel(l, for: id)
         #expect(session.label(for: id) == l)

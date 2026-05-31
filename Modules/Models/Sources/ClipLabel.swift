@@ -8,8 +8,10 @@ public struct ClipLabel: Equatable, Sendable {
     public var text: String
     /// 글꼴. `.memoment`("꾸꾸") 또는 `.system`(기본).
     public var font: LabelFont
-    /// 표시 스타일. `.plain`(검정 글자, 배경 없음) 또는 `.boxed`(흰 글자 + 검정 배경).
-    public var style: LabelTextStyle
+    /// 배경. 흰색/검정색/투명.
+    public var background: LabelBackground
+    /// 글자색. 흰색/검정색.
+    public var textColor: LabelColor
     /// 클립 이미지 높이 대비 글자 크기 비율. `clampedSizeFraction` 으로 0.04...0.25 클램프해 사용.
     public var sizeFraction: CGFloat
     /// 클립 이미지 사각형 기준 정규화 위치(라벨 중심). x,y ∈ 0...1, y는 위(0)→아래(1) 스크린 방향.
@@ -18,13 +20,15 @@ public struct ClipLabel: Equatable, Sendable {
     public init(
         text: String = "",
         font: LabelFont = .memoment,
-        style: LabelTextStyle = .plain,
+        background: LabelBackground = .transparent,
+        textColor: LabelColor = .white,
         sizeFraction: CGFloat = 0.10,
         position: CGPoint = CGPoint(x: 0.5, y: 0.5)
     ) {
         self.text = text
         self.font = font
-        self.style = style
+        self.background = background
+        self.textColor = textColor
         self.sizeFraction = sizeFraction
         self.position = position
     }
@@ -58,14 +62,28 @@ public enum LabelFont: String, Sendable, CaseIterable, Codable {
     }
 }
 
-/// 라벨 표시 스타일.
-public enum LabelTextStyle: String, Sendable, CaseIterable, Codable {
-    case plain   // 검정 글자, 배경 없음
-    case boxed   // 흰 글자 + 검정 배경
+/// 라벨 배경. 흰색 / 검정색 / 투명(배경 없음).
+public enum LabelBackground: String, Sendable, CaseIterable, Codable {
+    case white
+    case black
+    case transparent
     public var displayName: String {
         switch self {
-        case .plain: "검정 글자"
-        case .boxed: "흰 글자 + 검정 배경"
+        case .white:       "흰색"
+        case .black:       "검정색"
+        case .transparent: "투명"
+        }
+    }
+}
+
+/// 라벨 글자색. 흰색 / 검정색.
+public enum LabelColor: String, Sendable, CaseIterable, Codable {
+    case white
+    case black
+    public var displayName: String {
+        switch self {
+        case .white: "흰색"
+        case .black: "검정색"
         }
     }
 }

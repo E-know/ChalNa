@@ -85,7 +85,7 @@ struct LabelEditorView: View {
             let box = fittedBox(in: proxy.size)
             ZStack {
                 RotatableContent(rotation: rotation) {
-                    clip.thumbnailView(contentMode: .fit)
+                    clip.thumbnailView(contentMode: .fill)
                 }
                 .frame(width: box.width, height: box.height)
                 .clipped()
@@ -99,7 +99,7 @@ struct LabelEditorView: View {
         let fontPx = label.clampedSizeFraction * boxSize.height
         let centerX = label.position.x * boxSize.width + dragTranslation.width
         let centerY = label.position.y * boxSize.height + dragTranslation.height
-        return labelText(fontPx: fontPx)
+        return labelView(fontPx: fontPx)
             .position(x: centerX, y: centerY)
             .gesture(
                 DragGesture()
@@ -113,29 +113,9 @@ struct LabelEditorView: View {
             )
     }
 
-    @ViewBuilder
-    private func labelText(fontPx: CGFloat) -> some View {
+    private func labelView(fontPx: CGFloat) -> some View {
         let isEmpty = label.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let display = isEmpty ? "라벨 입력" : label.text
-        let base = Text(display)
-            .font(label.font == .memoment
-                  ? ChalNaTypography.memoment(fontPx)
-                  : ChalNaTypography.krBody(fontPx, weight: .semibold))
-            .lineLimit(1)
-            .fixedSize()
-
-        switch label.style {
-        case .plain:
-            base.foregroundColor(isEmpty ? Color.white.opacity(0.7) : Color.black)
-        case .boxed:
-            base.foregroundColor(.white)
-                .padding(.horizontal, fontPx * 0.35)
-                .padding(.vertical, fontPx * 0.22)
-                .background(
-                    RoundedRectangle(cornerRadius: min(fontPx * 0.4, 12), style: .continuous)
-                        .fill(Color.black)
-                )
-        }
+        return ClipLabelText(label: label, fontPx: fontPx, placeholder: isEmpty)
     }
 
     // MARK: - Controls
@@ -148,10 +128,14 @@ struct LabelEditorView: View {
                 segmented(title: "폰트",
                           options: LabelFont.allCases.map { ($0.displayName, $0) },
                           selection: $label.font)
-                segmented(title: "스타일",
-                          options: LabelTextStyle.allCases.map { ($0.displayName, $0) },
-                          selection: $label.style)
+                segmented(title: "글자색",
+                          options: LabelColor.allCases.map { ($0.displayName, $0) },
+                          selection: $label.textColor)
             }
+
+            segmented(title: "배경",
+                      options: LabelBackground.allCases.map { ($0.displayName, $0) },
+                      selection: $label.background)
 
             VStack(alignment: .leading, spacing: 6) {
                 Text("크기")
@@ -204,7 +188,7 @@ struct LabelEditorView: View {
     LabelEditorView(
         clip: SampleData.jejuTimeline[0],
         rotation: .r0,
-        initialLabel: ClipLabel(text: "제주 바다", font: .memoment, style: .boxed),
+        initialLabel: ClipLabel(text: "제주 바다", font: .memoment, background: .black, textColor: .white),
         onCommit: { _ in },
         onCancel: {}
     )
