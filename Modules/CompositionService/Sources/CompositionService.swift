@@ -575,7 +575,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
             height: textSize.height + padY * 2
         )
         bgLayer.backgroundColor = bgColorUI.cgColor
-        bgLayer.cornerRadius = min(bgLayer.frame.height * 0.18, 12)
+        bgLayer.cornerRadius = min(fontSize * 0.4, 12)
         bgLayer.opacity = 0
         addShowAnimation(to: bgLayer, timeRange: timeRange)
         return [bgLayer, textLayer]
