@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import Models
 import DesignSystem
 
@@ -33,9 +34,12 @@ struct LabelEditorView: View {
             canvas
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.horizontal, 16)
+                .contentShape(Rectangle())
+                .onTapGesture { dismissKeyboard() }
             controls
         }
         .chalNaScreen()
+        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 
     // MARK: - Top bar
@@ -97,6 +101,10 @@ struct LabelEditorView: View {
                         label.position = CGPoint(x: min(max(nx, 0), 1), y: min(max(ny, 0), 1))
                     }
             )
+    }
+
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 
     private func labelView(fontPx: CGFloat) -> some View {
