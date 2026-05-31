@@ -84,10 +84,12 @@ struct LabelEditorView: View {
         GeometryReader { proxy in
             let box = fittedBox(in: proxy.size)
             ZStack {
-                clip.thumbnailView(contentMode: .fill)
-                    .frame(width: box.width, height: box.height)
-                    .clipped()
-                    .overlay(labelOverlay(boxSize: box))
+                RotatableContent(rotation: rotation) {
+                    clip.thumbnailView(contentMode: .fit)
+                }
+                .frame(width: box.width, height: box.height)
+                .clipped()
+                .overlay(labelOverlay(boxSize: box))
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
         }
