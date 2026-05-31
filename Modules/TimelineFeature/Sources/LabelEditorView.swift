@@ -65,24 +65,10 @@ struct LabelEditorView: View {
 
     // MARK: - Canvas (드래그 캔버스)
 
-    /// 클립의 표시 비율(회전 반영) width/height.
-    private var displayAspect: CGFloat {
-        let base = clip.displaySize ?? CGSize(width: 9, height: 16)
-        let oriented = rotation.swapsAxes ? CGSize(width: base.height, height: base.width) : base
-        return max(oriented.width, 1) / max(oriented.height, 1)
-    }
-
-    /// 가용 영역 안에 displayAspect 로 fit 되는 박스 크기.
-    private func fittedBox(in available: CGSize) -> CGSize {
-        guard available.width > 0, available.height > 0 else { return .zero }
-        let byWidth = CGSize(width: available.width, height: available.width / displayAspect)
-        if byWidth.height <= available.height { return byWidth }
-        return CGSize(width: available.height * displayAspect, height: available.height)
-    }
-
     private var canvas: some View {
         GeometryReader { proxy in
-            let box = fittedBox(in: proxy.size)
+            let aspect = LabelBoxGeometry.displayAspect(displaySize: clip.displaySize, rotation: rotation)
+            let box = LabelBoxGeometry.fittedBox(aspect: aspect, in: proxy.size)
             ZStack {
                 RotatableContent(rotation: rotation) {
                     clip.thumbnailView(contentMode: .fill)

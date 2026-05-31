@@ -23,21 +23,6 @@ struct PreviewPanel: View {
         return session.label(for: id)
     }
 
-    /// 현재 클립의 표시 비율(회전 반영) width/height. 라벨 에디터와 동일 규칙.
-    private var displayAspect: CGFloat {
-        let base = store.currentClip?.displaySize ?? CGSize(width: 9, height: 16)
-        let oriented = currentRotation.swapsAxes ? CGSize(width: base.height, height: base.width) : base
-        return max(oriented.width, 1) / max(oriented.height, 1)
-    }
-
-    /// 가용 영역 안에 displayAspect 로 fit 되는 이미지 박스(에디터 fittedBox 와 동일).
-    private func fittedBox(in available: CGSize) -> CGSize {
-        guard available.width > 0, available.height > 0 else { return .zero }
-        let byWidth = CGSize(width: available.width, height: available.width / displayAspect)
-        if byWidth.height <= available.height { return byWidth }
-        return CGSize(width: available.height * displayAspect, height: available.height)
-    }
-
     var body: some View {
         VStack(spacing: 8) {
             previewCard
@@ -83,7 +68,8 @@ struct PreviewPanel: View {
         let label = currentLabel
         if store.currentClip != nil, label.isVisible {
             GeometryReader { proxy in
-                let box = fittedBox(in: proxy.size)
+                let aspect = LabelBoxGeometry.displayAspect(displaySize: store.currentClip?.displaySize, rotation: currentRotation)
+                let box = LabelBoxGeometry.fittedBox(aspect: aspect, in: proxy.size)
                 let fontPx = label.clampedSizeFraction * box.height
                 ClipLabelText(label: label, fontPx: fontPx)
                     .position(
