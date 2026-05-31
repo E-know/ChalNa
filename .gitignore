@@ -134,3 +134,6 @@ Derived/**
 /graph.png
 # understand/ 로컬 설명 HTML 산출물
 understand/
+
+# Superpowers brainstorm 산출물
+.superpowers/
