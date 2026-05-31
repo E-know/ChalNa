@@ -35,6 +35,7 @@ struct PreviewPanel: View {
         ZStack {
             ChalNaColor.ink
             thumbnail
+                .overlay(autoLabelsOverlay)
                 .overlay(labelOverlay)
                 .overlay(hudOverlay)
         }
@@ -58,6 +59,21 @@ struct PreviewPanel: View {
             } else {
                 ChalNaColor.ivory
             }
+        }
+    }
+
+    /// 자동 시간/날짜 라벨을 출력과 동일하게 미리보기에 표시(읽기 전용).
+    @ViewBuilder
+    private var autoLabelsOverlay: some View {
+        if let clip = store.currentClip {
+            GeometryReader { proxy in
+                let aspect = LabelBoxGeometry.displayAspect(displaySize: clip.displaySize, rotation: currentRotation)
+                let box = LabelBoxGeometry.fittedBox(aspect: aspect, in: proxy.size)
+                AutoLabelsOverlay(box: box, capturedAt: clip.capturedAt)
+                    .frame(width: box.width, height: box.height)
+                    .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
+            }
+            .allowsHitTesting(false)
         }
     }
 

@@ -89,6 +89,7 @@ struct LabelEditorView: View {
                 }
                 .frame(width: box.width, height: box.height)
                 .clipped()
+                .overlay(AutoLabelsOverlay(box: box, capturedAt: clip.capturedAt))
                 .overlay(labelOverlay(boxSize: box))
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
