@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 import Models
 import DesignSystem
 
@@ -13,6 +12,7 @@ struct LabelEditorView: View {
 
     @State private var label: ClipLabel
     @GestureState private var dragTranslation: CGSize = .zero
+    @State private var isEditingText = false
 
     init(
         clip: Clip,
@@ -29,17 +29,27 @@ struct LabelEditorView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            topBar
-            canvas
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.horizontal, 16)
-                .contentShape(Rectangle())
-                .onTapGesture { dismissKeyboard() }
-            controls
+        ZStack {
+            VStack(spacing: 0) {
+                topBar
+                canvas
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.horizontal, 16)
+                controls
+            }
+            .chalNaScreen()
+
+            if isEditingText {
+                LabelTextInputView(
+                    clip: clip,
+                    initialText: label.text,
+                    font: label.font,
+                    onCommit: { label.text = $0; isEditingText = false },
+                    onCancel: { isEditingText = false }
+                )
+            }
         }
-        .chalNaScreen()
-        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .onAppear { if !label.isVisible { isEditingText = true } }
     }
 
     // MARK: - Top bar
@@ -101,10 +111,7 @@ struct LabelEditorView: View {
                         label.position = CGPoint(x: min(max(nx, 0), 1), y: min(max(ny, 0), 1))
                     }
             )
-    }
-
-    private func dismissKeyboard() {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            .onTapGesture { isEditingText = true }
     }
 
     private func labelView(fontPx: CGFloat) -> some View {
@@ -116,8 +123,6 @@ struct LabelEditorView: View {
 
     private var controls: some View {
         VStack(spacing: 16) {
-            ChalNaTextField(placeholder: "라벨 문구를 입력하세요", text: $label.text)
-
             HStack(spacing: 12) {
                 segmented(title: "폰트",
                           options: LabelFont.allCases.map { ($0.displayName, $0) },
