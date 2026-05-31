@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 // Danawa DDS Mobile v2.0 타이포 토큰. 한글 본문은 시스템 폰트, Spec/숫자는 SF Mono.
 // 다나와 가이드:
@@ -41,6 +44,70 @@ public enum ChalNaTypography {
     public static func monoFallback(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
         Font.custom(FontName.systemMono, size: size, relativeTo: textStyle(for: size)).weight(weight)
     }
+
+    // MARK: - KERISKEDU (영상 오버레이와 동일 폰트)
+    // UIAppFonts 로 앱에 등록된 KERISKEDU 패밀리의 Line(outline) 변형을 우선 사용.
+    // CompositionService 의 영상 라벨 폰트 해석과 동일 규칙 — 매칭 실패 시 시스템 bold fallback.
+    public static func keris(_ size: CGFloat, weight: Font.Weight = .bold) -> Font {
+        #if canImport(UIKit)
+        if let name = kerisFontName, UIFont(name: name, size: size) != nil {
+            return Font.custom(name, size: size)
+        }
+        #endif
+        return Font.system(size: size, weight: weight, design: .default)
+    }
+
+    #if canImport(UIKit)
+    private static let kerisFontName: String? = {
+        let families = UIFont.familyNames.filter { $0.localizedCaseInsensitiveContains("KERIS") }
+        for family in families {
+            let names = UIFont.fontNames(forFamilyName: family)
+            if let line = names.first(where: {
+                let upper = $0.uppercased()
+                return upper.contains("LINE") || upper.contains("OUTLINE")
+            }) {
+                return line
+            }
+            if let any = names.first { return any }
+        }
+        return nil
+    }()
+
+    /// 측정/합성용 UIFont — `keris()` Font 와 같은 family. 실패 시 시스템 bold.
+    public static func kerisUIFont(_ size: CGFloat) -> UIFont {
+        if let name = kerisFontName, let f = UIFont(name: name, size: size) { return f }
+        return .systemFont(ofSize: size, weight: .bold)
+    }
+    #endif
+
+    // MARK: - Memoment(꾸꾸) — 사용자 라벨용 커스텀 폰트
+    // UIAppFonts 로 등록된 MemomentKkukkukk 패밀리를 런타임 탐색(이름은 EUC 인코딩이라 하드코딩 금지).
+    // 매칭 실패 시 시스템 폰트 fallback. 영상 합성쪽 overlayCustomUIFont 와 동일 family 를 쓴다.
+    public static func memoment(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        #if canImport(UIKit)
+        if let name = memomentFontName, UIFont(name: name, size: size) != nil {
+            return Font.custom(name, size: size)
+        }
+        #endif
+        return Font.system(size: size, weight: weight, design: .default)
+    }
+
+    #if canImport(UIKit)
+    private static let memomentFontName: String? = {
+        let families = UIFont.familyNames.filter { $0.localizedCaseInsensitiveContains("Memoment") }
+        for family in families {
+            let names = UIFont.fontNames(forFamilyName: family)
+            if let any = names.first { return any }
+        }
+        return nil
+    }()
+
+    /// 측정/합성용 UIFont — `memoment()` Font 와 같은 family. 실패 시 시스템 semibold.
+    public static func memomentUIFont(_ size: CGFloat) -> UIFont {
+        if let name = memomentFontName, let f = UIFont(name: name, size: size) { return f }
+        return .systemFont(ofSize: size, weight: .semibold)
+    }
+    #endif
 
     // MARK: - Legacy stubs (ChalNa 무드 제거: Fraunces/Caveat/BradleyHand 의존 삭제, Pretendard 로 매핑)
     // Phase 2~5 에서 호출처 정리될 때까지 빌드 호환용으로 둔다.

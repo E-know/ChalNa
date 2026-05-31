@@ -89,6 +89,16 @@ let project = Project(
             ]
         ),
         Module.framework(
+            name: "SettingsFeature",
+            dependencies: [
+                .target(name: "AppCore"),
+                .target(name: "AnalyticsService"),
+                .target(name: "Models"),
+                .target(name: "DesignSystem"),
+                .external(name: "ComposableArchitecture"),
+            ]
+        ),
+        Module.framework(
             name: "FilmDetailFeature",
             dependencies: [
                 .target(name: "AppCore"),
@@ -116,6 +126,7 @@ let project = Project(
                     "UIUserInterfaceStyle": "Light",
                     "UIAppFonts": [
                         "KERISKEDU_Line.otf",
+                        "MemomentKkukkukk.ttf",
                     ],
                 ]
             ),
@@ -137,6 +148,7 @@ let project = Project(
                 .target(name: "ExportFeature"),
                 .target(name: "TimelineFeature"),
                 .target(name: "FilmDetailFeature"),
+                .target(name: "SettingsFeature"),
                 .external(name: "ComposableArchitecture"),
                 .external(name: "FirebaseAnalytics"),
             ],
@@ -171,6 +183,19 @@ let project = Project(
             dependencies: [
                 .target(name: "Models"),
                 .target(name: "CompositionService"),
+                .external(name: "ComposableArchitecture"),
+            ]
+        ),
+        Module.unitTests(
+            for: "MediaPickerFeature",
+            dependencies: [
+                .target(name: "PhotosService"),
+            ]
+        ),
+        Module.unitTests(
+            for: "SettingsFeature",
+            dependencies: [
+                .target(name: "Models"),
                 .external(name: "ComposableArchitecture"),
             ]
         ),

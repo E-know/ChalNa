@@ -110,6 +110,14 @@ public struct MediaPickerView: View {
             )
             .ignoresSafeArea()
         }
+        .sheet(
+            item: Binding(
+                get: { store.previewAsset },
+                set: { if $0 == nil { store.send(.previewDismissed) } }
+            )
+        ) { asset in
+            MediaPreviewSheet(asset: asset, store: store)
+        }
         .overlay {
             if store.isPreparingPickedMedia {
                 pickedMediaLoadingOverlay
@@ -407,35 +415,38 @@ public struct MediaPickerView: View {
                     spacing: 12
                 ) {
                     ForEach(Array(selectedAssets.enumerated()), id: \.element.id) { idx, asset in
-                        Button {
-                            dismissTitleKeyboard()
-                            store.send(.photoAssetTapped(asset))
-                        } label: {
-                            ClipThumbCard(
-                                state: .selected,
-                                size: CGSize(width: 84, height: 108)
-                            ) {
-                                photoThumbnail(for: asset)
-                            }
-                            .overlay(alignment: .topLeading) {
-                                kindChip(for: asset.kind)
-                                    .scaleEffect(0.78, anchor: .topLeading)
-                                    .fixedSize(horizontal: true, vertical: true)
-                                    .offset(x: -5, y: -7)
-                                    .allowsHitTesting(false)
-                            }
-                            .overlay(alignment: .topTrailing) {
-                                Circle()
-                                    .fill(ChalNaColor.coral)
-                                    .frame(width: 22, height: 22)
-                                    .overlay(ChalNaIcon(.close, size: 10).foregroundColor(.white))
-                                    .padding(2)
-                            }
+                        ClipThumbCard(
+                            state: .selected,
+                            size: CGSize(width: 84, height: 108)
+                        ) {
+                            photoThumbnail(for: asset)
                         }
-                        .buttonStyle(.plain)
+                        .overlay(alignment: .topLeading) {
+                            kindChip(for: asset.kind)
+                                .scaleEffect(0.78, anchor: .topLeading)
+                                .fixedSize(horizontal: true, vertical: true)
+                                .offset(x: -5, y: -7)
+                                .allowsHitTesting(false)
+                        }
+                        .overlay(alignment: .topTrailing) {
+                            removeBadge(for: asset)
+                        }
                         .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            dismissTitleKeyboard()
+                            store.send(.previewRequested(asset))
+                        }
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityAddTraits(.isButton)
                         .accessibilityLabel(thumbnailAccessibilityLabel(for: asset, index: idx, isSelected: true))
-                        .accessibilityHint("탭하면 선택에서 제외돼요")
+                        .accessibilityHint("탭하면 미리보기가 열려요")
+                        .accessibilityAction {
+                            store.send(.previewRequested(asset))
+                        }
+                        .accessibilityAction(named: "선택에서 제외") {
+                            store.send(.photoAssetTapped(asset))
+                        }
                     }
                 }
                 .padding(.top, 16)
@@ -529,6 +540,24 @@ public struct MediaPickerView: View {
         case .video:     ChalNaChip("VIDEO", variant: .video, icon: .film)
         case .image, .unknown: EmptyView()
         }
+    }
+
+    /// 선택된 미디어를 선택에서 제외하는 코너 X 버튼. 본문 탭(미리보기)과 분리된 히트 영역.
+    private func removeBadge(for asset: PhotoLibraryAsset) -> some View {
+        Button {
+            dismissTitleKeyboard()
+            store.send(.photoAssetTapped(asset))
+        } label: {
+            ChalNaIcon(.close, size: 10)
+                .foregroundColor(.white)
+                .frame(width: 22, height: 22)
+                .background(Circle().fill(ChalNaColor.coral))
+                .frame(width: 40, height: 40, alignment: .topTrailing)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("선택에서 제외")
+        .accessibilityHint("\(asset.kind == .video ? "비디오" : "라이브 포토")를 선택에서 빼요")
     }
 
     // MARK: - Bottom bar

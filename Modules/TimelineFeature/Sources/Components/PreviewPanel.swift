@@ -12,11 +12,15 @@ struct PreviewPanel: View {
 
     let store: StoreOf<TimelineFeature>
     let playback: ClipPlaybackController
-    let onTogglePlay: () -> Void
 
     private var currentRotation: ClipRotation {
         guard let id = store.currentClip?.id else { return .r0 }
         return session.rotation(for: id)
+    }
+
+    private var currentLabel: ClipLabel {
+        guard let id = store.currentClip?.id else { return .default }
+        return session.label(for: id)
     }
 
     var body: some View {
@@ -30,7 +34,10 @@ struct PreviewPanel: View {
     private var previewCard: some View {
         ZStack {
             ChalNaColor.ink
-            thumbnail.overlay(hudOverlay)
+            thumbnail
+                .overlay(autoLabelsOverlay)
+                .overlay(labelOverlay)
+                .overlay(hudOverlay)
         }
         .frame(maxWidth: .infinity)
         .frame(height: Self.previewHeight)
@@ -55,19 +62,48 @@ struct PreviewPanel: View {
         }
     }
 
+    /// 자동 시간/날짜 라벨을 출력과 동일하게 미리보기에 표시(읽기 전용).
     @ViewBuilder
-    private var hudOverlay: some View {
-        if #available(iOS 26.0, *) {
-            GlassEffectContainer(spacing: 16) { hudStack }
-        } else {
-            hudStack
+    private var autoLabelsOverlay: some View {
+        if let clip = store.currentClip {
+            GeometryReader { proxy in
+                let aspect = LabelBoxGeometry.displayAspect(displaySize: clip.displaySize, rotation: currentRotation)
+                let box = LabelBoxGeometry.fittedBox(aspect: aspect, in: proxy.size)
+                AutoLabelsOverlay(box: box, capturedAt: clip.capturedAt)
+                    .frame(width: box.width, height: box.height)
+                    .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
+            }
+            .allowsHitTesting(false)
         }
     }
 
-    private var hudStack: some View {
-        ZStack {
+    /// 현재 클립에 설정된 라벨을 미리보기 위에 표시(읽기 전용). 에디터와 동일한
+    /// 정규화 좌표(클립 표시 박스 기준)·동일 렌더러(ClipLabelText)로 WYSIWYG 일치.
+    @ViewBuilder
+    private var labelOverlay: some View {
+        let label = currentLabel
+        if store.currentClip != nil, label.isVisible {
+            GeometryReader { proxy in
+                let aspect = LabelBoxGeometry.displayAspect(displaySize: store.currentClip?.displaySize, rotation: currentRotation)
+                let box = LabelBoxGeometry.fittedBox(aspect: aspect, in: proxy.size)
+                let fontPx = label.clampedSizeFraction * box.height
+                ClipLabelText(label: label, fontPx: fontPx)
+                    .position(
+                        x: (proxy.size.width - box.width) / 2 + label.position.x * box.width,
+                        y: (proxy.size.height - box.height) / 2 + label.position.y * box.height
+                    )
+            }
+            .allowsHitTesting(false)
+        }
+    }
+
+    // 영상 위에는 정보용 인덱스(n / N)만 둔다. 재생/정지/이전/다음 제어는 영상 아래 TransportControls 담당.
+    @ViewBuilder
+    private var hudOverlay: some View {
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer(spacing: 16) { topRightClipIndex }
+        } else {
             topRightClipIndex
-            playPauseButton
         }
     }
 
@@ -104,40 +140,6 @@ struct PreviewPanel: View {
         tail.foregroundColor = tailColor
         s.append(tail)
         return s
-    }
-
-    @ViewBuilder
-    private var playPauseButton: some View {
-        Button(action: onTogglePlay) {
-            playPauseButtonLabel
-        }
-        .buttonStyle(.plain)
-        .chalNaHitTarget(minSize: 64)
-        .accessibilityLabel(store.isPlaying ? "일시정지" : "재생")
-    }
-
-    @ViewBuilder
-    private var playPauseButtonLabel: some View {
-        if #available(iOS 26.0, *) {
-            ChalNaIcon(store.isPlaying ? .pause : .play, size: 22)
-                .foregroundColor(ChalNaColor.ink)
-                .offset(x: store.isPlaying ? 0 : 2)
-                .frame(width: 64, height: 64)
-                .glassEffect(
-                    .regular.tint(ChalNaColor.ivory.opacity(0.34)).interactive(),
-                    in: Circle()
-                )
-        } else {
-            ZStack {
-                Circle()
-                    .fill(Color.white.opacity(0.94))
-                    .frame(width: 64, height: 64)
-                    .shadow(color: .black.opacity(0.3), radius: 14, y: 10)
-                ChalNaIcon(store.isPlaying ? .pause : .play, size: 22)
-                    .foregroundColor(ChalNaColor.ink)
-                    .offset(x: store.isPlaying ? 0 : 2)
-            }
-        }
     }
 
     @ViewBuilder

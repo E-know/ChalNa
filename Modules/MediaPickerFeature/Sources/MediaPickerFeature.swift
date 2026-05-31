@@ -44,6 +44,9 @@ public struct MediaPickerFeature {
         /// confirm 이 완료되면 set. View 가 onChange 로 잡아 navigation 처리.
         public var confirmation: Confirmation?
 
+        /// 미리보기 시트로 띄울 선택된 미디어. nil 이면 시트가 닫혀 있음.
+        public var previewAsset: PhotoLibraryAsset?
+
         public init(
             source: MediaPickerSource = .photoLibrary,
             photoAuthorizationStatus: PHAuthorizationStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
@@ -85,6 +88,10 @@ public struct MediaPickerFeature {
         case pickedMediaProgressUpdated(done: Int)
         case photosPickedFromSystemPicker(media: [PickedMedia])
         case photoAssetTapped(PhotoLibraryAsset)
+
+        // Preview
+        case previewRequested(PhotoLibraryAsset)
+        case previewDismissed
 
         // Media pipeline
         case startSyncingMedia(ids: [String])
@@ -268,6 +275,14 @@ public struct MediaPickerFeature {
                 }
                 guard !state.selectedAssetIDs.isEmpty else { return .none }
                 return .send(.startSyncingMedia(ids: state.selectedAssetIDs))
+
+            case let .previewRequested(asset):
+                state.previewAsset = asset
+                return .none
+
+            case .previewDismissed:
+                state.previewAsset = nil
+                return .none
 
             case let .startSyncingMedia(ids):
                 let retained = Set(ids)

@@ -7,8 +7,11 @@ struct EditToolbar: View {
     var dimmed: Bool = false
     /// 현재 클립이 r0이 아닐 때 회전 아이콘 우상단에 coral dot으로 "회전 적용 중" 표시.
     var rotationActive: Bool = false
+    /// 현재 클립에 라벨이 있을 때 라벨 아이콘 우상단 coral dot.
+    var labelActive: Bool = false
     var canSave: Bool = true
     var onRotate: () -> Void = {}
+    var onLabel: () -> Void = {}
     var onDelete: () -> Void = {}
     var onSave: () -> Void = {}
 
@@ -24,6 +27,7 @@ struct EditToolbar: View {
     private var paperToolbar: some View {
         HStack(spacing: 0) {
             item(icon: .rotate, label: "회전", action: onRotate, dotIndicator: rotationActive)
+            item(icon: .textLabel, label: "라벨", action: onLabel, dotIndicator: labelActive)
             item(icon: .trash, label: "삭제", action: onDelete, tone: .destructive)
             item(icon: .check, label: "저장", action: onSave, disabled: !canSave)
         }
@@ -49,6 +53,7 @@ struct EditToolbar: View {
         GlassEffectContainer(spacing: 8) {
             HStack(spacing: 8) {
                 glassItem(icon: .rotate, label: "회전", action: onRotate, dotIndicator: rotationActive)
+                glassItem(icon: .textLabel, label: "라벨", action: onLabel, dotIndicator: labelActive)
                 glassItem(icon: .trash, label: "삭제", action: onDelete, tone: .destructive)
                 glassItem(icon: .check, label: "저장", action: onSave, disabled: !canSave)
             }

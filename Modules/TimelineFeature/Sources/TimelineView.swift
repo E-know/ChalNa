@@ -12,6 +12,7 @@ public struct TimelineView: View {
     @Bindable var store: StoreOf<TimelineFeature>
     @State private var playback = ClipPlaybackController()
     @State private var didWireController = false
+    @State private var labelEditorClip: Clip?
 
     public init(store: StoreOf<TimelineFeature> = Store(initialState: TimelineFeature.State()) { TimelineFeature() }) {
         self.store = store
@@ -24,6 +25,14 @@ public struct TimelineView: View {
             preview
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
+
+            TransportControls(
+                isPlaying: store.isPlaying,
+                onPrev: { store.send(.previousTapped) },
+                onToggle: { store.send(.togglePlay) },
+                onNext: { store.send(.nextTapped) }
+            )
+            .padding(.top, 12)
 
             dateSticker
                 .padding(.top, 16)
@@ -44,16 +53,6 @@ public struct TimelineView: View {
             hintRow
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
-
-            if store.isPlaying {
-                TransportControls(
-                    isPlaying: true,
-                    onPrev: { store.send(.previousTapped) },
-                    onToggle: { store.send(.togglePlay) },
-                    onNext: { store.send(.nextTapped) }
-                )
-                .padding(.top, 16)
-            }
 
             Spacer(minLength: 0)
         }
@@ -86,6 +85,18 @@ public struct TimelineView: View {
             Button("취소", role: .cancel) { store.send(.deleteCancelled) }
         } message: {
             Text("삭제한 클립은 현재 타임라인에서 제거됩니다.")
+        }
+        .fullScreenCover(item: $labelEditorClip) { clip in
+            LabelEditorView(
+                clip: clip,
+                rotation: session.rotation(for: clip.id),
+                initialLabel: session.label(for: clip.id),
+                onCommit: { newLabel in
+                    session.setLabel(newLabel, for: clip.id)
+                    labelEditorClip = nil
+                },
+                onCancel: { labelEditorClip = nil }
+            )
         }
     }
 
@@ -175,7 +186,7 @@ public struct TimelineView: View {
     // MARK: - Preview
 
     private var preview: some View {
-        PreviewPanel(store: store, playback: playback, onTogglePlay: { store.send(.togglePlay) })
+        PreviewPanel(store: store, playback: playback)
     }
 
     // MARK: - Date sticker
@@ -261,8 +272,10 @@ public struct TimelineView: View {
         } else {
             EditToolbar(
                 rotationActive: currentRotationActive,
+                labelActive: currentLabelActive,
                 canSave: canSave,
                 onRotate: { rotateCurrentClip() },
+                onLabel: { openLabelEditor() },
                 onDelete: { store.send(.deleteCurrentRequested) },
                 onSave: {
                     store.send(.saveTapped)
@@ -285,6 +298,17 @@ public struct TimelineView: View {
         session.cycleRotation(for: id)
         store.send(.rotateCurrentTapped)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    // MARK: - Label
+
+    private var currentLabelActive: Bool {
+        guard let id = store.currentClip?.id else { return false }
+        return session.label(for: id).isVisible
+    }
+
+    private func openLabelEditor() {
+        labelEditorClip = store.currentClip
     }
 }
 
