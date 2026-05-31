@@ -126,6 +126,7 @@ let project = Project(
                     "UIUserInterfaceStyle": "Light",
                     "UIAppFonts": [
                         "KERISKEDU_Line.otf",
+                        "MemomentKkukkukk.ttf",
                     ],
                 ]
             ),
