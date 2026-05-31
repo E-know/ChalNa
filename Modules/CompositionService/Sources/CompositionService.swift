@@ -607,6 +607,50 @@ public actor AVFoundationCompositionService: CompositionServicing {
             .concatenating(centerTranslate)
     }
 
+    /// 한 클립이 renderSize 안에서 aspectFit + 가운데 정렬됐을 때 차지하는 사각형.
+    /// `transform()` 과 동일한 fit-scale·center 계산을 공유한다. 가운데 정렬이라 y-up/y-down 무관.
+    public static func placedRect(
+        naturalSize: CGSize,
+        preferredTransform: CGAffineTransform,
+        rotation: ClipRotation,
+        renderSize: CGSize
+    ) -> CGRect {
+        let displayRect = CGRect(origin: .zero, size: naturalSize).applying(preferredTransform)
+        let displaySize = CGSize(width: abs(displayRect.width), height: abs(displayRect.height))
+        let postRotationSize: CGSize = rotation.swapsAxes
+            ? CGSize(width: displaySize.height, height: displaySize.width)
+            : displaySize
+        let safeW = max(postRotationSize.width, minDisplayDimension)
+        let safeH = max(postRotationSize.height, minDisplayDimension)
+        let fitScaleRaw = min(renderSize.width / safeW, renderSize.height / safeH)
+        let fitScale: CGFloat = (fitScaleRaw.isFinite && fitScaleRaw > 0) ? fitScaleRaw : 1.0
+        let scaledSize = CGSize(
+            width: postRotationSize.width * fitScale,
+            height: postRotationSize.height * fitScale
+        )
+        let origin = CGPoint(
+            x: (renderSize.width - scaledSize.width) / 2,
+            y: (renderSize.height - scaledSize.height) / 2
+        )
+        return CGRect(origin: origin, size: scaledSize)
+    }
+
+    /// 클립 이미지 사각형 기준 정규화 위치(라벨 중심, y=위→아래)를
+    /// CoreAnimation 좌하단 origin 으로 변환. 텍스트 박스의 좌측 하단 좌표를 돌려준다.
+    public static func customLabelOrigin(
+        placedRect: CGRect,
+        position: CGPoint,
+        textSize: CGSize,
+        renderSize: CGSize
+    ) -> CGPoint {
+        let nx = min(max(position.x, 0), 1)
+        let ny = min(max(position.y, 0), 1)
+        let centerXTopDown = placedRect.minX + nx * placedRect.width
+        let centerYTopDown = placedRect.minY + ny * placedRect.height
+        let centerYUp = renderSize.height - centerYTopDown
+        return CGPoint(x: centerXTopDown - textSize.width / 2, y: centerYUp - textSize.height / 2)
+    }
+
     // MARK: - Output URL
 
     private static func makeOutputURL() -> URL {
