@@ -347,6 +347,22 @@ public actor AVFoundationCompositionService: CompositionServicing {
         let stacked = labelSettings.timeEnabled && labelSettings.dateEnabled
             && labelSettings.timePosition == labelSettings.datePosition
 
+        #if canImport(UIKit)
+        // 자동 시간·날짜 레이어 추가 "뒤"에 호출 — 커스텀 라벨을 그 위에 얹는다.
+        func addCustomLabel(for entry: (timeRange: CMTimeRange, capturedAt: Date, clipID: Clip.ID, placedRect: CGRect)) {
+            let custom = clipLabels[entry.clipID] ?? .default
+            guard custom.isVisible else { return }
+            for layer in makeCustomLabelLayers(
+                label: custom,
+                placedRect: entry.placedRect,
+                renderSize: renderSize,
+                timeRange: entry.timeRange
+            ) {
+                parentLayer.addSublayer(layer)
+            }
+        }
+        #endif
+
         for entry in entries {
             let dateText = dateOnlyFormatter.string(from: entry.capturedAt)
             let timeText = timeOnlyFormatter.string(from: entry.capturedAt)
@@ -379,17 +395,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
                 parentLayer.addSublayer(timeLayer)
 
                 #if canImport(UIKit)
-                let customStacked = clipLabels[entry.clipID] ?? .default
-                if customStacked.isVisible {
-                    for layer in makeCustomLabelLayers(
-                        label: customStacked,
-                        placedRect: entry.placedRect,
-                        renderSize: renderSize,
-                        timeRange: entry.timeRange
-                    ) {
-                        parentLayer.addSublayer(layer)
-                    }
-                }
+                addCustomLabel(for: entry)
                 #endif
                 continue
             }
@@ -419,17 +425,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
             }
 
             #if canImport(UIKit)
-            let custom = clipLabels[entry.clipID] ?? .default
-            if custom.isVisible {
-                for layer in makeCustomLabelLayers(
-                    label: custom,
-                    placedRect: entry.placedRect,
-                    renderSize: renderSize,
-                    timeRange: entry.timeRange
-                ) {
-                    parentLayer.addSublayer(layer)
-                }
-            }
+            addCustomLabel(for: entry)
             #endif
         }
 
