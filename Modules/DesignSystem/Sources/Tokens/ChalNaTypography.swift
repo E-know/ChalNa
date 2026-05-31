@@ -72,6 +72,12 @@ public enum ChalNaTypography {
         }
         return nil
     }()
+
+    /// 측정/합성용 UIFont — `keris()` Font 와 같은 family. 실패 시 시스템 bold.
+    public static func kerisUIFont(_ size: CGFloat) -> UIFont {
+        if let name = kerisFontName, let f = UIFont(name: name, size: size) { return f }
+        return .systemFont(ofSize: size, weight: .bold)
+    }
     #endif
 
     // MARK: - Memoment(꾸꾸) — 사용자 라벨용 커스텀 폰트
@@ -95,6 +101,12 @@ public enum ChalNaTypography {
         }
         return nil
     }()
+
+    /// 측정/합성용 UIFont — `memoment()` Font 와 같은 family. 실패 시 시스템 semibold.
+    public static func memomentUIFont(_ size: CGFloat) -> UIFont {
+        if let name = memomentFontName, let f = UIFont(name: name, size: size) { return f }
+        return .systemFont(ofSize: size, weight: .semibold)
+    }
     #endif
 
     // MARK: - Legacy stubs (ChalNa 무드 제거: Fraunces/Caveat/BradleyHand 의존 삭제, Pretendard 로 매핑)

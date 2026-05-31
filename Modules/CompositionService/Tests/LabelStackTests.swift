@@ -11,7 +11,7 @@ struct LabelStackTests {
         let pad = CGSize(width: 40, height: 80)
         let gap: CGFloat = 24
 
-        let r = AVFoundationCompositionService.stackedOrigins(
+        let r = LabelLayout.stackedOrigins(
             position: .center, timeSize: timeSize, dateSize: dateSize,
             gap: gap, renderSize: render, padding: pad
         )
@@ -29,7 +29,7 @@ struct LabelStackTests {
         let pad = CGSize(width: 40, height: 80)
         let gap: CGFloat = 24
 
-        let r = AVFoundationCompositionService.stackedOrigins(
+        let r = LabelLayout.stackedOrigins(
             position: .bottomLeft, timeSize: timeSize, dateSize: dateSize,
             gap: gap, renderSize: render, padding: pad
         )
