@@ -503,39 +503,26 @@ public actor AVFoundationCompositionService: CompositionServicing {
     }
 
     #if canImport(UIKit)
-    /// 커스텀 라벨용 UIFont. `.memoment` 는 등록된 MemomentKkukkukk family 런타임 탐색(첫 호출 1회 진단 print),
-    /// 실패하거나 `.system` 이면 시스템 semibold.
-    private static let memomentLabelFontName: String = {
-        let families = UIFont.familyNames.filter { $0.localizedCaseInsensitiveContains("Memoment") }
-        print("[CompositionService] Memoment families: \(families)")
-        for family in families {
-            let names = UIFont.fontNames(forFamilyName: family)
-            print("[CompositionService] family=\(family) names=\(names)")
-            if let any = names.first { return any }
-        }
-        return ""
-    }()
-
-    private static func overlayCustomUIFont(font: LabelFont, fontSize: CGFloat) -> UIFont {
-        if font == .memoment, !memomentLabelFontName.isEmpty,
-           let f = UIFont(name: memomentLabelFontName, size: fontSize) {
-            return f
-        }
-        return .systemFont(ofSize: fontSize, weight: .semibold)
+    /// 박스 자막 라벨용 UIFont — 시스템 light 고정.
+    private static func overlayCustomUIFont(fontSize: CGFloat) -> UIFont {
+        .systemFont(ofSize: fontSize, weight: .light)
     }
 
-    /// 커스텀 라벨 텍스트 실측(선택 폰트 기준).
-    private static func measureCustomText(_ text: String, font: LabelFont, fontSize: CGFloat) -> CGSize {
+    /// 박스 자막 텍스트 실측(시스템 light + 자간 기준).
+    private static func measureCustomText(_ text: String, fontSize: CGFloat) -> CGSize {
         let attributed = NSAttributedString(
             string: text,
-            attributes: [.font: overlayCustomUIFont(font: font, fontSize: fontSize)]
+            attributes: [
+                .font: overlayCustomUIFont(fontSize: fontSize),
+                .kern: ClipLabel.BoxStyle.letterSpacing(for: fontSize),
+            ]
         )
         let m = attributed.size()
         return CGSize(width: ceil(m.width), height: ceil(m.height))
     }
 
-    /// 사용자 라벨 한 개를 그릴 레이어들(배경 박스가 있으면 [bg, text], 없으면 [text]).
-    /// 모두 클립 `timeRange` 동안만 보인다.
+    /// 박스 자막 라벨 한 개를 그릴 레이어들([배경 박스, 텍스트]).
+    /// 스타일은 흰 배경 + 검정 글씨 + 검정 테두리로 고정. 모두 클립 `timeRange` 동안만 보인다.
     private static func makeCustomLabelLayers(
         label: ClipLabel,
         placedRect: CGRect,
@@ -543,16 +530,16 @@ public actor AVFoundationCompositionService: CompositionServicing {
         timeRange: CMTimeRange
     ) -> [CALayer] {
         let fontSize = max(8, label.clampedSizeFraction * placedRect.height)
-        let textSize = measureCustomText(label.text, font: label.font, fontSize: fontSize)
-        let textColorUI: UIColor = (label.textColor == .white) ? .white : .black
+        let textSize = measureCustomText(label.text, fontSize: fontSize)
         let origin = customLabelOrigin(placedRect: placedRect, position: label.position, textSize: textSize, renderSize: renderSize)
 
         let textLayer = CATextLayer()
         textLayer.string = NSAttributedString(
             string: label.text,
             attributes: [
-                .font: overlayCustomUIFont(font: label.font, fontSize: fontSize),
-                .foregroundColor: textColorUI,
+                .font: overlayCustomUIFont(fontSize: fontSize),
+                .foregroundColor: UIColor.black,
+                .kern: ClipLabel.BoxStyle.letterSpacing(for: fontSize),
             ]
         )
         textLayer.contentsScale = 2.0
@@ -562,11 +549,9 @@ public actor AVFoundationCompositionService: CompositionServicing {
         textLayer.opacity = 0
         addShowAnimation(to: textLayer, timeRange: timeRange)
 
-        guard label.background != .transparent else { return [textLayer] }
-
-        let bgColorUI: UIColor = (label.background == .white) ? .white : .black
-        let padX = fontSize * 0.35
-        let padY = fontSize * 0.22
+        // 흰 배경 + 검정 테두리 박스. (프리뷰 ClipLabelText 와 동일한 ClipLabel.BoxStyle 사용)
+        let padX = fontSize * ClipLabel.BoxStyle.horizontalPaddingFraction
+        let padY = fontSize * ClipLabel.BoxStyle.verticalPaddingFraction
         let bgLayer = CALayer()
         bgLayer.frame = CGRect(
             x: origin.x - padX,
@@ -574,8 +559,9 @@ public actor AVFoundationCompositionService: CompositionServicing {
             width: textSize.width + padX * 2,
             height: textSize.height + padY * 2
         )
-        bgLayer.backgroundColor = bgColorUI.cgColor
-        bgLayer.cornerRadius = min(fontSize * 0.4, 12)
+        bgLayer.backgroundColor = UIColor.white.cgColor
+        bgLayer.borderColor = UIColor.black.cgColor
+        bgLayer.borderWidth = fontSize * ClipLabel.BoxStyle.borderWidthFraction
         bgLayer.opacity = 0
         addShowAnimation(to: bgLayer, timeRange: timeRange)
         return [bgLayer, textLayer]

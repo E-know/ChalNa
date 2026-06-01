@@ -3,54 +3,61 @@ import UIKit
 import Models
 import DesignSystem
 
-/// ClipLabel 한 개를 스타일(폰트·글자색·배경)대로 그리는 공용 텍스트 뷰.
-/// 라벨 에디터와 타임라인 미리보기가 공유한다. 위치/드래그는 호출 측 담당.
+/// ClipLabel 한 개를 박스 자막 스타일(흰 배경·검정 글씨·검정 테두리)로 그리는 공용 텍스트 뷰.
+/// 자막 에디터와 타임라인 미리보기가 공유한다. 위치/드래그는 호출 측 담당.
 /// `fontPx` = 표시 박스 높이 × clampedSizeFraction.
-/// 텍스트 박스를 합성(CATextLayer)과 동일한 UIFont 측정값으로 고정해, `.position` 중심 기준을 영상 출력과 맞춘다.
+/// 텍스트 박스를 합성(CATextLayer)과 동일한 UIFont 측정값·박스 스타일(ClipLabel.BoxStyle)로 고정해,
+/// `.position` 중심 기준과 박스 외형을 영상 출력과 맞춘다.
 struct ClipLabelText: View {
     let label: ClipLabel
     let fontPx: CGFloat
     var placeholder: Bool = false
 
-    private var displayString: String { placeholder ? "라벨 입력" : label.text }
+    private var displayString: String { placeholder ? "자막 입력" : label.text }
 
-    private var textColor: Color {
-        label.textColor == .white ? .white : .black
-    }
-
-    /// 합성 measureCustomText 와 동일한 UIFont 로 측정한 텍스트 크기.
+    /// 합성 measureCustomText 와 동일한 UIFont(시스템 light) 로 측정한 텍스트 크기.
     private var measuredSize: CGSize {
-        let ui: UIFont = label.font == .memoment
-            ? ChalNaTypography.memomentUIFont(fontPx)
-            : .systemFont(ofSize: fontPx, weight: .semibold)
-        let s = NSAttributedString(string: displayString, attributes: [.font: ui]).size()
+        let ui = UIFont.systemFont(ofSize: fontPx, weight: .light)
+        let s = NSAttributedString(string: displayString, attributes: [
+            .font: ui,
+            .kern: ClipLabel.BoxStyle.letterSpacing(for: fontPx),
+        ]).size()
         return CGSize(width: ceil(s.width), height: ceil(s.height))
     }
 
     private var styledText: some View {
         Text(displayString)
-            .font(label.font == .memoment
-                  ? ChalNaTypography.memoment(fontPx)
-                  : ChalNaTypography.krBody(fontPx, weight: .semibold))
+            .font(ChalNaTypography.krBody(fontPx, weight: .light))
+            .tracking(ClipLabel.BoxStyle.letterSpacing(for: fontPx))
             .lineLimit(1)
             .fixedSize()
             .frame(width: measuredSize.width, height: measuredSize.height)
-            .foregroundColor(placeholder ? textColor.opacity(0.6) : textColor)
+            .foregroundColor(placeholder ? .black.opacity(0.5) : .black)
     }
 
-    @ViewBuilder
     var body: some View {
-        switch label.background {
-        case .transparent:
-            styledText
-        case .white, .black:
-            styledText
-                .padding(.horizontal, fontPx * 0.35)
-                .padding(.vertical, fontPx * 0.22)
-                .background(
-                    RoundedRectangle(cornerRadius: min(fontPx * 0.4, 12), style: .continuous)
-                        .fill(label.background == .white ? Color.white : Color.black)
-                )
-        }
+        styledText.boxSubtitleStyle(fontPx: fontPx)
+    }
+}
+
+/// 박스 자막 배경(흰 배경 + 검정 테두리 + 패딩). 표시(ClipLabelText)와 인라인 편집(TextField)이 공유한다.
+struct BoxSubtitleStyle: ViewModifier {
+    let fontPx: CGFloat
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, fontPx * ClipLabel.BoxStyle.horizontalPaddingFraction)
+            .padding(.vertical, fontPx * ClipLabel.BoxStyle.verticalPaddingFraction)
+            .background(Rectangle().fill(Color.white))
+            .overlay(
+                Rectangle()
+                    .strokeBorder(Color.black, lineWidth: fontPx * ClipLabel.BoxStyle.borderWidthFraction)
+            )
+    }
+}
+
+extension View {
+    /// 박스 자막 스타일(흰 배경 + 검정 테두리)을 적용한다.
+    func boxSubtitleStyle(fontPx: CGFloat) -> some View {
+        modifier(BoxSubtitleStyle(fontPx: fontPx))
     }
 }
