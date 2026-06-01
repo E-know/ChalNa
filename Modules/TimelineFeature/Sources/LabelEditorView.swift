@@ -13,6 +13,7 @@ struct LabelEditorView: View {
     @State private var label: ClipLabel
     @GestureState private var dragTranslation: CGSize = .zero
     @State private var isEditingText = false
+    @FocusState private var focused: Bool
 
     init(
         clip: Clip,
@@ -29,27 +30,18 @@ struct LabelEditorView: View {
     }
 
     var body: some View {
-        ZStack {
-            VStack(spacing: 0) {
-                topBar
-                canvas
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.horizontal, 16)
-                controls
-            }
-            .chalNaScreen()
-
-            if isEditingText {
-                LabelTextInputView(
-                    clip: clip,
-                    initialText: label.text,
-                    font: label.font,
-                    onCommit: { label.text = $0; isEditingText = false },
-                    onCancel: { isEditingText = false }
-                )
-            }
+        VStack(spacing: 0) {
+            topBar
+            canvas
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, 16)
+            controls
         }
-        .onAppear { if !label.isVisible { isEditingText = true } }
+        .chalNaScreen()
+        .onAppear { if !label.isVisible { startEditing() } }
+        .onChange(of: focused) { _, isFocused in
+            if !isFocused { isEditingText = false }
+        }
     }
 
     // MARK: - Top bar
@@ -96,14 +88,28 @@ struct LabelEditorView: View {
         }
     }
 
+    @ViewBuilder
     private func labelOverlay(boxSize: CGSize) -> some View {
         let fontPx = label.clampedSizeFraction * boxSize.height
         let centerX = label.position.x * boxSize.width + dragTranslation.width
         let centerY = label.position.y * boxSize.height + dragTranslation.height
-        return labelView(fontPx: fontPx)
-            .position(x: centerX, y: centerY)
+        Group {
+            if isEditingText {
+                inlineEditor(fontPx: fontPx)
+            } else {
+                displayLabel(fontPx: fontPx, boxSize: boxSize)
+            }
+        }
+        .position(x: centerX, y: centerY)
+    }
+
+    /// 표시 상태: 드래그로 위치 이동, 탭하면 같은 자리에서 인라인 편집 시작.
+    private func displayLabel(fontPx: CGFloat, boxSize: CGSize) -> some View {
+        let isEmpty = label.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return ClipLabelText(label: label, fontPx: fontPx, placeholder: isEmpty)
             .gesture(
-                DragGesture()
+                // 좌표계를 .global 로 고정 — 박스가 이동해도 로컬 좌표계가 따라 움직여 생기는 떨림 방지.
+                DragGesture(coordinateSpace: .global)
                     .updating($dragTranslation) { value, state, _ in state = value.translation }
                     .onEnded { value in
                         guard boxSize.width > 0, boxSize.height > 0 else { return }
@@ -112,75 +118,44 @@ struct LabelEditorView: View {
                         label.position = CGPoint(x: min(max(nx, 0), 1), y: min(max(ny, 0), 1))
                     }
             )
-            .onTapGesture { isEditingText = true }
+            .onTapGesture { startEditing() }
     }
 
-    private func labelView(fontPx: CGFloat) -> some View {
-        let isEmpty = label.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        return ClipLabelText(label: label, fontPx: fontPx, placeholder: isEmpty)
+    /// 편집 상태: 같은 위치·같은 박스 스타일(흰 배경·검정 글씨·테두리)로 그리는 인라인 TextField. WYSIWYG.
+    private func inlineEditor(fontPx: CGFloat) -> some View {
+        TextField("자막 입력", text: $label.text)
+            .font(ChalNaTypography.krBody(fontPx, weight: .light))
+            .tracking(ClipLabel.BoxStyle.letterSpacing(for: fontPx))
+            .foregroundColor(.black)
+            .tint(ChalNaColor.coral)
+            .multilineTextAlignment(.center)
+            .lineLimit(1)
+            .fixedSize()
+            .focused($focused)
+            .submitLabel(.done)
+            .onSubmit { focused = false }
+            .boxSubtitleStyle(fontPx: fontPx)
+    }
+
+    private func startEditing() {
+        isEditingText = true
+        focused = true
     }
 
     // MARK: - Controls
 
     private var controls: some View {
-        VStack(spacing: 16) {
-            HStack(spacing: 12) {
-                segmented(title: "폰트",
-                          options: LabelFont.allCases.map { ($0.displayName, $0) },
-                          selection: $label.font)
-                segmented(title: "글자색",
-                          options: LabelColor.allCases.map { ($0.displayName, $0) },
-                          selection: $label.textColor)
-            }
-
-            segmented(title: "배경",
-                      options: LabelBackground.allCases.map { ($0.displayName, $0) },
-                      selection: $label.background)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("크기")
-                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.small, weight: .medium))
-                    .foregroundColor(ChalNaColor.ink)
-                Slider(
-                    value: $label.sizeFraction,
-                    in: ClipLabel.minSizeFraction...ClipLabel.maxSizeFraction
-                )
-                .tint(ChalNaColor.coral)
-            }
-        }
-        .padding(16)
-    }
-
-    private func segmented<T: Equatable>(
-        title: String,
-        options: [(String, T)],
-        selection: Binding<T>
-    ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title)
+            Text("크기")
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.small, weight: .medium))
                 .foregroundColor(ChalNaColor.ink)
-            HStack(spacing: 8) {
-                ForEach(options.indices, id: \.self) { i in
-                    let opt = options[i]
-                    let isOn = selection.wrappedValue == opt.1
-                    Button {
-                        selection.wrappedValue = opt.1
-                    } label: {
-                        Text(opt.0)
-                            .font(ChalNaTypography.krBody(13, weight: .medium))
-                            .foregroundColor(isOn ? .white : ChalNaColor.ink)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
-                            .background(
-                                RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                                    .fill(isOn ? ChalNaColor.coral : ChalNaColor.ivory)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
+            Slider(
+                value: $label.sizeFraction,
+                in: ClipLabel.minSizeFraction...ClipLabel.maxSizeFraction
+            )
+            .tint(ChalNaColor.coral)
         }
+        .padding(16)
     }
 }
 
@@ -188,7 +163,7 @@ struct LabelEditorView: View {
     LabelEditorView(
         clip: SampleData.jejuTimeline[0],
         rotation: .r0,
-        initialLabel: ClipLabel(text: "제주 바다", font: .memoment, background: .black, textColor: .white),
+        initialLabel: ClipLabel(text: "제주 바다"),
         onCommit: { _ in },
         onCancel: {}
     )
