@@ -53,7 +53,7 @@ public struct HomeView: View {
 
     private var header: some View {
         HStack(alignment: .center) {
-            Text("ChalNa")
+            Text(verbatim: "ChalNa")
                 .font(ChalNaTypography.title(ChalNaTypography.Size.h1))
                 .foregroundColor(ChalNaColor.ink)
             Spacer()

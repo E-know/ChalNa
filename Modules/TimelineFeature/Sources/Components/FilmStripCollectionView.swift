@@ -471,9 +471,9 @@ final class FilmStripVC: UIViewController,
     }
 
     private func accessibilityLabel(for clip: Clip, index: Int, isCurrent: Bool) -> String {
-        let kind = clip.kind == .live ? "라이브 포토" : "비디오"
-        let selected = isCurrent ? ", 선택됨" : ""
-        return "\(index + 1)번째 클립, \(kind), \(clip.durationSecondsLabel)\(selected)"
+        let kind = clip.kind == .live ? String(localized: "라이브 포토") : String(localized: "비디오")
+        let selected = isCurrent ? String(localized: ", 선택됨") : ""
+        return String(localized: "\(index + 1)번째 클립, \(kind), \(clip.durationSecondsLabel)\(selected)")
     }
 
     private func moveClipForAccessibility(_ clipID: Clip.ID, by delta: Int) -> Bool {
@@ -483,7 +483,7 @@ final class FilmStripVC: UIViewController,
         onMove?(clipID, target)
         UIAccessibility.post(
             notification: .announcement,
-            argument: "\(target + 1)번째 위치로 이동했습니다."
+            argument: String(localized: "\(target + 1)번째 위치로 이동했습니다.")
         )
         return true
     }

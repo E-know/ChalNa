@@ -261,7 +261,7 @@ public struct ExportView: View {
             .frame(height: 6)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("내보내기 진행률")
-            .accessibilityValue("\(Int(store.progress * 100))퍼센트")
+            .accessibilityValue(String(localized: "\(Int(store.progress * 100))퍼센트"))
 
             Text(statusLine)
                 .font(ChalNaTypography.krBody(13))
@@ -271,20 +271,20 @@ public struct ExportView: View {
 
     private var statusLabelLeft: String {
         switch store.phase {
-        case .idle, .exporting: return "EXPORT · IN PROGRESS"
-        case .done:             return "EXPORT · COMPLETE"
-        case .failed:           return "EXPORT · FAILED"
+        case .idle, .exporting: return String(localized: "EXPORT · IN PROGRESS")
+        case .done:             return String(localized: "EXPORT · COMPLETE")
+        case .failed:           return String(localized: "EXPORT · FAILED")
         }
     }
 
     private var statusLine: String {
         switch store.phase {
         case .idle, .exporting:
-            return "Vlog를 엮는 중… Live Photo의 영상 부분을 자동으로 추출해 이어 붙여요."
+            return String(localized: "Vlog를 엮는 중… Live Photo의 영상 부분을 자동으로 추출해 이어 붙여요.")
         case .done:
-            return "필름이 완성되었어요. 공유하거나 사진 보관함에 저장할 수 있어요."
+            return String(localized: "필름이 완성되었어요. 공유하거나 사진 보관함에 저장할 수 있어요.")
         case .failed:
-            return store.errorMessage ?? "저장 중 문제가 발생했어요."
+            return store.errorMessage ?? String(localized: "저장 중 문제가 발생했어요.")
         }
     }
 

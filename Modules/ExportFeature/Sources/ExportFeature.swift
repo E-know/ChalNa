@@ -169,13 +169,13 @@ public struct ExportFeature {
                 switch result {
                 case .ok:
                     state.didAddToLibrary = true
-                    state.saveToast = "사진 앱에 저장됐어요 ✦"
+                    state.saveToast = String(localized: "사진 앱에 저장됐어요 ✦")
                     analyticsTracker.log(.vlogSavedToLibrary)
                 case .denied:
-                    state.saveToast = "사진 보관함 접근 권한이 필요해요"
+                    state.saveToast = String(localized: "사진 보관함 접근 권한이 필요해요")
                     analyticsTracker.log(.vlogSaveFailed(reason: "denied"))
                 case let .failed(msg):
-                    state.saveToast = "저장 실패 — \(msg)"
+                    state.saveToast = String(localized: "저장 실패 — \(msg)")
                     analyticsTracker.log(.vlogSaveFailed(reason: msg))
                 }
                 return .none
@@ -205,9 +205,9 @@ public struct ExportFeature {
 public extension ExportFeature.ExportPhase {
     var title: String {
         switch self {
-        case .idle, .exporting: return "저장 중"
-        case .done:             return "완성"
-        case .failed:           return "저장 실패"
+        case .idle, .exporting: return String(localized: "저장 중")
+        case .done:             return String(localized: "완성")
+        case .failed:           return String(localized: "저장 실패")
         }
     }
 

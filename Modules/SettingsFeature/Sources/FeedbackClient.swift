@@ -32,9 +32,9 @@ public enum FeedbackError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .network:
-            return "전송에 실패했어요. 네트워크 상태를 확인하고 다시 시도해 주세요."
+            return String(localized: "전송에 실패했어요. 네트워크 상태를 확인하고 다시 시도해 주세요.")
         case .telegram:
-            return "전송에 실패했어요. 잠시 후 다시 시도해 주세요."
+            return String(localized: "전송에 실패했어요. 잠시 후 다시 시도해 주세요.")
         }
     }
 }

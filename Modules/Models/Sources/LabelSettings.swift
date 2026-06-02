@@ -9,15 +9,15 @@ public enum LabelPosition: Int, CaseIterable, Sendable, Codable {
     /// 사용자 표기. 예: .center → "정중앙"
     public var koreanName: String {
         switch self {
-        case .topLeft:      return "좌측 상단"
-        case .topCenter:    return "중앙 상단"
-        case .topRight:     return "우측 상단"
-        case .centerLeft:   return "좌측 중앙"
-        case .center:       return "정중앙"
-        case .centerRight:  return "우측 중앙"
-        case .bottomLeft:   return "좌측 하단"
-        case .bottomCenter: return "중앙 하단"
-        case .bottomRight:  return "우측 하단"
+        case .topLeft:      return String(localized: "좌측 상단")
+        case .topCenter:    return String(localized: "중앙 상단")
+        case .topRight:     return String(localized: "우측 상단")
+        case .centerLeft:   return String(localized: "좌측 중앙")
+        case .center:       return String(localized: "정중앙")
+        case .centerRight:  return String(localized: "우측 중앙")
+        case .bottomLeft:   return String(localized: "좌측 하단")
+        case .bottomCenter: return String(localized: "중앙 하단")
+        case .bottomRight:  return String(localized: "우측 하단")
         }
     }
 
@@ -85,22 +85,22 @@ public enum LabelKind: String, CaseIterable, Sendable, Hashable {
 
     public var title: String {
         switch self {
-        case .time: return "시각 라벨"
-        case .date: return "날짜 라벨"
+        case .time: return String(localized: "시각 라벨")
+        case .date: return String(localized: "날짜 라벨")
         }
     }
 
     public var subtitle: String {
         switch self {
-        case .time: return "HH:mm"
-        case .date: return "yyyy/MM/dd"
+        case .time: return String(localized: "HH:mm")
+        case .date: return String(localized: "yyyy/MM/dd")
         }
     }
 
     public var sampleText: String {
         switch self {
-        case .time: return "12:30"
-        case .date: return "2026/04/05"
+        case .time: return String(localized: "12:30")
+        case .date: return String(localized: "2026/04/05")
         }
     }
 }

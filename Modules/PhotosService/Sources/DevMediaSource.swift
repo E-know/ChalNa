@@ -46,11 +46,11 @@ public enum DevMediaError: LocalizedError, Equatable, Sendable {
     public var errorDescription: String? {
         switch self {
         case .missingAssetIDs(let ids):
-            return "알 수 없는 Dev fixture예요: \(ids.joined(separator: ", "))"
+            return String(localized: "알 수 없는 Dev fixture예요: \(ids.joined(separator: ", "))")
         case .missingResource(let id):
-            return "Dev fixture 파일을 찾을 수 없어요: \(id)"
+            return String(localized: "Dev fixture 파일을 찾을 수 없어요: \(id)")
         case .unreadableVideo(let id):
-            return "Dev fixture 영상을 읽을 수 없어요: \(id)"
+            return String(localized: "Dev fixture 영상을 읽을 수 없어요: \(id)")
         }
     }
 }
@@ -207,39 +207,39 @@ public actor BundledDevMediaSource: DevMediaSourcing {
         return [
             DevMediaAsset(
                 id: "dev-jeju-sea",
-                title: "협재 바다",
+                title: String(localized: "협재 바다"),
                 kind: .live,
                 capturedAt: base,
                 duration: 2.4,
                 preset: .jejuSea,
-                locationNote: "Dev · 협재 바다"
+                locationNote: String(localized: "Dev · 협재 바다")
             ),
             DevMediaAsset(
                 id: "dev-cafe-table",
-                title: "카페 테이블",
+                title: String(localized: "카페 테이블"),
                 kind: .video,
                 capturedAt: base.addingTimeInterval(420),
                 duration: 2.0,
                 preset: .cafe,
-                locationNote: "Dev · 카페"
+                locationNote: String(localized: "Dev · 카페")
             ),
             DevMediaAsset(
                 id: "dev-sunset-walk",
-                title: "노을 산책",
+                title: String(localized: "노을 산책"),
                 kind: .video,
                 capturedAt: base.addingTimeInterval(1_080),
                 duration: 2.8,
                 preset: .sunset,
-                locationNote: "Dev · 노을"
+                locationNote: String(localized: "Dev · 노을")
             ),
             DevMediaAsset(
                 id: "dev-forest-light",
-                title: "숲의 빛",
+                title: String(localized: "숲의 빛"),
                 kind: .live,
                 capturedAt: base.addingTimeInterval(1_560),
                 duration: 2.2,
                 preset: .forest,
-                locationNote: "Dev · 숲길"
+                locationNote: String(localized: "Dev · 숲길")
             ),
         ]
     }

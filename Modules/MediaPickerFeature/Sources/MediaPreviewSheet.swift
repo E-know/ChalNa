@@ -52,7 +52,7 @@ struct MediaPreviewSheet: View {
             }
 
             if let duration = media.duration, duration > 0 {
-                Text(String(format: "%.1f초", duration))
+                Text(String(format: String(localized: "%.1f초"), duration))
                     .font(ChalNaTypography.monoFallback(13, weight: .medium))
                     .foregroundColor(ChalNaColor.taupe)
             }

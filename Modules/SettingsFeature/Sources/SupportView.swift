@@ -8,7 +8,7 @@ public struct SupportView: View {
     @Environment(AppRouter.self) private var router
     @Bindable var store: StoreOf<SupportFeature>
 
-    private let placeholder = "불편한 점이나 제안을 자유롭게 적어주세요."
+    private let placeholder = String(localized: "불편한 점이나 제안을 자유롭게 적어주세요.")
 
     public init(store: StoreOf<SupportFeature>) {
         self.store = store

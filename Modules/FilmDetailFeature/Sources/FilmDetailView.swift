@@ -157,10 +157,10 @@ public struct FilmDetailView: View {
         let videoCount = max(film.clipCount - film.liveCount, 0)
         let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
         return LazyVGrid(columns: columns, spacing: 12) {
-            metaCell(label: "총 길이", value: Self.durationLabel(film.totalDurationSeconds))
-            metaCell(label: "클립", value: "\(film.clipCount)")
-            metaCell(label: "Live", value: "\(film.liveCount)")
-            metaCell(label: "Video", value: "\(videoCount)")
+            metaCell(label: String(localized: "총 길이"), value: Self.durationLabel(film.totalDurationSeconds))
+            metaCell(label: String(localized: "클립"), value: "\(film.clipCount)")
+            metaCell(label: String(localized: "Live"), value: "\(film.liveCount)")
+            metaCell(label: String(localized: "Video"), value: "\(videoCount)")
         }
     }
 

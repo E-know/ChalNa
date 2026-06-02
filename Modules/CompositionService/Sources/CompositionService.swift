@@ -23,13 +23,13 @@ public enum ExportError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .noVideoClips:
-            return "합성 가능한 영상이 없어요. 영상 또는 Live Photo를 골라주세요."
+            return String(localized: "합성 가능한 영상이 없어요. 영상 또는 Live Photo를 골라주세요.")
         case .sessionSetupFailed:
-            return "내보내기 세션을 준비하지 못했어요."
+            return String(localized: "내보내기 세션을 준비하지 못했어요.")
         case .trackCreationFailed:
-            return "비디오 트랙을 만들 수 없어요."
+            return String(localized: "비디오 트랙을 만들 수 없어요.")
         case .exportFailed(let msg):
-            return "저장 중 문제가 생겼어요: \(msg)"
+            return String(localized: "저장 중 문제가 생겼어요: \(msg)")
         }
     }
 }
@@ -130,7 +130,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
             continuation.yield(.progress(1.0))
             continuation.yield(.completed(outputURL))
         } catch let err as ExportError {
-            continuation.yield(.failed(err.errorDescription ?? "알 수 없는 오류"))
+            continuation.yield(.failed(err.errorDescription ?? String(localized: "알 수 없는 오류")))
         } catch {
             continuation.yield(.failed(error.localizedDescription))
         }
