@@ -38,6 +38,7 @@ public struct AppFeature {
         case routerPushedLabelSettings
         case routerPushedLabelPosition(kind: LabelKind)
         case routerPushedSupport
+        case routerPushedLanguage
     }
 
     @Reducer
@@ -50,6 +51,7 @@ public struct AppFeature {
         case labelSettings(LabelSettingsFeature)
         case labelPosition(LabelPositionFeature)
         case support(SupportFeature)
+        case language(LanguageFeature)
     }
 
     @Dependency(\.analyticsTracker) var analyticsTracker
@@ -107,6 +109,10 @@ public struct AppFeature {
 
             case .routerPushedSupport:
                 state.path.append(.support(SupportFeature.State()))
+                return .none
+
+            case .routerPushedLanguage:
+                state.path.append(.language(LanguageFeature.State()))
                 return .none
 
             case .home, .path:

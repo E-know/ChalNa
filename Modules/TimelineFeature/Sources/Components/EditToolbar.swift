@@ -66,7 +66,7 @@ struct EditToolbar: View {
 
     private func item(
         icon: ChalNaIconKind,
-        label: String,
+        label: LocalizedStringKey,
         action: @escaping () -> Void,
         dotIndicator: Bool = false,
         tone: ToolbarItemTone = .normal,
@@ -103,7 +103,7 @@ struct EditToolbar: View {
     @available(iOS 26.0, *)
     private func glassItem(
         icon: ChalNaIconKind,
-        label: String,
+        label: LocalizedStringKey,
         action: @escaping () -> Void,
         dotIndicator: Bool = false,
         tone: ToolbarItemTone = .normal,
@@ -150,7 +150,7 @@ private enum ToolbarItemTone {
         }
     }
 
-    var accessibilityHint: String {
+    var accessibilityHint: LocalizedStringKey {
         switch self {
         case .normal:      return ""
         case .destructive: return "선택한 클립을 삭제합니다."

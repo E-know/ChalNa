@@ -25,6 +25,10 @@ public struct SettingsView: View {
                         router.push(.labelSettings)
                     }
                     Divider().overlay(ChalNaColor.Gray.g100)
+                    menuRow(title: "언어", subtitle: "앱 표시 언어를 선택하세요") {
+                        router.push(.language)
+                    }
+                    Divider().overlay(ChalNaColor.Gray.g100)
                     menuRow(title: "문의·신고", subtitle: "불편한 점이나 제안을 보내주세요") {
                         store.send(.supportMenuTapped)
                         router.push(.support)
@@ -65,7 +69,7 @@ public struct SettingsView: View {
     }
 
     @ViewBuilder
-    private func menuRow(title: String, subtitle: String, action: @escaping () -> Void) -> some View {
+    private func menuRow(title: LocalizedStringKey, subtitle: LocalizedStringKey, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {

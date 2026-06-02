@@ -64,7 +64,7 @@ public struct SupportFeature {
                 analyticsTracker.log(.feedbackSubmitted(category: state.category.rawValue))
                 state.isSending = false
                 state.text = ""
-                state.alert = AlertInfo(message: "소중한 의견 감사합니다. 잘 전달했어요.", isSuccess: true)
+                state.alert = AlertInfo(message: String(localized: "소중한 의견 감사합니다. 잘 전달했어요."), isSuccess: true)
                 return .none
 
             case let .sendFailed(reason):

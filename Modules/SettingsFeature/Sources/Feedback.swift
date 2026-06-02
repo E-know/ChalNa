@@ -8,9 +8,9 @@ public enum FeedbackCategory: String, CaseIterable, Sendable, Equatable {
 
     public var koreanName: String {
         switch self {
-        case .bug:        return "버그"
-        case .suggestion: return "제안"
-        case .other:      return "기타"
+        case .bug:        return String(localized: "버그")
+        case .suggestion: return String(localized: "제안")
+        case .other:      return String(localized: "기타")
         }
     }
 

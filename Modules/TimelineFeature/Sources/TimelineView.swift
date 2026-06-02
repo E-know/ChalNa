@@ -176,7 +176,7 @@ public struct TimelineView: View {
     private var canSave: Bool { !store.clips.isEmpty }
 
     private var headerTitle: String {
-        store.isPlaying ? "재생 중" : "편집"
+        store.isPlaying ? String(localized: "재생 중") : String(localized: "편집")
     }
 
     private var headerSubtitle: String {

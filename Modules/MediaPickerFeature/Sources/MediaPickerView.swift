@@ -224,8 +224,7 @@ public struct MediaPickerView: View {
     private var intro: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("PICK · YOUR CHALNA").tagLabel()
-            (Text("찰나의 순간을\n").font(ChalNaTypography.displayKR(26))
-             + Text("천천히 골라보세요.").font(ChalNaTypography.krBody(22, weight: .medium)))
+            introHeadline
                 .foregroundColor(ChalNaColor.ink)
                 .lineSpacing(2)
             Text("Live Photo와 짧은 영상을 불러올 수 있어요.\nLive Photo는 내부의 영상 부분을 사용합니다.")
@@ -233,6 +232,17 @@ public struct MediaPickerView: View {
                 .foregroundColor(ChalNaColor.taupe)
                 .padding(.top, 4)
         }
+    }
+
+    /// 첫 줄(큰 display)·둘째 줄(작은 body) 폰트가 달라 Text 두 개를 합치지만,
+    /// 로컬라이즈 키는 합쳐진 한 문장이라 번역을 가져와 \n 기준으로 쪼갠다(번역도 \n 위치를 따른다).
+    private var introHeadline: Text {
+        let full = String(localized: "찰나의 순간을\n천천히 골라보세요.")
+        let lines = full.split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
+        let first = String(lines.first ?? "")
+        let second = lines.count > 1 ? String(lines[1]) : ""
+        return Text(first + "\n").font(ChalNaTypography.displayKR(26))
+             + Text(second).font(ChalNaTypography.krBody(22, weight: .medium))
     }
 
     // MARK: - Title field
@@ -334,8 +344,8 @@ public struct MediaPickerView: View {
                         .font(ChalNaTypography.krSemibold(15))
                         .foregroundColor(ChalNaColor.ink)
                     Text(store.selectedDevAssetIDs.isEmpty
-                         ? "번들 fixture로 실제 export까지 확인"
-                         : "\(store.selectedDevAssetIDs.count)개 fixture 선택됨")
+                         ? LocalizedStringKey("번들 fixture로 실제 export까지 확인")
+                         : LocalizedStringKey("\(store.selectedDevAssetIDs.count)개 fixture 선택됨"))
                         .font(ChalNaTypography.krBody(12))
                         .foregroundColor(ChalNaColor.taupe)
                 }
@@ -444,7 +454,7 @@ public struct MediaPickerView: View {
                         .accessibilityAction {
                             store.send(.previewRequested(asset))
                         }
-                        .accessibilityAction(named: "선택에서 제외") {
+                        .accessibilityAction(named: Text("선택에서 제외")) {
                             store.send(.photoAssetTapped(asset))
                         }
                     }
@@ -489,7 +499,7 @@ public struct MediaPickerView: View {
                             DevMediaAssetCard(asset: asset, isSelected: isSelected)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("\(asset.title), \(asset.kind == .live ? "라이브 포토" : "비디오")")
+                        .accessibilityLabel("\(asset.title), \(asset.kind == .live ? String(localized: "라이브 포토") : String(localized: "비디오"))")
                     }
                 }
                 .padding(.vertical, 12)
@@ -557,7 +567,7 @@ public struct MediaPickerView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("선택에서 제외")
-        .accessibilityHint("\(asset.kind == .video ? "비디오" : "라이브 포토")를 선택에서 빼요")
+        .accessibilityHint("\(asset.kind == .video ? String(localized: "비디오") : String(localized: "라이브 포토"))를 선택에서 빼요")
     }
 
     // MARK: - Bottom bar
@@ -690,19 +700,19 @@ public struct MediaPickerView: View {
         guard case .photoLibrary = store.source else { return nil }
         let status = store.photoAuthorizationStatus
         if status == .denied || status == .restricted {
-            return "사진 권한을 허용해야 Live Photo 영상을 사용할 수 있어요."
+            return String(localized: "사진 권한을 허용해야 Live Photo 영상을 사용할 수 있어요.")
         }
         if status == .notDetermined {
-            return "먼저 사진 권한 범위를 선택해 주세요."
+            return String(localized: "먼저 사진 권한 범위를 선택해 주세요.")
         }
         if store.isPhotoLibraryLoading {
-            return "선택한 사진을 불러오는 중"
+            return String(localized: "선택한 사진을 불러오는 중")
         }
         if hasUnavailableMedia {
-            return "선택한 항목을 불러오지 못했어요. 다시 선택해 주세요."
+            return String(localized: "선택한 항목을 불러오지 못했어요. 다시 선택해 주세요.")
         }
         if !store.selectedAssetIDs.isEmpty, readyMediaCount < store.selectedAssetIDs.count {
-            return "사진 로딩 중 · \(readyMediaCount)/\(store.selectedAssetIDs.count)"
+            return String(localized: "사진 로딩 중 · \(readyMediaCount)/\(store.selectedAssetIDs.count)")
         }
         return nil
     }
@@ -716,13 +726,13 @@ public struct MediaPickerView: View {
 
     private var confirmButtonTitle: String {
         if selectedCount == 0 {
-            return "선택 후 다음"
+            return String(localized: "선택 후 다음")
         }
         if case .photoLibrary = store.source {
-            if hasUnavailableMedia { return "원본 확인 필요" }
-            if !canProceed { return "사진 로딩 중" }
+            if hasUnavailableMedia { return String(localized: "원본 확인 필요") }
+            if !canProceed { return String(localized: "사진 로딩 중") }
         }
-        return "Timeline으로 (\(selectedCount))"
+        return String(localized: "Timeline으로 (\(selectedCount))")
     }
 
     private var selectedCount: Int {
@@ -734,26 +744,26 @@ public struct MediaPickerView: View {
 
     private var photoLauncherTitle: String {
         let status = store.photoAuthorizationStatus
-        if status == .notDetermined { return "사진 권한 선택" }
-        if status == .denied || status == .restricted { return "사진 권한 열기" }
-        return store.selectedAssetIDs.isEmpty ? "사진 추가하기" : "다시 고르기"
+        if status == .notDetermined { return String(localized: "사진 권한 선택") }
+        if status == .denied || status == .restricted { return String(localized: "사진 권한 열기") }
+        return store.selectedAssetIDs.isEmpty ? String(localized: "사진 추가하기") : String(localized: "다시 고르기")
     }
 
     private var photoLauncherSubtitle: String {
         let status = store.photoAuthorizationStatus
-        if status == .notDetermined { return "먼저 권한 범위를 고른 뒤 선택해요" }
-        if status == .denied || status == .restricted { return "설정에서 사진 접근을 허용해 주세요" }
-        if store.isPhotoLibraryLoading { return "선택한 사진을 불러오는 중" }
-        if store.selectedAssetIDs.isEmpty { return "Live Photo와 짧은 영상만 가져올 수 있어요" }
-        return "\(store.selectedAssetIDs.count)개 선택됨 · 탭해서 추가해요"
+        if status == .notDetermined { return String(localized: "먼저 권한 범위를 고른 뒤 선택해요") }
+        if status == .denied || status == .restricted { return String(localized: "설정에서 사진 접근을 허용해 주세요") }
+        if store.isPhotoLibraryLoading { return String(localized: "선택한 사진을 불러오는 중") }
+        if store.selectedAssetIDs.isEmpty { return String(localized: "Live Photo와 짧은 영상만 가져올 수 있어요") }
+        return String(localized: "\(store.selectedAssetIDs.count)개 선택됨 · 탭해서 추가해요")
     }
 
     private var photoEmptyMessage: String {
         let status = store.photoAuthorizationStatus
-        if status == .notDetermined { return "먼저 사진 권한 범위를 선택해 주세요" }
-        if status == .denied || status == .restricted { return "사진 권한을 허용해야 Live Photo 영상을 만들 수 있어요" }
-        if store.isPhotoLibraryLoading { return "선택한 사진을 불러오고 있어요" }
-        return "아직 선택한 사진이 없어요. 위 카드를 눌러 골라보세요."
+        if status == .notDetermined { return String(localized: "먼저 사진 권한 범위를 선택해 주세요") }
+        if status == .denied || status == .restricted { return String(localized: "사진 권한을 허용해야 Live Photo 영상을 만들 수 있어요") }
+        if store.isPhotoLibraryLoading { return String(localized: "선택한 사진을 불러오고 있어요") }
+        return String(localized: "아직 선택한 사진이 없어요. 위 카드를 눌러 골라보세요.")
     }
 
     private var selectedLiveCount: Int {

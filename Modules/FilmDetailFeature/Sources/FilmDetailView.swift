@@ -146,7 +146,7 @@ public struct FilmDetailView: View {
                 .foregroundColor(ChalNaColor.ink)
                 .lineLimit(2)
 
-            Text(Self.dateFormatter.string(from: film.createdAt))
+            Text(film.createdAt, format: .dateTime.year().month().day().weekday())
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
                 .foregroundColor(ChalNaColor.taupe)
         }
@@ -157,10 +157,10 @@ public struct FilmDetailView: View {
         let videoCount = max(film.clipCount - film.liveCount, 0)
         let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
         return LazyVGrid(columns: columns, spacing: 12) {
-            metaCell(label: "총 길이", value: Self.durationLabel(film.totalDurationSeconds))
-            metaCell(label: "클립", value: "\(film.clipCount)")
-            metaCell(label: "Live", value: "\(film.liveCount)")
-            metaCell(label: "Video", value: "\(videoCount)")
+            metaCell(label: String(localized: "총 길이"), value: Self.durationLabel(film.totalDurationSeconds))
+            metaCell(label: String(localized: "클립"), value: "\(film.clipCount)")
+            metaCell(label: String(localized: "Live"), value: "\(film.liveCount)")
+            metaCell(label: String(localized: "Video"), value: "\(videoCount)")
         }
     }
 
@@ -277,13 +277,6 @@ public struct FilmDetailView: View {
     }
 
     // MARK: - Formatters
-
-    private static let dateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "ko_KR")
-        f.dateFormat = "yyyy년 M월 d일 EEEE"
-        return f
-    }()
 
     private static func durationLabel(_ seconds: Double) -> String {
         let total = Int(seconds.rounded())
