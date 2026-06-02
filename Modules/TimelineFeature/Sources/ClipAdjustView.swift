@@ -97,13 +97,14 @@ public struct ClipAdjustView: View {
             .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
             .gesture(
                 SimultaneousGesture(
-                    MagnificationGesture()
-                        .updating($gestureScale) { v, s, _ in s = v }
-                        .onEnded { v in commitScale(v) },
-                    DragGesture()
-                        .updating($gestureDrag) { v, s, _ in s = v.translation }
-                        .onEnded { v in commitDrag(v.translation, viewBox: box) }
+                    MagnificationGesture().updating($gestureScale) { v, s, _ in s = v },
+                    DragGesture().updating($gestureDrag) { v, s, _ in s = v.translation }
                 )
+                .onEnded { value in
+                    let magnify = value.first ?? 1
+                    let drag = value.second?.translation ?? .zero
+                    commitGesture(magnify: magnify, drag: drag, viewBox: box)
+                }
             )
         }
         .aspectRatio(9.0 / 16.0, contentMode: .fit)
@@ -161,19 +162,14 @@ public struct ClipAdjustView: View {
         return ClipTransform(scale: scale, offset: offset)
     }
 
-    private func commitScale(_ v: CGFloat) {
-        let scale = min(max(committed.scale * v, Self.minScale), Self.maxScale)
-        let offset = ClipFraming.clampedOffset(committed.offset, display: displaySize, rotation: rotation, render: Self.render, scale: scale)
-        session.setTransform(ClipTransform(scale: scale, offset: offset), for: store.clipID)
-    }
-
-    private func commitDrag(_ t: CGSize, viewBox: CGSize) {
-        let fx = viewBox.width > 0 ? t.width / viewBox.width : 0
-        let fy = viewBox.height > 0 ? t.height / viewBox.height : 0
+    private func commitGesture(magnify: CGFloat, drag: CGSize, viewBox: CGSize) {
+        let scale = min(max(committed.scale * magnify, Self.minScale), Self.maxScale)
+        let fx = viewBox.width > 0 ? drag.width / viewBox.width : 0
+        let fy = viewBox.height > 0 ? drag.height / viewBox.height : 0
         let offset = ClipFraming.clampedOffset(
             CGPoint(x: committed.offset.x + fx, y: committed.offset.y + fy),
-            display: displaySize, rotation: rotation, render: Self.render, scale: committed.scale
+            display: displaySize, rotation: rotation, render: Self.render, scale: scale
         )
-        session.setTransform(ClipTransform(scale: committed.scale, offset: offset), for: store.clipID)
+        session.setTransform(ClipTransform(scale: scale, offset: offset), for: store.clipID)
     }
 }
