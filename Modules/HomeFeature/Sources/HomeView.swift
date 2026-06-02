@@ -82,11 +82,22 @@ public struct HomeView: View {
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
                 .foregroundColor(ChalNaColor.taupe)
                 .lineSpacing(4)
-            // 비한국어 UI 에서만 앱 이름 '찰나(ChalNa)' 뜻풀이를 작게 덧붙인다.
+            // 비한국어 UI 에서만 앱 이름 '찰나(ChalNa)' 뜻풀이를 옅은 surface 박스로 구분해 덧붙인다.
             if !languageStore.isKoreanUI {
                 Text("'찰나'는 아주 짧은 순간이라는 뜻이에요.")
                     .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
                     .foregroundColor(ChalNaColor.taupe)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
+                            .fill(ChalNaColor.ivory)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
+                            .strokeBorder(ChalNaColor.Gray.g200, lineWidth: 1)
+                    )
+                    .padding(.top, 2)
             }
         }
     }
