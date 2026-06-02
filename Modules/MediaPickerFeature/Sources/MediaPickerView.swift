@@ -125,6 +125,11 @@ public struct MediaPickerView: View {
             }
         }
         .animation(.easeInOut(duration: 0.18), value: store.isPreparingPickedMedia)
+        // 사진 추출 중에는 화면 자동 잠금(idle timer)을 막아 작업이 중단되지 않게 한다.
+        .onChange(of: store.isPreparingPickedMedia) { _, isPreparing in
+            UIApplication.shared.isIdleTimerDisabled = isPreparing
+        }
+        .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
         .task { await store.send(.task).finish() }
     }
 
@@ -148,7 +153,9 @@ public struct MediaPickerView: View {
                         .foregroundColor(ChalNaColor.ink)
 
                     if let progress = store.preparingPickedMediaProgress, progress.total > 0 {
-                        Text("\(progress.done) / \(progress.total)")
+                        // total 자릿수에 맞춰 done 을 0 패딩 (예: 총 12개 → "05 / 12", 총 9개 → "5 / 9")
+                        let doneText = String(format: "%0\(String(progress.total).count)d", progress.done)
+                        Text("\(doneText) / \(progress.total)")
                             .font(ChalNaTypography.monoFallback(22, weight: .bold))
                             .foregroundColor(ChalNaColor.coral)
                             .monospacedDigit()
