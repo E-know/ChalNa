@@ -334,8 +334,8 @@ public struct MediaPickerView: View {
                         .font(ChalNaTypography.krSemibold(15))
                         .foregroundColor(ChalNaColor.ink)
                     Text(store.selectedDevAssetIDs.isEmpty
-                         ? "번들 fixture로 실제 export까지 확인"
-                         : "\(store.selectedDevAssetIDs.count)개 fixture 선택됨")
+                         ? LocalizedStringKey("번들 fixture로 실제 export까지 확인")
+                         : LocalizedStringKey("\(store.selectedDevAssetIDs.count)개 fixture 선택됨"))
                         .font(ChalNaTypography.krBody(12))
                         .foregroundColor(ChalNaColor.taupe)
                 }
@@ -444,7 +444,7 @@ public struct MediaPickerView: View {
                         .accessibilityAction {
                             store.send(.previewRequested(asset))
                         }
-                        .accessibilityAction(named: "선택에서 제외") {
+                        .accessibilityAction(named: Text("선택에서 제외")) {
                             store.send(.photoAssetTapped(asset))
                         }
                     }
@@ -489,7 +489,7 @@ public struct MediaPickerView: View {
                             DevMediaAssetCard(asset: asset, isSelected: isSelected)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("\(asset.title), \(asset.kind == .live ? "라이브 포토" : "비디오")")
+                        .accessibilityLabel("\(asset.title), \(asset.kind == .live ? String(localized: "라이브 포토") : String(localized: "비디오"))")
                     }
                 }
                 .padding(.vertical, 12)

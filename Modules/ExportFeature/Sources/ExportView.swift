@@ -195,7 +195,7 @@ public struct ExportView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(!canPlay)
-                    .accessibilityLabel(canPlay ? "완성된 영상 재생" : "")
+                    .accessibilityLabel(canPlay ? LocalizedStringKey("완성된 영상 재생") : "")
                     .accessibilityAddTraits(canPlay ? .isButton : [])
 
                     if store.phase == .done {
@@ -340,7 +340,7 @@ public struct ExportView: View {
                             } else {
                                 ChalNaIcon(.download, size: 14)
                             }
-                            Text(store.isSaving ? "저장 중…" : "저장하기")
+                            Text(store.isSaving ? LocalizedStringKey("저장 중…") : LocalizedStringKey("저장하기"))
                         }
                         .frame(maxWidth: .infinity)
                     }
@@ -391,7 +391,7 @@ public struct ExportView: View {
                                 } else {
                                     ChalNaIcon(.download, size: 14)
                                 }
-                                Text(store.isSaving ? "저장 중…" : "저장하기")
+                                Text(store.isSaving ? LocalizedStringKey("저장 중…") : LocalizedStringKey("저장하기"))
                             }
                             .foregroundStyle(ChalNaColor.ink)
                             .frame(maxWidth: .infinity, minHeight: 44)

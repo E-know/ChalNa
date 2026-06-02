@@ -195,6 +195,7 @@ ENTRIES = [
     ("문의·신고", "Contact & report", "お問い合わせ・報告"),
     ("불편한 점이나 제안을 보내주세요", "Send issues or suggestions", "ご不便な点やご提案をお送りください"),
     ("위치", "Position", "位置"),
+    ("%@ 위치", "%@ position", "%@の位置"),
     ("투명도", "Opacity", "透明度"),
     ("불편한 점이나 제안을 자유롭게 적어주세요.", "Feel free to write any issues or suggestions.",
      "ご不便な点やご提案を自由にお書きください。"),

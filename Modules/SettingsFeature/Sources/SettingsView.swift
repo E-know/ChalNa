@@ -69,7 +69,7 @@ public struct SettingsView: View {
     }
 
     @ViewBuilder
-    private func menuRow(title: String, subtitle: String, action: @escaping () -> Void) -> some View {
+    private func menuRow(title: LocalizedStringKey, subtitle: LocalizedStringKey, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {

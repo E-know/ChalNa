@@ -2193,6 +2193,22 @@
         }
       }
     },
+    "%@ 위치": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ position"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@の位置"
+          }
+        }
+      }
+    },
     "투명도": {
       "localizations": {
         "en": {

@@ -16,7 +16,7 @@ struct TransportControls: View {
         }
     }
 
-    private func sideButton(icon: ChalNaIconKind, label: String, action: @escaping () -> Void) -> some View {
+    private func sideButton(icon: ChalNaIconKind, label: LocalizedStringKey, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             ZStack {
                 Circle().fill(ChalNaColor.ivory).frame(width: 40, height: 40)
@@ -40,7 +40,7 @@ struct TransportControls: View {
         }
         .buttonStyle(.plain)
         .chalNaHitTarget(minSize: 56)
-        .accessibilityLabel(isPlaying ? "일시정지" : "재생")
+        .accessibilityLabel(isPlaying ? LocalizedStringKey("일시정지") : LocalizedStringKey("재생"))
         .accessibilityHint("현재 클립 재생 상태를 전환합니다.")
     }
 }
