@@ -34,9 +34,6 @@ public struct TimelineView: View {
             )
             .padding(.top, 12)
 
-            dateSticker
-                .padding(.top, 16)
-
             labelRow
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
@@ -150,14 +147,13 @@ public struct TimelineView: View {
             Spacer()
 
             VStack(spacing: 2) {
-                HStack(spacing: 6) {
-                    if store.isPlaying { PulseDot() }
-                    Text(headerTitle)
-                        .font(ChalNaTypography.krSemibold(15))
-                        .foregroundColor(ChalNaColor.ink)
-                }
+                Text(headerTitle)
+                    .font(ChalNaTypography.krSemibold(15))
+                    .foregroundColor(ChalNaColor.ink)
+                    .lineLimit(1)
                 Text(headerSubtitle)
-                    .tagLabel(color: store.isPlaying ? ChalNaColor.coral : ChalNaColor.taupe)
+                    .tagLabel(color: ChalNaColor.taupe)
+                    .lineLimit(1)
             }
 
             Spacer()
@@ -171,51 +167,19 @@ public struct TimelineView: View {
             .accessibilityHidden(true)
             .allowsHitTesting(false)
         }
+        .frame(height: 44)
     }
 
     private var canSave: Bool { !store.clips.isEmpty }
 
-    private var headerTitle: String {
-        store.isPlaying ? "재생 중" : "편집"
-    }
+    private var headerTitle: String { "편집" }
 
-    private var headerSubtitle: String {
-        store.isPlaying ? "PLAYING" : store.title
-    }
+    private var headerSubtitle: String { store.title }
 
     // MARK: - Preview
 
     private var preview: some View {
         PreviewPanel(store: store, playback: playback)
-    }
-
-    // MARK: - Date sticker
-
-    @ViewBuilder
-    private var dateSticker: some View {
-        if let clip = store.currentClip {
-            HStack(spacing: 4) {
-                ChalNaIcon(.calendar, size: 12)
-                    .foregroundColor(ChalNaColor.taupe)
-                Text(dateStickerText(for: clip))
-                    .font(ChalNaTypography.monoFallback(ChalNaTypography.Size.small, weight: .medium))
-                    .foregroundColor(ChalNaColor.taupe)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(Capsule(style: .continuous).fill(ChalNaColor.ivory))
-        }
-    }
-
-    private static let dateStickerFormatter: DateFormatter = {
-        let df = DateFormatter()
-        df.dateFormat = "yyyy.MM.dd"
-        return df
-    }()
-
-    private func dateStickerText(for clip: Clip) -> String {
-        let note = clip.locationNote.map { " · \($0)" } ?? ""
-        return Self.dateStickerFormatter.string(from: clip.capturedAt) + note
     }
 
     // MARK: - Label row
@@ -309,17 +273,6 @@ public struct TimelineView: View {
 
     private func openLabelEditor() {
         labelEditorClip = store.currentClip
-    }
-}
-
-// MARK: - Pulse dot (header)
-
-private struct PulseDot: View {
-    var body: some View {
-        Circle()
-            .fill(ChalNaColor.coral)
-            .frame(width: 6, height: 6)
-            .overlay(Circle().stroke(ChalNaColor.coral.opacity(0.3), lineWidth: 3).padding(-3))
     }
 }
 
