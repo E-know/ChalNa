@@ -529,6 +529,11 @@ public actor AVFoundationCompositionService: CompositionServicing {
             }
         }
 
+        // 라벨 origin 은 CoreAnimation y-UP(좌하단). `isGeometryFlipped = true` 로 하면
+        // sublayer 좌표가 시각상 올바르게(상단=상단) 그려지면서 글자 자체는 뒤집히지 않는다.
+        // → 결과 CGImage 는 "정상 방향(top-left)" 스크린샷. 이후 컴포지터가 전경과 동일하게 다룬다.
+        parentLayer.isGeometryFlipped = true
+
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
         format.opaque = false

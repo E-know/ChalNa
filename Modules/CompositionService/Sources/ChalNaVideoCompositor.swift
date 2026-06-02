@@ -83,11 +83,11 @@ final class ChalNaVideoCompositor: NSObject, AVVideoCompositing, @unchecked Send
 
         var output = foreground.composited(over: background).cropped(to: renderRect)
 
-        // 라벨 오버레이: 이미 renderSize 로 미리 렌더한 top-left origin 정적 이미지.
-        // 전경과 동일한 render-height flip 만 적용해 y-up 출력 공간으로 맞춘 뒤 위에 합성.
+        // 라벨 오버레이: 이미 renderSize 로 미리 렌더한 "정상 방향(top-left)" 정적 이미지.
+        // `CIImage(cgImage:)` 는 시각상 위쪽 행을 extent 위쪽(높은 y)에 두므로, 이미 y-up 출력 공간과
+        // 정렬돼 있다. 추가 flip 없이 그대로 전경 위에 합성한다. (위/아래 가드 테스트로 확정.)
         if let overlay = instruction.overlayImage {
-            let flipRender = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: render.height)
-            let overlayCI = CIImage(cgImage: overlay).transformed(by: flipRender)
+            let overlayCI = CIImage(cgImage: overlay)
             output = overlayCI.composited(over: output).cropped(to: renderRect)
         }
 
