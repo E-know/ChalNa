@@ -58,7 +58,7 @@ ENTRIES = [
     ("%lld개 fixture 선택됨", "%lld fixtures selected", "%lld個のfixtureを選択"),
     ("Dev 미디어를 준비하고 있어요", "Preparing dev media", "Devメディアを準備中です"),
     ("이번 필름의 제목", "This film's title", "このフィルムのタイトル"),
-    ("%lld개 중 %lld개 완료", "%1$lld of %2$lld done", "%1$lld個中%2$lld個完了"),
+    ("%lld개 중 %lld개 완료", "%2$lld of %1$lld done", "%1$lld個中%2$lld個完了"),
     ("탭하면 미리보기가 열려요", "Tap to open preview", "タップでプレビューを開きます"),
     ("선택에서 제외", "Remove from selection", "選択から除外"),
     ("%@를 선택에서 빼요", "Remove %@ from selection", "%@を選択から外します"),

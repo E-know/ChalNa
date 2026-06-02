@@ -514,7 +514,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$lld of %2$lld done"
+            "value": "%2$lld of %1$lld done"
           }
         },
         "ja": {
