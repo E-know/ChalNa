@@ -168,7 +168,7 @@ public struct MediaPickerView: View {
             .frame(minWidth: 220)
             .background(
                 RoundedRectangle(cornerRadius: ChalNaRadius.sheet, style: .continuous)
-                    .fill(ChalNaColor.cream)
+                    .fill(ChalNaColor.white)
             )
             .chalNaShadow(ChalNaShadow.lg)
             .padding(.horizontal, 48)

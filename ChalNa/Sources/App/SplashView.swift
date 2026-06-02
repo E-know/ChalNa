@@ -13,7 +13,7 @@ struct SplashView: View {
     var body: some View {
         ZStack {
             VStack(spacing: 16) {
-                Image("SplashIcon")
+                Image("splash_icon")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 120, height: 120)
@@ -28,14 +28,14 @@ struct SplashView: View {
                     Text("ChalNa")
                         .font(.custom(Self.kerisFontName, size: 15))
                 }
-                .foregroundStyle(ChalNaColor.ink)
+                .foregroundStyle(ChalNaColor.white)
             }
             // Reduce Motion 시 확대 생략(페이드만)
             .scaleEffect(scale)
             .opacity(appeared ? 1 : 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .chalNaScreen()
+        .background(ChalNaColor.Purple.p900.ignoresSafeArea())
         .onAppear {
             withAnimation(.easeOut(duration: 0.5)) { appeared = true }
         }

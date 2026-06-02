@@ -20,7 +20,7 @@ struct MediaPreviewSheet: View {
 
     var body: some View {
         ZStack {
-            ChalNaColor.cream.ignoresSafeArea()
+            ChalNaColor.white.ignoresSafeArea()
 
             VStack(alignment: .leading, spacing: 16) {
                 metaRow

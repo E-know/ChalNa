@@ -93,12 +93,12 @@ public struct SupportView: View {
         let isSelected = store.category == category
         return Text(category.koreanName)
             .font(ChalNaTypography.krBody(ChalNaTypography.Size.small, weight: .semibold))
-            .foregroundColor(isSelected ? ChalNaColor.cream : ChalNaColor.taupe)
+            .foregroundColor(isSelected ? ChalNaColor.white : ChalNaColor.taupe)
             .padding(.horizontal, 18)
             .padding(.vertical, 10)
             .background(
                 Capsule(style: .continuous)
-                    .fill(isSelected ? ChalNaColor.ink : ChalNaColor.cream)
+                    .fill(isSelected ? ChalNaColor.ink : ChalNaColor.white)
             )
             .overlay(
                 Capsule(style: .continuous)
@@ -128,7 +128,7 @@ public struct SupportView: View {
         }
         .background(
             RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                .fill(ChalNaColor.cream)
+                .fill(ChalNaColor.white)
         )
         .overlay(
             RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
@@ -143,7 +143,7 @@ public struct SupportView: View {
             store.send(.sendTapped)
         } label: {
             if store.isSending {
-                ProgressView().tint(ChalNaColor.cream)
+                ProgressView().tint(ChalNaColor.white)
             } else {
                 Text("전송")
             }
