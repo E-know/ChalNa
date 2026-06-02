@@ -224,8 +224,7 @@ public struct MediaPickerView: View {
     private var intro: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("PICK · YOUR CHALNA").tagLabel()
-            (Text("찰나의 순간을\n").font(ChalNaTypography.displayKR(26))
-             + Text("천천히 골라보세요.").font(ChalNaTypography.krBody(22, weight: .medium)))
+            introHeadline
                 .foregroundColor(ChalNaColor.ink)
                 .lineSpacing(2)
             Text("Live Photo와 짧은 영상을 불러올 수 있어요.\nLive Photo는 내부의 영상 부분을 사용합니다.")
@@ -233,6 +232,17 @@ public struct MediaPickerView: View {
                 .foregroundColor(ChalNaColor.taupe)
                 .padding(.top, 4)
         }
+    }
+
+    /// 첫 줄(큰 display)·둘째 줄(작은 body) 폰트가 달라 Text 두 개를 합치지만,
+    /// 로컬라이즈 키는 합쳐진 한 문장이라 번역을 가져와 \n 기준으로 쪼갠다(번역도 \n 위치를 따른다).
+    private var introHeadline: Text {
+        let full = String(localized: "찰나의 순간을\n천천히 골라보세요.")
+        let lines = full.split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
+        let first = String(lines.first ?? "")
+        let second = lines.count > 1 ? String(lines[1]) : ""
+        return Text(first + "\n").font(ChalNaTypography.displayKR(26))
+             + Text(second).font(ChalNaTypography.krBody(22, weight: .medium))
     }
 
     // MARK: - Title field
