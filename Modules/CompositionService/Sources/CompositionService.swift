@@ -321,134 +321,8 @@ public actor AVFoundationCompositionService: CompositionServicing {
         return ""
     }()
 
-    /// 클립별 블러 배경(videoLayer 아래) + 촬영일시/커스텀 라벨(videoLayer 위)을 합성하는 `AVVideoCompositionCoreAnimationTool`.
-    /// - 배경: 각 클립 썸네일을 블러+aspectFill 해 9:16 여백을 채움. 자기 timeRange 동안만 보인다.
-    /// - 시각 `HH:mm`: 큰 글씨(minDim×0.18), opacity 0.5
-    /// - 날짜 `yyyy/MM/dd`: 작은 글씨(minDim×0.035), opacity 1.0
-    /// 라벨 표시 여부·위치는 `labelSettings`를 따른다. 각 라벨은 자신의 timeRange 동안만 보인다.
-    /// 시각·날짜가 모두 켜져 있고 위치가 같으면 세로 스택(시각 위 / 날짜 아래)으로 묶어 배치한다.
-    private static func makeBackdropAndLabelTool(
-        renderSize: CGSize,
-        entries: [(timeRange: CMTimeRange, capturedAt: Date, clipID: Clip.ID, placedRect: CGRect, thumbnailData: Data?)],
-        labelSettings: LabelSettings,
-        clipLabels: [Clip.ID: ClipLabel]
-    ) -> AVVideoCompositionCoreAnimationTool {
-        let parentLayer = CALayer()
-        let videoLayer = CALayer()
-        parentLayer.frame = CGRect(origin: .zero, size: renderSize)
-        videoLayer.frame = parentLayer.frame
-        parentLayer.addSublayer(videoLayer)
-
-        #if canImport(UIKit)
-        // 각 클립의 블러 배경을 videoLayer 아래에 깔고, 자기 timeRange 동안만 보이게 한다.
-        for entry in entries {
-            if let backdrop = makeBlurredBackdropLayer(thumbnailData: entry.thumbnailData, renderSize: renderSize, timeRange: entry.timeRange) {
-                parentLayer.insertSublayer(backdrop, below: videoLayer)
-            }
-        }
-        #endif
-
-        let minDim = min(renderSize.width, renderSize.height)
-        let dateFontSize = minDim * LabelLayout.dateFontFraction
-        let timeFontSize = minDim * LabelLayout.timeFontFraction
-        let padding = CGSize(width: renderSize.width * LabelLayout.paddingFraction, height: renderSize.height * LabelLayout.paddingFraction)
-        let stackGap = minDim * LabelLayout.stackGapFraction
-        // 둘 다 켜져 있고 같은 구역이면 겹치므로 세로 스택으로 묶는다.
-        let stacked = labelSettings.timeEnabled && labelSettings.dateEnabled
-            && labelSettings.timePosition == labelSettings.datePosition
-
-        #if canImport(UIKit)
-        // 자동 시간·날짜 레이어 추가 "뒤"에 호출 — 커스텀 라벨을 그 위에 얹는다.
-        func addCustomLabel(for entry: (timeRange: CMTimeRange, capturedAt: Date, clipID: Clip.ID, placedRect: CGRect, thumbnailData: Data?)) {
-            let custom = clipLabels[entry.clipID] ?? .default
-            guard custom.isVisible else { return }
-            for layer in makeCustomLabelLayers(
-                label: custom,
-                placedRect: entry.placedRect,
-                renderSize: renderSize,
-                timeRange: entry.timeRange
-            ) {
-                parentLayer.addSublayer(layer)
-            }
-        }
-        #endif
-
-        for entry in entries {
-            let dateText = dateOnlyFormatter.string(from: entry.capturedAt)
-            let timeText = timeOnlyFormatter.string(from: entry.capturedAt)
-
-            if stacked {
-                let timeSize = measureOverlayText(timeText, fontSize: timeFontSize)
-                let dateSize = measureOverlayText(dateText, fontSize: dateFontSize)
-                let origins = LabelLayout.stackedOrigins(
-                    position: labelSettings.timePosition,
-                    timeSize: timeSize,
-                    dateSize: dateSize,
-                    gap: stackGap,
-                    renderSize: renderSize,
-                    padding: padding
-                )
-                let dateLayer = makeOverlayTextLayer(
-                    text: dateText,
-                    fontSize: dateFontSize,
-                    timeRange: entry.timeRange,
-                    opacity: labelSettings.dateOpacity
-                ) { _ in origins.date }
-                parentLayer.addSublayer(dateLayer)
-
-                let timeLayer = makeOverlayTextLayer(
-                    text: timeText,
-                    fontSize: timeFontSize,
-                    timeRange: entry.timeRange,
-                    opacity: labelSettings.timeOpacity
-                ) { _ in origins.time }
-                parentLayer.addSublayer(timeLayer)
-
-                #if canImport(UIKit)
-                addCustomLabel(for: entry)
-                #endif
-                continue
-            }
-
-            if labelSettings.dateEnabled {
-                let dateLayer = makeOverlayTextLayer(
-                    text: dateText,
-                    fontSize: dateFontSize,
-                    timeRange: entry.timeRange,
-                    opacity: labelSettings.dateOpacity
-                ) { size in
-                    labelSettings.datePosition.origin(renderSize: renderSize, textSize: size, padding: padding)
-                }
-                parentLayer.addSublayer(dateLayer)
-            }
-
-            if labelSettings.timeEnabled {
-                let timeLayer = makeOverlayTextLayer(
-                    text: timeText,
-                    fontSize: timeFontSize,
-                    timeRange: entry.timeRange,
-                    opacity: labelSettings.timeOpacity
-                ) { size in
-                    labelSettings.timePosition.origin(renderSize: renderSize, textSize: size, padding: padding)
-                }
-                parentLayer.addSublayer(timeLayer)
-            }
-
-            #if canImport(UIKit)
-            addCustomLabel(for: entry)
-            #endif
-        }
-
-        return AVVideoCompositionCoreAnimationTool(
-            postProcessingAsVideoLayer: videoLayer,
-            in: parentLayer
-        )
-    }
-
     #if canImport(UIKit)
     /// 한 클립 구간의 라벨(시간/날짜/커스텀)을 `renderSize` 의 투명 CALayer 트리로 쌓아 정적 CGImage 로 렌더한다.
-    /// `makeBackdropAndLabelTool` 가 한 클립에 대해 추가하던 라벨 레이어와 동일한 레이아웃이되,
-    /// show-animation 없이 목표 opacity 로 고정한다(이 이미지는 클립 구간 동안만 컴포지터가 합성하므로 gating 불필요).
     /// 라벨이 하나도 보이지 않으면 nil 을 반환해 컴포지터가 합성을 스킵하게 한다.
     ///
     /// 좌표계: 라벨 origin 들은 CoreAnimation y-UP(좌하단 원점)으로 계산된다. 이를 top-left 원점
@@ -479,8 +353,6 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
         let dateText = dateOnlyFormatter.string(from: capturedAt)
         let timeText = timeOnlyFormatter.string(from: capturedAt)
-        // 정적 렌더라 timeRange 는 쓰이지 않지만 시그니처 호환용으로 zero 를 넘긴다.
-        let dummyRange = CMTimeRange(start: .zero, duration: .zero)
 
         if stacked {
             let timeSize = measureOverlayText(timeText, fontSize: timeFontSize)
@@ -494,26 +366,26 @@ public actor AVFoundationCompositionService: CompositionServicing {
                 padding: padding
             )
             parentLayer.addSublayer(makeOverlayTextLayer(
-                text: dateText, fontSize: dateFontSize, timeRange: dummyRange,
-                opacity: labelSettings.dateOpacity, staticRender: true
+                text: dateText, fontSize: dateFontSize,
+                opacity: labelSettings.dateOpacity
             ) { _ in origins.date })
             parentLayer.addSublayer(makeOverlayTextLayer(
-                text: timeText, fontSize: timeFontSize, timeRange: dummyRange,
-                opacity: labelSettings.timeOpacity, staticRender: true
+                text: timeText, fontSize: timeFontSize,
+                opacity: labelSettings.timeOpacity
             ) { _ in origins.time })
         } else {
             if labelSettings.dateEnabled {
                 parentLayer.addSublayer(makeOverlayTextLayer(
-                    text: dateText, fontSize: dateFontSize, timeRange: dummyRange,
-                    opacity: labelSettings.dateOpacity, staticRender: true
+                    text: dateText, fontSize: dateFontSize,
+                    opacity: labelSettings.dateOpacity
                 ) { size in
                     labelSettings.datePosition.origin(renderSize: renderSize, textSize: size, padding: padding)
                 })
             }
             if labelSettings.timeEnabled {
                 parentLayer.addSublayer(makeOverlayTextLayer(
-                    text: timeText, fontSize: timeFontSize, timeRange: dummyRange,
-                    opacity: labelSettings.timeOpacity, staticRender: true
+                    text: timeText, fontSize: timeFontSize,
+                    opacity: labelSettings.timeOpacity
                 ) { size in
                     labelSettings.timePosition.origin(renderSize: renderSize, textSize: size, padding: padding)
                 })
@@ -522,8 +394,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
         if custom.isVisible {
             for layer in makeCustomLabelLayers(
-                label: custom, placedRect: placedRect, renderSize: renderSize,
-                timeRange: dummyRange, staticRender: true
+                label: custom, placedRect: placedRect, renderSize: renderSize
             ) {
                 parentLayer.addSublayer(layer)
             }
@@ -576,13 +447,11 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
     /// 흰색 KERISKEDU(없으면 시스템 bold) 텍스트에 검은 그림자를 입혀 만든 `CATextLayer`.
     /// `placement` 클로저는 실측 텍스트 사이즈를 받아 좌하단 원점(CoreAnimation) 기준 좌측 하단 좌표를 반환한다.
-    /// timeRange 구간 동안만 `opacity` 값으로 표시, 그 외엔 model value(0)로 복귀.
+    /// opacity 를 목표값으로 고정한다(클립 구간 동안만 컴포지터가 합성하므로 per-frame gating 불필요).
     private static func makeOverlayTextLayer(
         text: String,
         fontSize: CGFloat,
-        timeRange: CMTimeRange,
         opacity: CGFloat = 1.0,
-        staticRender: Bool = false,
         placement: (CGSize) -> CGPoint
     ) -> CATextLayer {
         let textLayer = CATextLayer()
@@ -613,27 +482,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
         let origin = placement(textSize)
         textLayer.frame = CGRect(origin: origin, size: textSize)
-
-        // staticRender: 정적 이미지로 미리 렌더하는 경로 — opacity 를 목표값으로 고정하고 show 애니메이션 생략.
-        // (클립 구간 동안만 합성되므로 per-frame opacity gating 불필요.)
-        if staticRender {
-            textLayer.opacity = Float(opacity)
-            return textLayer
-        }
-
-        textLayer.opacity = 0
-
-        // 해당 클립의 timeRange 동안만 보이게. `AVCoreAnimationBeginTimeAtZero` 는
-        // CoreAnimation에서 "합성 0초"를 의미하는 매직값 (0은 "즉시"라 의미가 다름).
-        // fillMode = .removed: 활성 구간 밖에서는 model value(opacity=0)로 복귀해 다음 클립과 겹치지 않게 함.
-        let show = CABasicAnimation(keyPath: "opacity")
-        show.fromValue = opacity
-        show.toValue = opacity
-        show.beginTime = AVCoreAnimationBeginTimeAtZero + CMTimeGetSeconds(timeRange.start)
-        show.duration = max(0.01, CMTimeGetSeconds(timeRange.duration))
-        show.fillMode = .removed
-        show.isRemovedOnCompletion = false
-        textLayer.add(show, forKey: "show")
+        textLayer.opacity = Float(opacity)
 
         return textLayer
     }
@@ -658,13 +507,11 @@ public actor AVFoundationCompositionService: CompositionServicing {
     }
 
     /// 박스 자막 라벨 한 개를 그릴 레이어들([배경 박스, 텍스트]).
-    /// 스타일은 흰 배경 + 검정 글씨 + 검정 테두리로 고정. 모두 클립 `timeRange` 동안만 보인다.
+    /// 스타일은 흰 배경 + 검정 글씨 + 검정 테두리로 고정.
     private static func makeCustomLabelLayers(
         label: ClipLabel,
         placedRect: CGRect,
-        renderSize: CGSize,
-        timeRange: CMTimeRange,
-        staticRender: Bool = false
+        renderSize: CGSize
     ) -> [CALayer] {
         let fontSize = max(8, label.clampedSizeFraction * placedRect.height)
         let textSize = measureCustomText(label.text, fontSize: fontSize)
@@ -683,6 +530,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
         textLayer.isWrapped = false
         textLayer.alignmentMode = .center
         textLayer.frame = CGRect(origin: origin, size: textSize)
+        textLayer.opacity = 1
 
         // 흰 배경 + 검정 테두리 박스. (프리뷰 ClipLabelText 와 동일한 ClipLabel.BoxStyle 사용)
         let padX = fontSize * ClipLabel.BoxStyle.horizontalPaddingFraction
@@ -697,57 +545,9 @@ public actor AVFoundationCompositionService: CompositionServicing {
         bgLayer.backgroundColor = UIColor.white.cgColor
         bgLayer.borderColor = UIColor.black.cgColor
         bgLayer.borderWidth = fontSize * ClipLabel.BoxStyle.borderWidthFraction
+        bgLayer.opacity = 1
 
-        if staticRender {
-            textLayer.opacity = 1
-            bgLayer.opacity = 1
-        } else {
-            textLayer.opacity = 0
-            addShowAnimation(to: textLayer, timeRange: timeRange)
-            bgLayer.opacity = 0
-            addShowAnimation(to: bgLayer, timeRange: timeRange)
-        }
         return [bgLayer, textLayer]
-    }
-
-    /// 레이어를 클립 `timeRange` 동안만 opacity=1 로 보이게 하는 애니메이션(그 외엔 model value 0).
-    private static func addShowAnimation(to layer: CALayer, timeRange: CMTimeRange) {
-        let show = CABasicAnimation(keyPath: "opacity")
-        show.fromValue = 1.0
-        show.toValue = 1.0
-        show.beginTime = AVCoreAnimationBeginTimeAtZero + CMTimeGetSeconds(timeRange.start)
-        show.duration = max(0.01, CMTimeGetSeconds(timeRange.duration))
-        show.fillMode = .removed
-        show.isRemovedOnCompletion = false
-        layer.add(show, forKey: "show")
-    }
-
-    private static let backdropCIContext = CIContext(options: nil)
-
-    /// 클립 썸네일을 가우시안 블러 → 캔버스 aspectFill 로 깐 배경 레이어(+어두운 스크림).
-    /// timeRange 동안만 opacity=1. 썸네일이 없으면 nil(배경 생략 = 검정).
-    private static func makeBlurredBackdropLayer(thumbnailData: Data?, renderSize: CGSize, timeRange: CMTimeRange) -> CALayer? {
-        guard let data = thumbnailData, let ui = UIImage(data: data), let cg = ui.cgImage else { return nil }
-        let ci = CIImage(cgImage: cg)
-        guard let blur = CIFilter(name: "CIGaussianBlur") else { return nil }
-        blur.setValue(ci, forKey: kCIInputImageKey)
-        blur.setValue(min(renderSize.width, renderSize.height) * 0.04, forKey: kCIInputRadiusKey)
-        guard let out = blur.outputImage,
-              let rendered = backdropCIContext.createCGImage(out.cropped(to: ci.extent), from: ci.extent) else { return nil }
-
-        let layer = CALayer()
-        layer.frame = CGRect(origin: .zero, size: renderSize)
-        layer.contents = rendered
-        layer.contentsGravity = .resizeAspectFill
-        layer.masksToBounds = true
-        layer.opacity = 0
-        addShowAnimation(to: layer, timeRange: timeRange)
-
-        let scrim = CALayer()
-        scrim.frame = layer.bounds
-        scrim.backgroundColor = UIColor.black.withAlphaComponent(0.18).cgColor
-        layer.addSublayer(scrim)
-        return layer
     }
     #endif
 
