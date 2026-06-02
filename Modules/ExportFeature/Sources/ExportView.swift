@@ -9,6 +9,7 @@ import SwiftData
 import Photos
 import AVKit
 import AVFoundation
+import UIKit
 
 /// Timeline에서 "저장"을 누르면 진입. AVFoundationCompositionService 를 구동해 mp4 를 만든다.
 public struct ExportView: View {
@@ -51,7 +52,12 @@ public struct ExportView: View {
             store.send(.startExport(clips: session.clips, rotations: session.rotations, clipLabels: session.labels))
         }
         .onDisappear {
+            UIApplication.shared.isIdleTimerDisabled = false
             store.send(.dismissTapped)
+        }
+        // 영상 합성 중에는 화면 자동 잠금(idle timer)을 막아 작업이 중단되지 않게 한다.
+        .onChange(of: store.phase) { _, newPhase in
+            UIApplication.shared.isIdleTimerDisabled = (newPhase == .exporting)
         }
         .onChange(of: store.exportedURL) { _, newURL in
             if let newURL, !store.didAddToLibrary {
