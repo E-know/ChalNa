@@ -4,6 +4,7 @@ import SwiftData
 import ComposableArchitecture
 import FirebaseCore
 import AnalyticsService
+import AppCore
 
 @main
 struct ChalNaApp: App {
@@ -25,6 +26,9 @@ struct ChalNaApp: App {
         prepareDependencies {
             $0.analyticsTracker = tracker
         }
+
+        // 저장된 앱 언어를 첫 페인트 전에 적용(스위즐 설치).
+        AppLanguageStore.applyStoredLanguageAtLaunch()
     }
 
     var body: some Scene {
