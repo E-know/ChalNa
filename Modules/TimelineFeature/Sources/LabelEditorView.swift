@@ -25,6 +25,9 @@ struct LabelEditorView: View {
     /// 드래그 시작 시점의 코너(기준점).
     @State private var dragBaseCorner: CGPoint = .zero
     @State private var boxSize: CGSize = .zero
+    /// 글자를 실제로 래스터화해 둔 '베이크' 크기 비율. 슬라이더 드래그 중에는 이 값으로 그린 박스를
+    /// scaleEffect 로만 부드럽게 키우고, 드래그가 끝나면 현재 값으로 베이크해 선명하게 다시 그린다.
+    @State private var renderedSizeFraction: CGFloat
     @State private var didInit = false
     @State private var showVGuide = false
     @State private var showHGuide = false
@@ -49,6 +52,7 @@ struct LabelEditorView: View {
         self.onCommit = onCommit
         self.onCancel = onCancel
         _label = State(initialValue: initialLabel)
+        _renderedSizeFraction = State(initialValue: initialLabel.clampedSizeFraction)
     }
 
     var body: some View {
@@ -128,8 +132,13 @@ struct LabelEditorView: View {
 
     @ViewBuilder
     private func labelLayer(box: CGSize, boxTopGlobalY: CGFloat) -> some View {
+        // 위치/드래그/플로팅은 '최종 표시 크기'(true fontPx) 기준으로 계산한다.
         let fontPx = label.clampedSizeFraction * box.height
         let padded = LabelAnchorMath.paddedBoxSize(text: label.text, fontPx: fontPx)
+        // 글자는 '베이크' 크기로만 래스터화하고, 슬라이더 드래그 중 차이는 scaleEffect 로 부드럽게 메운다.
+        // (매 프레임 폰트 재래스터화/박스 ceil 반올림으로 생기는 '뚝뚝 끊김'을 GPU 기하 변환으로 대체)
+        let renderedFontPx = renderedSizeFraction * box.height
+        let liveScale = renderedSizeFraction > 0 ? label.clampedSizeFraction / renderedSizeFraction : 1
         // 편집 진입 시 가시영역 중앙으로 올리는 '플로팅' 델타. 이 델타만 애니메이션하고,
         // 위치(anchorCorner) 오프셋은 애니메이션 밖에 둬 드래그가 손가락을 1:1 로 따라가게 한다.
         // (.adjusting 중에는 플로팅 애니메이션도 꺼서 드래그가 즉시 반영되도록 한다.)
@@ -142,7 +151,9 @@ struct LabelEditorView: View {
                 alignmentGuides(box: box)
             }
 
-            labelContent(fontPx: fontPx, padded: padded, box: box, boxTopGlobalY: boxTopGlobalY)
+            // fontPx 는 베이크 크기(선명 렌더), padded 는 true 크기(드래그/위치 계산용)로 분리해 전달.
+            labelContent(fontPx: renderedFontPx, padded: padded, box: box, boxTopGlobalY: boxTopGlobalY)
+                .scaleEffect(liveScale, anchor: .topLeading)
                 .offset(y: floatDeltaY)
                 .animation(phase == .adjusting ? nil : Self.moveAnimation, value: floatDeltaY)
                 .offset(x: anchorCorner.x, y: anchorCorner.y)
@@ -236,7 +247,11 @@ struct LabelEditorView: View {
                 .foregroundColor(ChalNaColor.ink)
             Slider(
                 value: $label.sizeFraction,
-                in: ClipLabel.minSizeFraction...ClipLabel.maxSizeFraction
+                in: ClipLabel.minSizeFraction...ClipLabel.maxSizeFraction,
+                onEditingChanged: { editing in
+                    // 드래그 종료 시 현재 크기로 베이크 → scaleEffect=1 로 글자를 선명하게 재렌더.
+                    if !editing { renderedSizeFraction = label.clampedSizeFraction }
+                }
             )
             .tint(ChalNaColor.coral)
         }
