@@ -2976,6 +2976,22 @@
           }
         }
       }
+    },
+    "'찰나'는 아주 짧은 순간이라는 뜻이에요.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "찰나 (ChalNa) — a fleeting moment in Korean."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "찰나 (ChalNa) — 韓国語で「ほんの一瞬」の意味。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

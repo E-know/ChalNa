@@ -26,6 +26,18 @@ public final class AppLanguageStore {
     /// 환경 `\.locale` 로 주입 → 날짜/숫자 형식 + 라이브 재렌더 트리거.
     public var locale: Locale { language.locale }
 
+    /// 화면에 실제로 그려지는 UI 언어가 한국어인지.
+    /// `.ko/.en/.ja` 직접 선택은 그대로 판정하고, `.system` 은 기기 선호 언어를
+    /// 앱 지원 언어(ko/en/ja)에 매칭한 결과의 첫 항목으로 해석한다.
+    public var isKoreanUI: Bool {
+        if let code = language.bundleCode { return code == "ko" }
+        let resolved = Bundle.preferredLocalizations(
+            from: ["ko", "en", "ja"],
+            forPreferences: Locale.preferredLanguages
+        ).first
+        return resolved == "ko"
+    }
+
     /// 첫 페인트 전 ChalNaApp.init 에서 호출(인스턴스 없이 스위즐만 설치).
     public nonisolated static func applyStoredLanguageAtLaunch() {
         let raw = UserDefaults.standard.string(forKey: storageKey)

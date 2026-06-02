@@ -8,6 +8,7 @@ import SwiftData
 /// 앱 루트 화면. Vlog 만들기 CTA + 최근 필름 라이브러리.
 public struct HomeView: View {
     @Environment(AppRouter.self) private var router
+    @Environment(AppLanguageStore.self) private var languageStore
     let store: StoreOf<HomeFeature>
 
     @Query(sort: [SortDescriptor(\Film.createdAt, order: .reverse)])
@@ -81,6 +82,12 @@ public struct HomeView: View {
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
                 .foregroundColor(ChalNaColor.taupe)
                 .lineSpacing(4)
+            // 비한국어 UI 에서만 앱 이름 '찰나(ChalNa)' 뜻풀이를 작게 덧붙인다.
+            if !languageStore.isKoreanUI {
+                Text("'찰나'는 아주 짧은 순간이라는 뜻이에요.")
+                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
+                    .foregroundColor(ChalNaColor.taupe)
+            }
         }
     }
 
@@ -215,5 +222,6 @@ private struct FilmRow: View {
     HomeView()
         .environment(AppRouter())
         .environment(EditSession())
+        .environment(AppLanguageStore())
         .modelContainer(for: Film.self, inMemory: true)
 }

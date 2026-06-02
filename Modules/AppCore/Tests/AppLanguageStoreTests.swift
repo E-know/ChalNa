@@ -33,6 +33,19 @@ struct AppLanguageStoreTests {
         #expect(AppLanguage.ko.bundleCode == "ko")
     }
 
+    @Test func isKoreanUIForExplicitSelection() {
+        freshDefaults()
+        let store = AppLanguageStore()
+        store.set(.ko)
+        #expect(store.isKoreanUI == true)
+        store.set(.en)
+        #expect(store.isKoreanUI == false)
+        store.set(.ja)
+        #expect(store.isKoreanUI == false)
+        store.set(.system) // 스위즐 원복
+        freshDefaults()
+    }
+
     @Test func displayNamesAreNonEmpty() {
         for lang in AppLanguage.allCases {
             #expect(!lang.displayName.isEmpty)
