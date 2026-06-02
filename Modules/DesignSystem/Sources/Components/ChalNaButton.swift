@@ -133,5 +133,5 @@ public extension ButtonStyle where Self == ChalNaButtonStyle {
         Button("텍스트 버튼") {}.buttonStyle(.chalNaText)
     }
     .padding(24)
-    .background(ChalNaColor.cream)
+    .background(ChalNaColor.white)
 }

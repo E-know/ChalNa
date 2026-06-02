@@ -104,5 +104,5 @@ public struct ChalNaChip: View {
         ChalNaChip("+ 날짜", variant: .dashed)
     }
     .padding(32)
-    .background(ChalNaColor.cream)
+    .background(ChalNaColor.white)
 }

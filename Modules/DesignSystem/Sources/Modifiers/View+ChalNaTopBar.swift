@@ -22,7 +22,7 @@ private struct ChalNaHeaderBarModifier: ViewModifier {
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity)
             .background(
-                ChalNaColor.cream
+                ChalNaColor.white
                     .opacity(progress)
                     .ignoresSafeArea(edges: .top)
             )
