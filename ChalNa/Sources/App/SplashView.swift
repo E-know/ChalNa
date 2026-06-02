@@ -17,16 +17,14 @@ struct SplashView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 120, height: 120)
-                    // iOS 홈 화면 아이콘 스퀴클 마스크 비율(≈0.2237 × 120pt). UI 반경이 아닌 플랫폼 유래 값.
-                    .clipShape(RoundedRectangle(cornerRadius: 27, style: .continuous))
-                    .chalNaShadow(ChalNaShadow.md)
+                    .shadow(color: .white, radius: 4)
 
                 // 앱 브랜드 라벨 — 앱에 등록된 KERISKEDU(영상 오버레이와 동일 패밀리).
                 VStack(spacing: 2) {
                     Text("찰나")
-                        .font(.custom(Self.kerisFontName, size: 32))
+                        .font(.custom(Self.kerisFontName, size: 48))
                     Text("ChalNa")
-                        .font(.custom(Self.kerisFontName, size: 15))
+                        .font(.custom(Self.kerisFontName, size: 24))
                 }
                 .foregroundStyle(ChalNaColor.white)
             }
