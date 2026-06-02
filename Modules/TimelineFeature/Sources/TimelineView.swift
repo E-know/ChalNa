@@ -267,14 +267,14 @@ public struct TimelineView: View {
     @ViewBuilder
     private var bottomBar: some View {
         if store.isPlaying {
-            EditToolbar(dimmed: true, rotationActive: currentRotationActive, canSave: canSave)
+            EditToolbar(dimmed: true, adjustActive: currentAdjustActive, canSave: canSave)
                 .padding(.bottom, 16)
         } else {
             EditToolbar(
-                rotationActive: currentRotationActive,
+                adjustActive: currentAdjustActive,
                 labelActive: currentLabelActive,
                 canSave: canSave,
-                onRotate: { rotateCurrentClip() },
+                onAdjust: { openAdjust() },
                 onLabel: { openLabelEditor() },
                 onDelete: { store.send(.deleteCurrentRequested) },
                 onSave: {
@@ -286,17 +286,17 @@ public struct TimelineView: View {
         }
     }
 
-    // MARK: - Rotation (session 환경 객체 사용)
+    // MARK: - Adjust (조정 화면 진입)
 
-    private var currentRotationActive: Bool {
+    /// 회전 또는 줌/이동이 적용돼 있으면 툴바 점 표시.
+    private var currentAdjustActive: Bool {
         guard let id = store.currentClip?.id else { return false }
-        return session.rotation(for: id) != .r0
+        return session.rotation(for: id) != .r0 || session.transform(for: id) != .fit
     }
 
-    private func rotateCurrentClip() {
+    private func openAdjust() {
         guard let id = store.currentClip?.id else { return }
-        session.cycleRotation(for: id)
-        store.send(.rotateCurrentTapped)
+        router.push(.clipAdjust(clipID: id))
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
