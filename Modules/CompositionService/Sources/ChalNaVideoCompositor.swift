@@ -58,17 +58,24 @@ final class ChalNaVideoCompositor: NSObject, AVVideoCompositing, @unchecked Send
         let renderRect = CGRect(origin: .zero, size: render)
         let src = CIImage(cvPixelBuffer: srcBuffer)
 
-        // y-down(natural→render) 변환을 CIImage 에 적용하는 헬퍼.
+        // y-down(natural→render) 변환을 CIImage(y-up) 에 적용하는 헬퍼.
         //
-        // 입력 t 는 "소스의 좌상단 픽셀(y-down) → render 의 좌상단 기준(y-down)" 매핑이다.
-        // `CIImage(cvPixelBuffer:)` 는 버퍼의 시각상 위쪽 행이 extent 위쪽(높은 y)에 오도록
-        // 들어오므로 t 를 그대로 적용하면 소스/전경의 좌상단이 그대로 보존된다.
-        // 마지막에 render 결과(y-down)를 CIImage 출력(y-up) 공간으로 한 번만 상하 뒤집으면 된다.
-        // (픽셀 테스트 `CompositorRenderTests` 로 4분면 비뒤집힘을 경험적으로 확정.)
+        // 입력 t 는 "소스의 좌상단 픽셀(y-down) → render 의 좌상단 기준(y-down)" 매핑이다
+        // (`AVFoundationCompositionService.transform(...)` 결과). 이는 AVFoundation 의
+        // layer-instruction `setTransform(t)` 가 기대하는 좌표계와 동일하다.
+        // 그러나 CoreImage 는 y-up(좌하단 원점)이라, 이 y-down 변환을 그대로 쓰면 상하가 뒤집힌다.
+        //
+        // 올바른 변환은 두 번의 flip 으로 좌표계를 맞춰주는 것:
+        //   combined = flipV(renderH) ∘ T ∘ flipV(srcH)
+        //   1) flipV(srcH): CIImage(y-up) 소스를 t 가 기대하는 y-down 소스 공간으로 변환
+        //   2) T:           y-down 소스 → y-down render
+        //   3) flipV(renderH): y-down render 결과를 다시 CIImage(y-up) 출력 공간으로 변환
+        // (source flip 누락 시 영상이 상하/좌우로 반전된다 — `CompositorOrientationTests` 가
+        //  layer-instruction 정석 경로를 oracle 로 비교 검증.)
         func placeYDown(_ image: CIImage, _ t: CGAffineTransform) -> CIImage {
-            // render 높이 기준 상하 뒤집기 (y-down → y-up).
+            let flipSrc = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: image.extent.height)
             let flipRender = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: render.height)
-            let combined = t.concatenating(flipRender)
+            let combined = flipSrc.concatenating(t).concatenating(flipRender)
             return image.transformed(by: combined)
         }
 
@@ -83,11 +90,14 @@ final class ChalNaVideoCompositor: NSObject, AVVideoCompositing, @unchecked Send
 
         var output = foreground.composited(over: background).cropped(to: renderRect)
 
-        // 라벨 오버레이: 이미 renderSize 로 미리 렌더한 "정상 방향(top-left)" 정적 이미지.
-        // `CIImage(cgImage:)` 는 시각상 위쪽 행을 extent 위쪽(높은 y)에 두므로, 이미 y-up 출력 공간과
-        // 정렬돼 있다. 추가 flip 없이 그대로 전경 위에 합성한다. (위/아래 가드 테스트로 확정.)
+        // 라벨 오버레이: 이미 renderSize 로 미리 렌더한 "정상 방향(top-left, visual-top=row0)" 정적 이미지.
+        // 전경/배경은 `placeYDown` 의 두 flip 으로 "소스 visual-top → 출력 visual-top" 이 되도록 맞춰져 있다.
+        // 반면 `CIImage(cgImage:)` 는 CGImage 의 visual-top 을 y-up CIImage 의 high-y 에 두므로, 그대로
+        // 합성하면 전경과 상하가 반대로 놓인다(라벨이 아래로 감). renderH 기준 한 번 flip 해 전경과 정렬한다.
+        // (`CompositorLabelTests` 의 TOP 라벨 위치 가드로 확정.)
         if let overlay = instruction.overlayImage {
-            let overlayCI = CIImage(cgImage: overlay)
+            let flipOverlay = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: render.height)
+            let overlayCI = CIImage(cgImage: overlay).transformed(by: flipOverlay)
             output = overlayCI.composited(over: output).cropped(to: renderRect)
         }
 

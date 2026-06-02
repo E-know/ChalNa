@@ -210,18 +210,16 @@ struct CompositorRenderTests {
             }) else {
                 throw NSError(domain: "CompositorRenderTests", code: 6, userInfo: [NSLocalizedDescriptionKey: "CGContext create failed"])
             }
-            // CGContext 는 y-up. 우리가 만든 1080×1920 캔버스의 좌상단을 row0 으로 맞추려면
-            // 이미지를 그대로 draw 하면 CGImage 가 y-down 으로 들어와 상하 반전된다.
-            // → 좌표를 일관되게 다루기 위해, draw 후 buffer 를 그대로 두고 rgb()에서 y 를 뒤집어 읽는다.
+            // `ctx.draw` 후 메모리 row 0 = 시각상 위쪽(top)이 된다. 따라서 top-down 좌표를
+            // 그대로(`cy = y`) 읽으면 화면 위쪽이 올바르게 샘플된다.
             ctx.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
             self.pixels = buffer
         }
 
-        /// top-down 좌표(y=0 이 화면 위쪽)로 RGB 샘플. CGContext 버퍼는 y-up 이므로 뒤집어 읽는다.
+        /// top-down 좌표(y=0 이 화면 위쪽)로 RGB 샘플. `ctx.draw` 후 메모리 row 0 = 시각상 위쪽이므로 `cy = y`.
         func rgb(x: Int, y: Int) -> (r: Int, g: Int, b: Int) {
             let cx = min(max(x, 0), width - 1)
-            let cyTopDown = min(max(y, 0), height - 1)
-            let cy = height - 1 - cyTopDown   // y-up 버퍼로 변환
+            let cy = min(max(y, 0), height - 1)
             let offset = cy * width * 4 + cx * 4
             return (Int(pixels[offset + 0]), Int(pixels[offset + 1]), Int(pixels[offset + 2]))
         }

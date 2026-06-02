@@ -229,11 +229,10 @@ struct CompositorLabelTests {
             self.pixels = buffer
         }
 
-        /// top-down 좌표(y=0 이 화면 위쪽)로 RGB 샘플. CGContext 버퍼는 y-up 이므로 뒤집어 읽는다.
+        /// top-down 좌표(y=0 이 화면 위쪽)로 RGB 샘플. `ctx.draw` 후 메모리 row 0 = 시각상 위쪽이므로 `cy = y`.
         func rgb(x: Int, y: Int) -> (r: Int, g: Int, b: Int) {
             let cx = min(max(x, 0), width - 1)
-            let cyTopDown = min(max(y, 0), height - 1)
-            let cy = height - 1 - cyTopDown
+            let cy = min(max(y, 0), height - 1)
             let offset = cy * width * 4 + cx * 4
             return (Int(pixels[offset + 0]), Int(pixels[offset + 1]), Int(pixels[offset + 2]))
         }
