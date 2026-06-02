@@ -208,7 +208,8 @@ public actor AVFoundationCompositionService: CompositionServicing {
                 naturalSize: naturalSize,
                 preferredTransform: preferredTransform,
                 rotation: userRotation,
-                renderSize: renderSize
+                renderSize: renderSize,
+                framing: .fit
             )
 
             let placedRange = CMTimeRange(start: cursor, duration: clipDuration)
@@ -597,74 +598,54 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
     // MARK: - Transform helper
 
-    private static let minDisplayDimension: CGFloat = 1.0
-
-    /// 한 클립이 renderSize 안에서 비율 유지된 채 최대 크기로 fit되어 가운데 정렬되도록 하는 affine transform.
-    /// 비율이 다르면 한 축에만 letterbox.
+    /// 한 클립을 renderSize 안에 aspectFit(=맞춤)으로 배치하고, 사용자 변환(scale·offset)을 추가 적용한 affine transform.
+    /// framing == .fit 이면 기존 맞춤 동작과 동일(회귀 가드).
     public static func transform(
         naturalSize: CGSize,
         preferredTransform: CGAffineTransform,
         rotation: ClipRotation,
-        renderSize: CGSize
+        renderSize: CGSize,
+        framing: ClipTransform
     ) -> CGAffineTransform {
-        // preferredTransform 적용 후 displaySize.
         let displayRect = CGRect(origin: .zero, size: naturalSize).applying(preferredTransform)
         let displaySize = CGSize(width: abs(displayRect.width), height: abs(displayRect.height))
-
-        // 사용자 회전 후 displaySize.
         let postRotationSize: CGSize = rotation.swapsAxes
             ? CGSize(width: displaySize.height, height: displaySize.width)
             : displaySize
 
-        // 합성 순서:
-        //   1) preferredTransform 적용된 좌표는 음수 영역에 있을 수 있어 (0,0)으로 끌어올리는 평행이동
-        //   2) 회전(원점 기준 rotate + 회전 후 음수 영역을 다시 (0,0)으로 끌어올리는 평행이동)
-        //   3) aspectFit scale (rotationNormalize 후 (0,0)–postRotationSize에 정렬된 사각형을 비율유지로 확대/축소)
-        //   4) scaledSize 기준 가운데 translate (한 축은 꽉, 다른 축은 letterbox)
-        let normalizeAfterPreferred = CGAffineTransform(
-            translationX: -displayRect.minX,
-            y: -displayRect.minY
-        )
+        let normalizeAfterPreferred = CGAffineTransform(translationX: -displayRect.minX, y: -displayRect.minY)
 
-        // 사용자 회전 적용. rotation을 (0,0) 기준에서 돌리면 사분면 밖으로 나가므로
-        // 다시 (0,0)으로 끌어올리는 보정을 더한다.
         let rotationMatrix = rotation.transform
         let rotatedRect = CGRect(origin: .zero, size: displaySize).applying(rotationMatrix)
-        let rotationNormalize = CGAffineTransform(
-            translationX: -rotatedRect.minX,
-            y: -rotatedRect.minY
-        )
+        let rotationNormalize = CGAffineTransform(translationX: -rotatedRect.minX, y: -rotatedRect.minY)
 
-        // aspectFit scale. 0 또는 NaN/Inf 가드.
-        let safeW = max(postRotationSize.width,  Self.minDisplayDimension)
-        let safeH = max(postRotationSize.height, Self.minDisplayDimension)
-        let fitScaleRaw = min(renderSize.width / safeW, renderSize.height / safeH)
-        let fitScale: CGFloat = (fitScaleRaw.isFinite && fitScaleRaw > 0) ? fitScaleRaw : 1.0
+        // fit 배율은 ClipFraming 과 공유. 사용자 배율(>=1)을 곱한다.
+        let fitScale = ClipFraming.fitScale(display: displaySize, rotation: rotation, render: renderSize)
+        let userScale = max(1.0, framing.scale)
+        let totalScale = fitScale * userScale
 
-        let scaledSize = CGSize(
-            width: postRotationSize.width * fitScale,
-            height: postRotationSize.height * fitScale
-        )
-        let scaleMatrix = CGAffineTransform(scaleX: fitScale, y: fitScale)
+        let scaledSize = CGSize(width: postRotationSize.width * totalScale,
+                                height: postRotationSize.height * totalScale)
+        let scaleMatrix = CGAffineTransform(scaleX: totalScale, y: totalScale)
+        let centerTranslate = CGAffineTransform(translationX: (renderSize.width - scaledSize.width) / 2,
+                                                y: (renderSize.height - scaledSize.height) / 2)
 
-        let centerTranslate = CGAffineTransform(
-            translationX: (renderSize.width - scaledSize.width) / 2,
-            y: (renderSize.height - scaledSize.height) / 2
-        )
+        // 사용자 이동(정규화 비율 → 픽셀). clamp 도 ClipFraming 공유.
+        let clampedFrac = ClipFraming.clampedOffset(framing.offset, display: displaySize,
+                                                    rotation: rotation, render: renderSize, scale: userScale)
+        let offsetTranslate = CGAffineTransform(translationX: clampedFrac.x * renderSize.width,
+                                                y: clampedFrac.y * renderSize.height)
 
-        // 적용 순서: 좌측에 곱한 행렬이 먼저 적용됨 (CGAffineTransform.concatenating(_) 의미).
-        // CGAffineTransform.concatenating(b) 은 self * b 라서, a.concatenating(b) = b ∘ a
-        // 즉 점에 a를 먼저, b를 나중에 적용. 따라서 아래처럼 누적한다.
         return preferredTransform
             .concatenating(normalizeAfterPreferred)
             .concatenating(rotationMatrix)
             .concatenating(rotationNormalize)
             .concatenating(scaleMatrix)
             .concatenating(centerTranslate)
+            .concatenating(offsetTranslate)
     }
 
-    /// 한 클립이 renderSize 안에서 aspectFit + 가운데 정렬됐을 때 차지하는 사각형.
-    /// `transform()` 과 동일한 fit-scale·center 계산을 공유한다. 가운데 정렬이라 y-up/y-down 무관.
+    /// 한 클립이 renderSize 안에서 aspectFit + 가운데 정렬됐을 때 차지하는 사각형(줌 미반영 = 라벨 기준).
     public static func placedRect(
         naturalSize: CGSize,
         preferredTransform: CGAffineTransform,
@@ -673,22 +654,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
     ) -> CGRect {
         let displayRect = CGRect(origin: .zero, size: naturalSize).applying(preferredTransform)
         let displaySize = CGSize(width: abs(displayRect.width), height: abs(displayRect.height))
-        let postRotationSize: CGSize = rotation.swapsAxes
-            ? CGSize(width: displaySize.height, height: displaySize.width)
-            : displaySize
-        let safeW = max(postRotationSize.width, minDisplayDimension)
-        let safeH = max(postRotationSize.height, minDisplayDimension)
-        let fitScaleRaw = min(renderSize.width / safeW, renderSize.height / safeH)
-        let fitScale: CGFloat = (fitScaleRaw.isFinite && fitScaleRaw > 0) ? fitScaleRaw : 1.0
-        let scaledSize = CGSize(
-            width: postRotationSize.width * fitScale,
-            height: postRotationSize.height * fitScale
-        )
-        let origin = CGPoint(
-            x: (renderSize.width - scaledSize.width) / 2,
-            y: (renderSize.height - scaledSize.height) / 2
-        )
-        return CGRect(origin: origin, size: scaledSize)
+        return ClipFraming.resolvedRect(display: displaySize, rotation: rotation, render: renderSize, transform: .fit)
     }
 
     /// 클립 이미지 사각형 기준 정규화 위치(라벨 중심, y=위→아래)를
