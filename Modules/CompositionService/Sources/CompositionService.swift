@@ -160,7 +160,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
         }
         var compAudioTrack: AVMutableCompositionTrack?
 
-        // 1) 출력 캔버스는 "가장 큰 oriented height"를 가진 클립의 W×H 비율 그대로.
+        // 1) 출력 캔버스는 항상 outputSize(9:16, 1080×1920) 고정.
         //    비율이 다른 클립은 `transform()`이 aspectFit + 가운데 정렬해 letterbox/pillarbox 처리.
         let renderSize = await Self.resolveRenderSize(clips: clips, rotations: rotations)
 
