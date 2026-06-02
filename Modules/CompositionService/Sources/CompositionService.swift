@@ -307,10 +307,11 @@ public actor AVFoundationCompositionService: CompositionServicing {
         return ""
     }()
 
-    /// 클립별 촬영일시를 설정에 따라 오버레이로 합성하는 `AVVideoCompositionCoreAnimationTool`.
+    /// 클립별 블러 배경(videoLayer 아래) + 촬영일시/커스텀 라벨(videoLayer 위)을 합성하는 `AVVideoCompositionCoreAnimationTool`.
+    /// - 배경: 각 클립 썸네일을 블러+aspectFill 해 9:16 여백을 채움. 자기 timeRange 동안만 보인다.
     /// - 시각 `HH:mm`: 큰 글씨(minDim×0.18), opacity 0.5
     /// - 날짜 `yyyy/MM/dd`: 작은 글씨(minDim×0.035), opacity 1.0
-    /// 표시 여부·위치는 `labelSettings`를 따른다. 각 라벨은 자신의 timeRange 동안만 보인다.
+    /// 라벨 표시 여부·위치는 `labelSettings`를 따른다. 각 라벨은 자신의 timeRange 동안만 보인다.
     /// 시각·날짜가 모두 켜져 있고 위치가 같으면 세로 스택(시각 위 / 날짜 아래)으로 묶어 배치한다.
     private static func makeBackdropAndLabelTool(
         renderSize: CGSize,
