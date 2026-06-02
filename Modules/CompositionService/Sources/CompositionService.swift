@@ -258,24 +258,36 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
     // MARK: - Date label overlay
 
-    /// 우측 하단 작은 라벨용 — 날짜만 (`yyyy/MM/dd`).
-    /// 사용자의 현재 타임존 · POSIX 로케일(ICU 의존 제거).
-    private static let dateOnlyFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = .current
-        f.dateFormat = "yyyy/MM/dd"
-        return f
-    }()
+    /// 앱에서 선택한 표시 언어(없으면 시스템)에 맞춘 오버레이 로케일.
+    /// 스위즐은 `Bundle` 만 바꾸므로 `Locale.current` 는 기기 언어를 반영한다.
+    /// 따라서 앱 선택 언어("appLanguage")를 직접 읽어 매핑한다.
+    private static func overlayLocale() -> Locale {
+        switch UserDefaults.standard.string(forKey: "appLanguage") {
+        case "ko": return Locale(identifier: "ko")
+        case "en": return Locale(identifier: "en")
+        case "ja": return Locale(identifier: "ja")
+        default:   return Locale.current
+        }
+    }
 
-    /// 화면 정중앙 큰 라벨용 — 시:분 (`HH:mm`).
-    private static let timeOnlyFormatter: DateFormatter = {
+    /// 우측 하단 작은 라벨용 — 날짜. 글리프-세이프 숫자 형식(로케일별 순서만 다름).
+    /// en: `MM/dd/yyyy`, 그 외(ko·ja): `yyyy/MM/dd`. 현재 타임존.
+    private static func dateOnlyFormatter(_ locale: Locale) -> DateFormatter {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
+        f.locale = locale
         f.timeZone = .current
-        f.dateFormat = "HH:mm"
+        f.dateFormat = (locale.language.languageCode?.identifier == "en") ? "MM/dd/yyyy" : "yyyy/MM/dd"
         return f
-    }()
+    }
+
+    /// 화면 정중앙 큰 라벨용 — 시:분. en: 12시간(`h:mm a`), 그 외: 24시간(`HH:mm`).
+    private static func timeOnlyFormatter(_ locale: Locale) -> DateFormatter {
+        let f = DateFormatter()
+        f.locale = locale
+        f.timeZone = .current
+        f.dateFormat = (locale.language.languageCode?.identifier == "en") ? "h:mm a" : "HH:mm"
+        return f
+    }
 
     /// `UIAppFonts`로 등록된 KERISKEDU 패밀리에서 Line(outline) 변형의 PostScript name 우선 선택.
     /// 매칭 실패 시 빈 문자열 → `UIFont(name:size:)`가 nil 리턴 → 시스템 폰트로 fallback.
@@ -344,9 +356,12 @@ public actor AVFoundationCompositionService: CompositionServicing {
         }
         #endif
 
+        let overlayLocale = overlayLocale()
+        let dateFmt = dateOnlyFormatter(overlayLocale)
+        let timeFmt = timeOnlyFormatter(overlayLocale)
         for entry in entries {
-            let dateText = dateOnlyFormatter.string(from: entry.capturedAt)
-            let timeText = timeOnlyFormatter.string(from: entry.capturedAt)
+            let dateText = dateFmt.string(from: entry.capturedAt)
+            let timeText = timeFmt.string(from: entry.capturedAt)
 
             if stacked {
                 let timeSize = measureOverlayText(timeText, fontSize: timeFontSize)

@@ -146,7 +146,7 @@ public struct FilmDetailView: View {
                 .foregroundColor(ChalNaColor.ink)
                 .lineLimit(2)
 
-            Text(Self.dateFormatter.string(from: film.createdAt))
+            Text(film.createdAt, format: .dateTime.year().month().day().weekday())
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
                 .foregroundColor(ChalNaColor.taupe)
         }
@@ -277,13 +277,6 @@ public struct FilmDetailView: View {
     }
 
     // MARK: - Formatters
-
-    private static let dateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "ko_KR")
-        f.dateFormat = "yyyy년 M월 d일 EEEE"
-        return f
-    }()
 
     private static func durationLabel(_ seconds: Double) -> String {
         let total = Int(seconds.rounded())
