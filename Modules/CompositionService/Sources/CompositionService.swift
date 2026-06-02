@@ -35,10 +35,11 @@ public enum ExportError: LocalizedError {
 }
 
 public protocol CompositionServicing: Sendable {
-    /// 클립 배열·회전·자동 라벨 설정·클립별 사용자 라벨을 받아 mp4를 만들고 진행률/완료/실패를 스트림으로 흘려보낸다.
+    /// 클립 배열·회전·클립별 변환·자동 라벨 설정·클립별 사용자 라벨을 받아 mp4를 만든다.
     func export(
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation],
+        transforms: [Clip.ID: ClipTransform],
         labelSettings: LabelSettings,
         clipLabels: [Clip.ID: ClipLabel]
     ) -> AsyncStream<ExportEvent>
@@ -47,15 +48,15 @@ public protocol CompositionServicing: Sendable {
 public extension CompositionServicing {
     /// 사용자 라벨 없는 호출 → 빈 라벨(현행 동작).
     func export(clips: [Clip], rotations: [Clip.ID: ClipRotation], labelSettings: LabelSettings) -> AsyncStream<ExportEvent> {
-        export(clips: clips, rotations: rotations, labelSettings: labelSettings, clipLabels: [:])
+        export(clips: clips, rotations: rotations, transforms: [:], labelSettings: labelSettings, clipLabels: [:])
     }
     /// 라벨 설정 없는 호출 → 기본값.
     func export(clips: [Clip], rotations: [Clip.ID: ClipRotation]) -> AsyncStream<ExportEvent> {
-        export(clips: clips, rotations: rotations, labelSettings: .default, clipLabels: [:])
+        export(clips: clips, rotations: rotations, transforms: [:], labelSettings: .default, clipLabels: [:])
     }
     /// 회전·라벨 설정 없는 호출.
     func export(clips: [Clip]) -> AsyncStream<ExportEvent> {
-        export(clips: clips, rotations: [:], labelSettings: .default, clipLabels: [:])
+        export(clips: clips, rotations: [:], transforms: [:], labelSettings: .default, clipLabels: [:])
     }
 }
 
@@ -66,6 +67,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
     public nonisolated func export(
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation],
+        transforms: [Clip.ID: ClipTransform],
         labelSettings: LabelSettings,
         clipLabels: [Clip.ID: ClipLabel]
     ) -> AsyncStream<ExportEvent> {
@@ -75,7 +77,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
                     continuation.finish()
                     return
                 }
-                await self.run(clips: clips, rotations: rotations, labelSettings: labelSettings, clipLabels: clipLabels, continuation: continuation)
+                await self.run(clips: clips, rotations: rotations, transforms: transforms, labelSettings: labelSettings, clipLabels: clipLabels, continuation: continuation)
             }
             continuation.onTermination = { _ in task.cancel() }
         }
@@ -86,12 +88,13 @@ public actor AVFoundationCompositionService: CompositionServicing {
     private func run(
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation],
+        transforms: [Clip.ID: ClipTransform],
         labelSettings: LabelSettings,
         clipLabels: [Clip.ID: ClipLabel],
         continuation: AsyncStream<ExportEvent>.Continuation
     ) async {
         do {
-            let built = try await buildComposition(clips: clips, rotations: rotations, labelSettings: labelSettings, clipLabels: clipLabels)
+            let built = try await buildComposition(clips: clips, rotations: rotations, transforms: transforms, labelSettings: labelSettings, clipLabels: clipLabels)
             guard built.hasContent else {
                 throw ExportError.noVideoClips
             }
@@ -148,6 +151,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
     private func buildComposition(
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation],
+        transforms: [Clip.ID: ClipTransform],
         labelSettings: LabelSettings,
         clipLabels: [Clip.ID: ClipLabel]
     ) async throws -> BuiltComposition {
@@ -209,7 +213,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
                 preferredTransform: preferredTransform,
                 rotation: userRotation,
                 renderSize: renderSize,
-                framing: .fit
+                framing: transforms[clip.id] ?? .fit
             )
 
             let placedRange = CMTimeRange(start: cursor, duration: clipDuration)
