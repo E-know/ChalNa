@@ -3,10 +3,10 @@
 <rect y="36" width="560" height="468" rx="24" fill="white"/>
 <g clip-path="url(#clip0_188_2164)">
 <rect width="300" height="300" transform="translate(180.711 83) rotate(17)" fill="#462DE2"/>
-<circle cx="180.711" cy="83.0002" r="150" transform="rotate(17 180.711 83.0002)" fill="#FCFCFC"/>
-<circle cx="467.381" cy="170.295" r="150" transform="rotate(17 467.381 170.295)" fill="#FCFCFC"/>
-<circle cx="93.0001" cy="369.891" r="150" transform="rotate(17 93.0001 369.891)" fill="#FCFCFC"/>
-<circle cx="379.891" cy="457.603" r="150" transform="rotate(17 379.891 457.603)" fill="#FCFCFC"/>
+<circle cx="180.711" cy="83.0002" r="150" transform="rotate(17 180.711 83.0002)" fill="white"/>
+<circle cx="467.381" cy="170.295" r="150" transform="rotate(17 467.381 170.295)" fill="white"/>
+<circle cx="93.0001" cy="369.891" r="150" transform="rotate(17 93.0001 369.891)" fill="white"/>
+<circle cx="379.891" cy="457.603" r="150" transform="rotate(17 379.891 457.603)" fill="white"/>
 </g>
 <defs>
 <clipPath id="clip0_188_2164">
