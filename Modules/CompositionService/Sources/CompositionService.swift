@@ -582,65 +582,17 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
     // MARK: - RenderSize
 
-    /// 출력 캔버스 결정 — "비율을 최대한 길게(가장 큰 높이를 가진 클립 기준)":
-    /// 1) 모든 클립의 oriented size를 모은다 (사용자 회전 r90/r270이 axes를 swap한 뒤).
-    /// 2) 그 중 **height가 가장 큰 클립의 W × H를 그대로 캔버스로 사용**.
-    ///    동률은 처음 등장한 클립이 우선 (덮어쓰기 안 함).
-    /// 3) mp4 인코더가 짝수 픽셀을 선호하므로 2의 배수로 스냅(올림).
-    /// 4) 모든 클립의 사이즈 추출 실패 시 fallback 9:16 세로(1080×1920).
-    ///
-    /// 비율이 다른 클립은 `transform()`이 aspectFit + 가운데 정렬해 자동 letterbox/pillarbox 처리한다.
+    /// 최종 출력 캔버스 — 9:16 세로 고정.
+    public static let outputSize = CGSize(width: 1080, height: 1920)
+
+    /// 출력 캔버스는 입력 클립과 무관하게 항상 `outputSize`(1080×1920).
+    /// 비율이 다른 클립은 `transform()` 이 aspectFit + 가운데 정렬로 자동 letterbox/pillarbox 처리하고,
+    /// 남는 여백은 블러 배경 레이어가 채운다. (시그니처는 호출부 호환을 위해 유지)
     public static func resolveRenderSize(
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation]
     ) async -> CGSize {
-        let fallback = CGSize(width: 1080, height: 1920)
-        var best: CGSize? = nil
-        var bestHeight: CGFloat = 0
-
-        for clip in clips {
-            guard let raw = await effectiveSize(for: clip) else { continue }
-            let rot = rotations[clip.id] ?? .r0
-            let oriented = rot.swapsAxes
-                ? CGSize(width: raw.height, height: raw.width)
-                : raw
-            if oriented.height > bestHeight {     // 동률은 갱신 안 함 → 첫 등장 우선
-                bestHeight = oriented.height
-                best = oriented
-            }
-        }
-
-        guard let pick = best else { return fallback }
-        return CGSize(width: snapEven(pick.width), height: snapEven(pick.height))
-    }
-
-    /// 정수 픽셀 중에서 2의 배수로 절상 스냅. H.264 인코더의 짝수 dim 선호를 만족시키기 위해.
-    private static func snapEven(_ v: CGFloat) -> CGFloat {
-        let r = round(v)
-        return r.truncatingRemainder(dividingBy: 2) == 0 ? r : r + 1
-    }
-
-    /// 한 클립의 "preferredTransform 적용 후 displaySize"를 계산.
-    /// 1순위: Clip.displaySize (PHAsset에서 추출됨), 2순위: AVAsset 트랙에서 직접 로드.
-    /// 둘 다 실패하면 nil. width/height가 0 이하면 무효 처리.
-    private static func effectiveSize(for clip: Clip) async -> CGSize? {
-        if let size = clip.displaySize, size.width > 0, size.height > 0 {
-            return size
-        }
-        if let url = clip.videoURL {
-            let asset = AVURLAsset(url: url)
-            if let track = (try? await asset.loadTracks(withMediaType: .video))?.first {
-                let natural = (try? await track.load(.naturalSize)) ?? .zero
-                let transform = (try? await track.load(.preferredTransform)) ?? .identity
-                let display = natural.applying(transform)
-                let w = abs(display.width)
-                let h = abs(display.height)
-                if w > 0, h > 0 {
-                    return CGSize(width: w, height: h)
-                }
-            }
-        }
-        return nil
+        outputSize
     }
 
     // MARK: - Transform helper
