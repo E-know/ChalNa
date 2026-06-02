@@ -171,7 +171,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
         // 2) 시간순으로 트랙을 채우면서 클립별 layerInstruction 누적.
         var cursor = CMTime.zero
-        var layerInstructions: [(timeRange: CMTimeRange, transform: CGAffineTransform, capturedAt: Date, clipID: Clip.ID, placedRect: CGRect, thumbnailData: Data?)] = []
+        var layerInstructions: [(timeRange: CMTimeRange, transform: CGAffineTransform, backgroundTransform: CGAffineTransform, capturedAt: Date, clipID: Clip.ID, placedRect: CGRect, thumbnailData: Data?)] = []
 
         for clip in clips {
             guard let videoURL = clip.videoURL else { continue }
@@ -217,6 +217,13 @@ public actor AVFoundationCompositionService: CompositionServicing {
                 framing: transforms[clip.id] ?? .fit
             )
 
+            let backgroundTransform = Self.fillTransform(
+                naturalSize: naturalSize,
+                preferredTransform: preferredTransform,
+                rotation: userRotation,
+                renderSize: renderSize
+            )
+
             let placedRange = CMTimeRange(start: cursor, duration: clipDuration)
             let pRect = Self.placedRect(
                 naturalSize: naturalSize,
@@ -224,35 +231,33 @@ public actor AVFoundationCompositionService: CompositionServicing {
                 rotation: userRotation,
                 renderSize: renderSize
             )
-            layerInstructions.append((placedRange, transform, clip.capturedAt, clip.id, pRect, clip.thumbnailData))
+            layerInstructions.append((placedRange, transform, backgroundTransform, clip.capturedAt, clip.id, pRect, clip.thumbnailData))
 
             cursor = CMTimeAdd(cursor, clipDuration)
         }
 
         let hasContent = cursor > .zero
 
-        // 3) AVMutableVideoComposition 구성.
+        // 3) AVMutableVideoComposition 구성. 여백(letterbox)을 클립의 블러 필로 채우기 위해
+        //    커스텀 컴포지터(`ChalNaVideoCompositor`)와 클립별 `ChalNaCompositionInstruction` 을 쓴다.
         let videoComposition = AVMutableVideoComposition()
         videoComposition.renderSize = renderSize
         videoComposition.frameDuration = CMTime(value: 1, timescale: 30)
+        videoComposition.customVideoCompositorClass = ChalNaVideoCompositor.self
+        let blurRadius = min(renderSize.width, renderSize.height) * 0.04
         videoComposition.instructions = layerInstructions.map { entry in
-            let inst = AVMutableVideoCompositionInstruction()
-            inst.timeRange = entry.timeRange
-            let layer = AVMutableVideoCompositionLayerInstruction(assetTrack: compVideoTrack)
-            layer.setTransform(entry.transform, at: entry.timeRange.start)
-            inst.layerInstructions = [layer]
-            return inst
-        }
-
-        // 4) 블러 배경 + 라벨 오버레이. 배경은 항상 필요하므로 hasContent 면 부착.
-        if hasContent {
-            videoComposition.animationTool = Self.makeBackdropAndLabelTool(
-                renderSize: renderSize,
-                entries: layerInstructions.map { ($0.timeRange, $0.capturedAt, $0.clipID, $0.placedRect, $0.thumbnailData) },
-                labelSettings: labelSettings,
-                clipLabels: clipLabels
+            ChalNaCompositionInstruction(
+                timeRange: entry.timeRange,
+                trackID: compVideoTrack.trackID,
+                foreground: entry.transform,
+                background: entry.backgroundTransform,
+                blurRadius: blurRadius,
+                scrimAlpha: 0.18
             )
         }
+
+        // NOTE: 라벨(시간/날짜/커스텀) 오버레이는 후속 작업에서 다시 추가한다.
+        // `makeBackdropAndLabelTool`/`makeBlurredBackdropLayer` 등 라벨 헬퍼는 그때 재사용하기 위해 남겨둔다(현재 미사용).
 
         return BuiltComposition(
             composition: composition,
@@ -685,6 +690,46 @@ public actor AVFoundationCompositionService: CompositionServicing {
             .concatenating(scaleMatrix)
             .concatenating(centerTranslate)
             .concatenating(offsetTranslate)
+    }
+
+    /// `transform()` 의 aspectFILL 버전. 배경 블러 필 전용 — 항상 캔버스를 꽉 채우고(중앙) 사용자 scale/offset 은 무시한다.
+    /// preferredTransform·회전 처리는 `transform()` 과 동일, fit 의 `min(...)` 배율만 `max(...)` 로 교체.
+    public static func fillTransform(
+        naturalSize: CGSize,
+        preferredTransform: CGAffineTransform,
+        rotation: ClipRotation,
+        renderSize: CGSize
+    ) -> CGAffineTransform {
+        let displayRect = CGRect(origin: .zero, size: naturalSize).applying(preferredTransform)
+        let displaySize = CGSize(width: abs(displayRect.width), height: abs(displayRect.height))
+        let postRotationSize: CGSize = rotation.swapsAxes
+            ? CGSize(width: displaySize.height, height: displaySize.width)
+            : displaySize
+
+        let normalizeAfterPreferred = CGAffineTransform(translationX: -displayRect.minX, y: -displayRect.minY)
+
+        let rotationMatrix = rotation.transform
+        let rotatedRect = CGRect(origin: .zero, size: displaySize).applying(rotationMatrix)
+        let rotationNormalize = CGAffineTransform(translationX: -rotatedRect.minX, y: -rotatedRect.minY)
+
+        // fill 배율: 짧은 축이 아니라 긴 축 기준으로 캔버스를 덮도록 max.
+        let w = max(postRotationSize.width, 1)
+        let h = max(postRotationSize.height, 1)
+        let rawScale = max(renderSize.width / w, renderSize.height / h)
+        let fillScale = (rawScale.isFinite && rawScale > 0) ? rawScale : 1
+
+        let scaledSize = CGSize(width: postRotationSize.width * fillScale,
+                                height: postRotationSize.height * fillScale)
+        let scaleMatrix = CGAffineTransform(scaleX: fillScale, y: fillScale)
+        let centerTranslate = CGAffineTransform(translationX: (renderSize.width - scaledSize.width) / 2,
+                                                y: (renderSize.height - scaledSize.height) / 2)
+
+        return preferredTransform
+            .concatenating(normalizeAfterPreferred)
+            .concatenating(rotationMatrix)
+            .concatenating(rotationNormalize)
+            .concatenating(scaleMatrix)
+            .concatenating(centerTranslate)
     }
 
     /// 한 클립이 renderSize 안에서 aspectFit + 가운데 정렬됐을 때 차지하는 사각형(줌 미반영 = 라벨 기준).
