@@ -3,6 +3,7 @@ import Models
 import AVFoundation
 import CoreGraphics
 import QuartzCore
+import CoreImage
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -170,7 +171,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
         // 2) 시간순으로 트랙을 채우면서 클립별 layerInstruction 누적.
         var cursor = CMTime.zero
-        var layerInstructions: [(timeRange: CMTimeRange, transform: CGAffineTransform, capturedAt: Date, clipID: Clip.ID, placedRect: CGRect)] = []
+        var layerInstructions: [(timeRange: CMTimeRange, transform: CGAffineTransform, capturedAt: Date, clipID: Clip.ID, placedRect: CGRect, thumbnailData: Data?)] = []
 
         for clip in clips {
             guard let videoURL = clip.videoURL else { continue }
@@ -223,7 +224,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
                 rotation: userRotation,
                 renderSize: renderSize
             )
-            layerInstructions.append((placedRange, transform, clip.capturedAt, clip.id, pRect))
+            layerInstructions.append((placedRange, transform, clip.capturedAt, clip.id, pRect, clip.thumbnailData))
 
             cursor = CMTimeAdd(cursor, clipDuration)
         }
@@ -243,12 +244,11 @@ public actor AVFoundationCompositionService: CompositionServicing {
             return inst
         }
 
-        // 4) 각 클립 placedRange 동안 라벨 오버레이 (자동 시간/날짜 + 사용자 커스텀 라벨).
-        let hasVisibleCustomLabel = clipLabels.values.contains { $0.isVisible }
-        if hasContent && (labelSettings.timeEnabled || labelSettings.dateEnabled || hasVisibleCustomLabel) {
-            videoComposition.animationTool = Self.makeDateLabelAnimationTool(
+        // 4) 블러 배경 + 라벨 오버레이. 배경은 항상 필요하므로 hasContent 면 부착.
+        if hasContent {
+            videoComposition.animationTool = Self.makeBackdropAndLabelTool(
                 renderSize: renderSize,
-                entries: layerInstructions.map { ($0.timeRange, $0.capturedAt, $0.clipID, $0.placedRect) },
+                entries: layerInstructions.map { ($0.timeRange, $0.capturedAt, $0.clipID, $0.placedRect, $0.thumbnailData) },
                 labelSettings: labelSettings,
                 clipLabels: clipLabels
             )
@@ -312,9 +312,9 @@ public actor AVFoundationCompositionService: CompositionServicing {
     /// - 날짜 `yyyy/MM/dd`: 작은 글씨(minDim×0.035), opacity 1.0
     /// 표시 여부·위치는 `labelSettings`를 따른다. 각 라벨은 자신의 timeRange 동안만 보인다.
     /// 시각·날짜가 모두 켜져 있고 위치가 같으면 세로 스택(시각 위 / 날짜 아래)으로 묶어 배치한다.
-    private static func makeDateLabelAnimationTool(
+    private static func makeBackdropAndLabelTool(
         renderSize: CGSize,
-        entries: [(timeRange: CMTimeRange, capturedAt: Date, clipID: Clip.ID, placedRect: CGRect)],
+        entries: [(timeRange: CMTimeRange, capturedAt: Date, clipID: Clip.ID, placedRect: CGRect, thumbnailData: Data?)],
         labelSettings: LabelSettings,
         clipLabels: [Clip.ID: ClipLabel]
     ) -> AVVideoCompositionCoreAnimationTool {
@@ -323,6 +323,15 @@ public actor AVFoundationCompositionService: CompositionServicing {
         parentLayer.frame = CGRect(origin: .zero, size: renderSize)
         videoLayer.frame = parentLayer.frame
         parentLayer.addSublayer(videoLayer)
+
+        #if canImport(UIKit)
+        // 각 클립의 블러 배경을 videoLayer 아래에 깔고, 자기 timeRange 동안만 보이게 한다.
+        for entry in entries {
+            if let backdrop = makeBlurredBackdropLayer(thumbnailData: entry.thumbnailData, renderSize: renderSize, timeRange: entry.timeRange) {
+                parentLayer.insertSublayer(backdrop, below: videoLayer)
+            }
+        }
+        #endif
 
         let minDim = min(renderSize.width, renderSize.height)
         let dateFontSize = minDim * LabelLayout.dateFontFraction
@@ -335,7 +344,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
         #if canImport(UIKit)
         // 자동 시간·날짜 레이어 추가 "뒤"에 호출 — 커스텀 라벨을 그 위에 얹는다.
-        func addCustomLabel(for entry: (timeRange: CMTimeRange, capturedAt: Date, clipID: Clip.ID, placedRect: CGRect)) {
+        func addCustomLabel(for entry: (timeRange: CMTimeRange, capturedAt: Date, clipID: Clip.ID, placedRect: CGRect, thumbnailData: Data?)) {
             let custom = clipLabels[entry.clipID] ?? .default
             guard custom.isVisible else { return }
             for layer in makeCustomLabelLayers(
@@ -582,6 +591,34 @@ public actor AVFoundationCompositionService: CompositionServicing {
         show.fillMode = .removed
         show.isRemovedOnCompletion = false
         layer.add(show, forKey: "show")
+    }
+
+    private static let backdropCIContext = CIContext(options: nil)
+
+    /// 클립 썸네일을 가우시안 블러 → 캔버스 aspectFill 로 깐 배경 레이어(+어두운 스크림).
+    /// timeRange 동안만 opacity=1. 썸네일이 없으면 nil(배경 생략 = 검정).
+    private static func makeBlurredBackdropLayer(thumbnailData: Data?, renderSize: CGSize, timeRange: CMTimeRange) -> CALayer? {
+        guard let data = thumbnailData, let ui = UIImage(data: data), let cg = ui.cgImage else { return nil }
+        let ci = CIImage(cgImage: cg)
+        guard let blur = CIFilter(name: "CIGaussianBlur") else { return nil }
+        blur.setValue(ci, forKey: kCIInputImageKey)
+        blur.setValue(min(renderSize.width, renderSize.height) * 0.04, forKey: kCIInputRadiusKey)
+        guard let out = blur.outputImage,
+              let rendered = backdropCIContext.createCGImage(out.cropped(to: ci.extent), from: ci.extent) else { return nil }
+
+        let layer = CALayer()
+        layer.frame = CGRect(origin: .zero, size: renderSize)
+        layer.contents = rendered
+        layer.contentsGravity = .resizeAspectFill
+        layer.masksToBounds = true
+        layer.opacity = 0
+        addShowAnimation(to: layer, timeRange: timeRange)
+
+        let scrim = CALayer()
+        scrim.frame = layer.bounds
+        scrim.backgroundColor = UIColor.black.withAlphaComponent(0.18).cgColor
+        layer.addSublayer(scrim)
+        return layer
     }
     #endif
 
