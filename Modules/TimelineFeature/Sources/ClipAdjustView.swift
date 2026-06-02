@@ -13,15 +13,14 @@ public struct ClipAdjustView: View {
 
     let store: StoreOf<ClipAdjustFeature>
     @State private var playback = ClipPlaybackController()
-    @GestureState private var gestureScale: CGFloat = 1
-    @GestureState private var gestureDrag: CGSize = .zero
+    @State private var working: ClipTransform? = nil
 
     public init(store: StoreOf<ClipAdjustFeature>) {
         self.store = store
     }
 
     private static let render = CGSize(width: 1080, height: 1920)
-    private static let minScale: CGFloat = 1.0
+    private static let minScale: CGFloat = 0.5
     private static let maxScale: CGFloat = 4.0
 
     private var clip: Clip? { session.clips.first { $0.id == store.clipID } }
@@ -74,7 +73,7 @@ public struct ClipAdjustView: View {
         GeometryReader { proxy in
             let box = LabelBoxGeometry.fittedBox(aspect: 9.0 / 16.0, in: proxy.size)
             let factor = box.width / Self.render.width
-            let live = liveTransform(viewBox: box)
+            let live = working ?? committed
             let rrect = ClipFraming.resolvedRect(display: displaySize, rotation: rotation, render: Self.render, transform: live)
 
             ZStack {
@@ -94,18 +93,14 @@ public struct ClipAdjustView: View {
             .frame(width: box.width, height: box.height)
             .clipped()
             .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous))
-            .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
-            .gesture(
-                SimultaneousGesture(
-                    MagnificationGesture().updating($gestureScale) { v, s, _ in s = v },
-                    DragGesture().updating($gestureDrag) { v, s, _ in s = v.translation }
+            .overlay(
+                PinchPanGesture(
+                    onChange: { handleGestureChange($0, $1, viewBox: box) },
+                    onEnded: { commitWorking() }
                 )
-                .onEnded { value in
-                    let magnify = value.first ?? 1
-                    let drag = value.second?.translation ?? .zero
-                    commitGesture(magnify: magnify, drag: drag, viewBox: box)
-                }
+                .frame(width: box.width, height: box.height)
             )
+            .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
         }
         .aspectRatio(9.0 / 16.0, contentMode: .fit)
         .padding(.horizontal, 24)
@@ -133,7 +128,7 @@ public struct ClipAdjustView: View {
             .buttonStyle(.chalNaOutlined)
 
             Button { reset() } label: {
-                Text("맞춤으로 리셋")
+                Text("위치 초기화")
             }
             .buttonStyle(.chalNaOutlined)
         }
@@ -151,25 +146,22 @@ public struct ClipAdjustView: View {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
-    private func liveTransform(viewBox: CGSize) -> ClipTransform {
-        let scale = min(max(committed.scale * gestureScale, Self.minScale), Self.maxScale)
-        let fx = viewBox.width > 0 ? gestureDrag.width / viewBox.width : 0
-        let fy = viewBox.height > 0 ? gestureDrag.height / viewBox.height : 0
-        let offset = ClipFraming.clampedOffset(
-            CGPoint(x: committed.offset.x + fx, y: committed.offset.y + fy),
-            display: displaySize, rotation: rotation, render: Self.render, scale: scale
+    private func handleGestureChange(_ scaleFactor: CGFloat, _ translation: CGSize, viewBox: CGSize) {
+        let base = working ?? committed
+        let newScale = min(max(base.scale * scaleFactor, Self.minScale), Self.maxScale)
+        let fx = viewBox.width > 0 ? translation.width / viewBox.width : 0
+        let fy = viewBox.height > 0 ? translation.height / viewBox.height : 0
+        let newOffset = ClipFraming.clampedOffset(
+            CGPoint(x: base.offset.x + fx, y: base.offset.y + fy),
+            display: displaySize, rotation: rotation, render: Self.render, scale: newScale
         )
-        return ClipTransform(scale: scale, offset: offset)
+        working = ClipTransform(scale: newScale, offset: newOffset)
     }
 
-    private func commitGesture(magnify: CGFloat, drag: CGSize, viewBox: CGSize) {
-        let scale = min(max(committed.scale * magnify, Self.minScale), Self.maxScale)
-        let fx = viewBox.width > 0 ? drag.width / viewBox.width : 0
-        let fy = viewBox.height > 0 ? drag.height / viewBox.height : 0
-        let offset = ClipFraming.clampedOffset(
-            CGPoint(x: committed.offset.x + fx, y: committed.offset.y + fy),
-            display: displaySize, rotation: rotation, render: Self.render, scale: scale
-        )
-        session.setTransform(ClipTransform(scale: scale, offset: offset), for: store.clipID)
+    private func commitWorking() {
+        if let working {
+            session.setTransform(working, for: store.clipID)
+            self.working = nil
+        }
     }
 }
