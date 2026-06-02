@@ -166,7 +166,7 @@ public struct ExportView: View {
         case .failed:           290
         }
         let envelope = max(available - reservedHeight, 200)
-        let widthFromHeight = (envelope - 60) * 16 / 9
+        let widthFromHeight = (envelope - 60) * 9 / 16
         return min(max(widthFromHeight, 240), 360)
     }
 
@@ -181,7 +181,7 @@ public struct ExportView: View {
                         store.send(.playerPresentedChanged(true))
                     } label: {
                         clip.thumbnailView()
-                            .frame(width: width, height: width * 9 / 16)
+                            .frame(width: width, height: width * 16 / 9)
                             .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous))
                             .overlay(
                                 RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
