@@ -48,6 +48,7 @@ public struct RootView: View {
         case let .labelSettings(s): LabelSettingsView(store: s)
         case let .labelPosition(s): LabelPositionPickerView(store: s)
         case let .support(s):       SupportView(store: s)
+        case let .clipAdjust(s):    ClipAdjustView(store: s)
         }
     }
 
@@ -70,6 +71,8 @@ public struct RootView: View {
                 store.send(.routerPushedLabelPosition(kind: kind))
             case .support:
                 store.send(.routerPushedSupport)
+            case let .clipAdjust(clipID):
+                store.send(.routerPushedClipAdjust(clipID: clipID))
             }
         }
         router.popHandler = { [store] in store.send(.routerPopped) }
