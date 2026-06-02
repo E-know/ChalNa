@@ -48,7 +48,7 @@ public struct ExportView: View {
         .chalNaScreen()
         .onAppear {
             guard store.phase == .idle else { return }
-            store.send(.startExport(clips: session.clips, rotations: session.rotations, clipLabels: session.labels))
+            store.send(.startExport(clips: session.clips, rotations: session.rotations, transforms: session.transforms, clipLabels: session.labels))
         }
         .onDisappear {
             store.send(.dismissTapped)
@@ -441,7 +441,7 @@ public struct ExportView: View {
     private var paperFailedCTAs: some View {
         VStack(spacing: 12) {
             Button {
-                store.send(.retryTapped(clips: session.clips, rotations: session.rotations, clipLabels: session.labels))
+                store.send(.retryTapped(clips: session.clips, rotations: session.rotations, transforms: session.transforms, clipLabels: session.labels))
             } label: {
                 HStack(spacing: 8) {
                     ChalNaIcon(.plus, size: 14)
@@ -462,7 +462,7 @@ public struct ExportView: View {
         GlassEffectContainer(spacing: 12) {
             VStack(spacing: 12) {
                 Button {
-                    store.send(.retryTapped(clips: session.clips, rotations: session.rotations, clipLabels: session.labels))
+                    store.send(.retryTapped(clips: session.clips, rotations: session.rotations, transforms: session.transforms, clipLabels: session.labels))
                 } label: {
                     HStack(spacing: 8) {
                         ChalNaIcon(.plus, size: 14)
