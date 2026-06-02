@@ -29,7 +29,7 @@ public struct ExportView: View {
             GeometryReader { proxy in
                 VStack(spacing: 0) {
                     cover(width: coverWidth(forAvailableHeight: proxy.size.height))
-                        .padding(.top, 16)
+                        .padding(.top, 28)
                         .padding(.horizontal, 32)
 
                     statusBlock
