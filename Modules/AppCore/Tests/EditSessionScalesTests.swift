@@ -36,7 +36,7 @@ struct EditSessionScalesTests {
         s.setTransform(ClipTransform(scale: 2), for: c.id)
         s.replace(clips: [makeClip()], title: "x")
         #expect(s.transform(for: c.id) == .fit)
-        #expect(s.scales.isEmpty)
+        #expect(s.transforms.isEmpty)
     }
 
     @Test func testClearClearsScales() {
@@ -44,6 +44,6 @@ struct EditSessionScalesTests {
         let c = makeClip()
         s.setTransform(ClipTransform(scale: 2), for: c.id)
         s.clear()
-        #expect(s.scales.isEmpty)
+        #expect(s.transforms.isEmpty)
     }
 }

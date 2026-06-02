@@ -12,20 +12,20 @@ public final class EditSession {
     /// 클립별 사용자 라벨. dict miss = `.default`(빈 라벨).
     public var labels: [Clip.ID: ClipLabel]
     /// 클립별 사용자 변환(줌/이동). dict miss = `.fit`.
-    public var scales: [Clip.ID: ClipTransform]
+    public var transforms: [Clip.ID: ClipTransform]
 
     public init(
         title: String = "",
         clips: [Clip] = [],
         rotations: [Clip.ID: ClipRotation] = [:],
         labels: [Clip.ID: ClipLabel] = [:],
-        scales: [Clip.ID: ClipTransform] = [:]
+        transforms: [Clip.ID: ClipTransform] = [:]
     ) {
         self.title = title
         self.clips = clips
         self.rotations = rotations
         self.labels = labels
-        self.scales = scales
+        self.transforms = transforms
     }
 
     public func replace(clips: [Clip], title: String) {
@@ -33,7 +33,7 @@ public final class EditSession {
         self.title = title
         self.rotations = [:]
         self.labels = [:]
-        self.scales = [:]
+        self.transforms = [:]
     }
 
     public func clear() {
@@ -41,7 +41,7 @@ public final class EditSession {
         title = ""
         rotations = [:]
         labels = [:]
-        scales = [:]
+        transforms = [:]
     }
 
     // MARK: - Rotation
@@ -68,14 +68,14 @@ public final class EditSession {
     // MARK: - Transform (zoom/offset)
 
     public func transform(for id: Clip.ID) -> ClipTransform {
-        scales[id] ?? .fit
+        transforms[id] ?? .fit
     }
 
     public func setTransform(_ transform: ClipTransform, for id: Clip.ID) {
-        scales[id] = transform
+        transforms[id] = transform
     }
 
     public func resetTransform(for id: Clip.ID) {
-        scales[id] = nil
+        transforms[id] = nil
     }
 }
