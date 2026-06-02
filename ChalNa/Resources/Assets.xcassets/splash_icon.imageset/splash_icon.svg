@@ -1,17 +1,16 @@
-<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="1024" height="1024" fill="#462DE2"/>
-<rect x="280" y="242" width="95" height="71" rx="24" fill="white"/>
-<rect x="232" y="278" width="560" height="468" rx="24" fill="white"/>
-<g clip-path="url(#clip0_185_2183)">
-<rect width="300" height="300" transform="translate(412.712 325) rotate(17)" fill="#462DE2"/>
-<circle cx="412.712" cy="325" r="150" transform="rotate(17 412.712 325)" fill="#FCFCFC"/>
-<circle cx="699.382" cy="412.295" r="150" transform="rotate(17 699.382 412.295)" fill="#FCFCFC"/>
-<circle cx="325" cy="611.891" r="150" transform="rotate(17 325 611.891)" fill="#FCFCFC"/>
-<circle cx="611.892" cy="699.603" r="150" transform="rotate(17 611.892 699.603)" fill="#FCFCFC"/>
+<svg width="560" height="504" viewBox="0 0 560 504" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M48 24C48 10.7452 58.7452 0 72 0H119C132.255 0 143 10.7452 143 24V71H48V24Z" fill="white"/>
+<rect y="36" width="560" height="468" rx="24" fill="white"/>
+<g clip-path="url(#clip0_188_2164)">
+<rect width="300" height="300" transform="translate(180.711 83) rotate(17)" fill="#462DE2"/>
+<circle cx="180.711" cy="83.0002" r="150" transform="rotate(17 180.711 83.0002)" fill="#FCFCFC"/>
+<circle cx="467.381" cy="170.295" r="150" transform="rotate(17 467.381 170.295)" fill="#FCFCFC"/>
+<circle cx="93.0001" cy="369.891" r="150" transform="rotate(17 93.0001 369.891)" fill="#FCFCFC"/>
+<circle cx="379.891" cy="457.603" r="150" transform="rotate(17 379.891 457.603)" fill="#FCFCFC"/>
 </g>
 <defs>
-<clipPath id="clip0_185_2183">
-<rect width="300" height="300" fill="white" transform="translate(412.712 325) rotate(17)"/>
+<clipPath id="clip0_188_2164">
+<rect width="300" height="300" fill="white" transform="translate(180.711 83) rotate(17)"/>
 </clipPath>
 </defs>
 </svg>
