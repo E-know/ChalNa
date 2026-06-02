@@ -246,18 +246,27 @@ public actor AVFoundationCompositionService: CompositionServicing {
         videoComposition.customVideoCompositorClass = ChalNaVideoCompositor.self
         let blurRadius = min(renderSize.width, renderSize.height) * 0.04
         videoComposition.instructions = layerInstructions.map { entry in
-            ChalNaCompositionInstruction(
+            // 클립별 라벨(시간/날짜/커스텀)을 정적 CGImage 로 미리 렌더해 컴포지터가 전경 위에 합성.
+            var overlay: CGImage?
+            #if canImport(UIKit)
+            overlay = Self.renderLabelOverlayImage(
+                renderSize: renderSize,
+                capturedAt: entry.capturedAt,
+                placedRect: entry.placedRect,
+                labelSettings: labelSettings,
+                clipLabel: clipLabels[entry.clipID] ?? .default
+            )
+            #endif
+            return ChalNaCompositionInstruction(
                 timeRange: entry.timeRange,
                 trackID: compVideoTrack.trackID,
                 foreground: entry.transform,
                 background: entry.backgroundTransform,
                 blurRadius: blurRadius,
-                scrimAlpha: 0.18
+                scrimAlpha: 0.18,
+                overlayImage: overlay
             )
         }
-
-        // NOTE: 라벨(시간/날짜/커스텀) 오버레이는 후속 작업에서 다시 추가한다.
-        // `makeBackdropAndLabelTool`/`makeBlurredBackdropLayer` 등 라벨 헬퍼는 그때 재사용하기 위해 남겨둔다(현재 미사용).
 
         return BuiltComposition(
             composition: composition,
@@ -437,6 +446,99 @@ public actor AVFoundationCompositionService: CompositionServicing {
     }
 
     #if canImport(UIKit)
+    /// 한 클립 구간의 라벨(시간/날짜/커스텀)을 `renderSize` 의 투명 CALayer 트리로 쌓아 정적 CGImage 로 렌더한다.
+    /// `makeBackdropAndLabelTool` 가 한 클립에 대해 추가하던 라벨 레이어와 동일한 레이아웃이되,
+    /// show-animation 없이 목표 opacity 로 고정한다(이 이미지는 클립 구간 동안만 컴포지터가 합성하므로 gating 불필요).
+    /// 라벨이 하나도 보이지 않으면 nil 을 반환해 컴포지터가 합성을 스킵하게 한다.
+    ///
+    /// 좌표계: 라벨 origin 들은 CoreAnimation y-UP(좌하단 원점)으로 계산된다. 이를 top-left 원점
+    /// CGContext 로 렌더하면 상하가 뒤집히므로 `parentLayer.isGeometryFlipped = true` 로 보정한다
+    /// → y-up 으로 계산한 TOP 라벨이 이미지 위쪽에 실제로 그려진다.
+    private static func renderLabelOverlayImage(
+        renderSize: CGSize,
+        capturedAt: Date,
+        placedRect: CGRect,
+        labelSettings: LabelSettings,
+        clipLabel: ClipLabel
+    ) -> CGImage? {
+        let custom = clipLabel
+        let anyVisible = labelSettings.timeEnabled || labelSettings.dateEnabled || custom.isVisible
+        guard anyVisible else { return nil }
+
+        let parentLayer = CALayer()
+        parentLayer.frame = CGRect(origin: .zero, size: renderSize)
+        parentLayer.backgroundColor = UIColor.clear.cgColor
+
+        let minDim = min(renderSize.width, renderSize.height)
+        let dateFontSize = minDim * LabelLayout.dateFontFraction
+        let timeFontSize = minDim * LabelLayout.timeFontFraction
+        let padding = CGSize(width: renderSize.width * LabelLayout.paddingFraction, height: renderSize.height * LabelLayout.paddingFraction)
+        let stackGap = minDim * LabelLayout.stackGapFraction
+        let stacked = labelSettings.timeEnabled && labelSettings.dateEnabled
+            && labelSettings.timePosition == labelSettings.datePosition
+
+        let dateText = dateOnlyFormatter.string(from: capturedAt)
+        let timeText = timeOnlyFormatter.string(from: capturedAt)
+        // 정적 렌더라 timeRange 는 쓰이지 않지만 시그니처 호환용으로 zero 를 넘긴다.
+        let dummyRange = CMTimeRange(start: .zero, duration: .zero)
+
+        if stacked {
+            let timeSize = measureOverlayText(timeText, fontSize: timeFontSize)
+            let dateSize = measureOverlayText(dateText, fontSize: dateFontSize)
+            let origins = LabelLayout.stackedOrigins(
+                position: labelSettings.timePosition,
+                timeSize: timeSize,
+                dateSize: dateSize,
+                gap: stackGap,
+                renderSize: renderSize,
+                padding: padding
+            )
+            parentLayer.addSublayer(makeOverlayTextLayer(
+                text: dateText, fontSize: dateFontSize, timeRange: dummyRange,
+                opacity: labelSettings.dateOpacity, staticRender: true
+            ) { _ in origins.date })
+            parentLayer.addSublayer(makeOverlayTextLayer(
+                text: timeText, fontSize: timeFontSize, timeRange: dummyRange,
+                opacity: labelSettings.timeOpacity, staticRender: true
+            ) { _ in origins.time })
+        } else {
+            if labelSettings.dateEnabled {
+                parentLayer.addSublayer(makeOverlayTextLayer(
+                    text: dateText, fontSize: dateFontSize, timeRange: dummyRange,
+                    opacity: labelSettings.dateOpacity, staticRender: true
+                ) { size in
+                    labelSettings.datePosition.origin(renderSize: renderSize, textSize: size, padding: padding)
+                })
+            }
+            if labelSettings.timeEnabled {
+                parentLayer.addSublayer(makeOverlayTextLayer(
+                    text: timeText, fontSize: timeFontSize, timeRange: dummyRange,
+                    opacity: labelSettings.timeOpacity, staticRender: true
+                ) { size in
+                    labelSettings.timePosition.origin(renderSize: renderSize, textSize: size, padding: padding)
+                })
+            }
+        }
+
+        if custom.isVisible {
+            for layer in makeCustomLabelLayers(
+                label: custom, placedRect: placedRect, renderSize: renderSize,
+                timeRange: dummyRange, staticRender: true
+            ) {
+                parentLayer.addSublayer(layer)
+            }
+        }
+
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = false
+        let renderer = UIGraphicsImageRenderer(size: renderSize, format: format)
+        let uiImage = renderer.image { ctx in
+            parentLayer.render(in: ctx.cgContext)
+        }
+        return uiImage.cgImage
+    }
+
     /// 오버레이 라벨용 UIFont. KERISKEDU(UIAppFonts 등록, PostScript name 매칭 성공 시)
     /// 커스텀 폰트, 실패하면 시스템 bold로 fallback.
     private static func overlayUIFont(fontSize: CGFloat) -> UIFont {
@@ -475,6 +577,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
         fontSize: CGFloat,
         timeRange: CMTimeRange,
         opacity: CGFloat = 1.0,
+        staticRender: Bool = false,
         placement: (CGSize) -> CGPoint
     ) -> CATextLayer {
         let textLayer = CATextLayer()
@@ -505,6 +608,14 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
         let origin = placement(textSize)
         textLayer.frame = CGRect(origin: origin, size: textSize)
+
+        // staticRender: 정적 이미지로 미리 렌더하는 경로 — opacity 를 목표값으로 고정하고 show 애니메이션 생략.
+        // (클립 구간 동안만 합성되므로 per-frame opacity gating 불필요.)
+        if staticRender {
+            textLayer.opacity = Float(opacity)
+            return textLayer
+        }
+
         textLayer.opacity = 0
 
         // 해당 클립의 timeRange 동안만 보이게. `AVCoreAnimationBeginTimeAtZero` 는
@@ -547,7 +658,8 @@ public actor AVFoundationCompositionService: CompositionServicing {
         label: ClipLabel,
         placedRect: CGRect,
         renderSize: CGSize,
-        timeRange: CMTimeRange
+        timeRange: CMTimeRange,
+        staticRender: Bool = false
     ) -> [CALayer] {
         let fontSize = max(8, label.clampedSizeFraction * placedRect.height)
         let textSize = measureCustomText(label.text, fontSize: fontSize)
@@ -566,8 +678,6 @@ public actor AVFoundationCompositionService: CompositionServicing {
         textLayer.isWrapped = false
         textLayer.alignmentMode = .center
         textLayer.frame = CGRect(origin: origin, size: textSize)
-        textLayer.opacity = 0
-        addShowAnimation(to: textLayer, timeRange: timeRange)
 
         // 흰 배경 + 검정 테두리 박스. (프리뷰 ClipLabelText 와 동일한 ClipLabel.BoxStyle 사용)
         let padX = fontSize * ClipLabel.BoxStyle.horizontalPaddingFraction
@@ -582,8 +692,16 @@ public actor AVFoundationCompositionService: CompositionServicing {
         bgLayer.backgroundColor = UIColor.white.cgColor
         bgLayer.borderColor = UIColor.black.cgColor
         bgLayer.borderWidth = fontSize * ClipLabel.BoxStyle.borderWidthFraction
-        bgLayer.opacity = 0
-        addShowAnimation(to: bgLayer, timeRange: timeRange)
+
+        if staticRender {
+            textLayer.opacity = 1
+            bgLayer.opacity = 1
+        } else {
+            textLayer.opacity = 0
+            addShowAnimation(to: textLayer, timeRange: timeRange)
+            bgLayer.opacity = 0
+            addShowAnimation(to: bgLayer, timeRange: timeRange)
+        }
         return [bgLayer, textLayer]
     }
 

@@ -16,9 +16,13 @@ final class ChalNaCompositionInstruction: NSObject, AVVideoCompositionInstructio
     let background: CGAffineTransform   // natural→render, y-down (aspectFill, 중앙)
     let blurRadius: CGFloat
     let scrimAlpha: CGFloat
+    /// 이 클립 구간에 전경 위로 올릴, 이미 renderSize 로 미리 렌더한 정적 라벨 오버레이(top-left origin).
+    /// nil 이면 라벨 없음 → 합성 스킵.
+    let overlayImage: CGImage?
 
     init(timeRange: CMTimeRange, trackID: CMPersistentTrackID, foreground: CGAffineTransform,
-         background: CGAffineTransform, blurRadius: CGFloat, scrimAlpha: CGFloat) {
+         background: CGAffineTransform, blurRadius: CGFloat, scrimAlpha: CGFloat,
+         overlayImage: CGImage? = nil) {
         self.timeRange = timeRange
         self.trackID = trackID
         self.requiredSourceTrackIDs = [NSNumber(value: trackID)]
@@ -26,6 +30,7 @@ final class ChalNaCompositionInstruction: NSObject, AVVideoCompositionInstructio
         self.background = background
         self.blurRadius = blurRadius
         self.scrimAlpha = scrimAlpha
+        self.overlayImage = overlayImage
         super.init()
     }
 }
@@ -76,7 +81,16 @@ final class ChalNaVideoCompositor: NSObject, AVVideoCompositing, @unchecked Send
         // 전경: aspectFit + 사용자 변환.
         let foreground = placeYDown(src, instruction.foreground).cropped(to: renderRect)
 
-        let output = foreground.composited(over: background).cropped(to: renderRect)
+        var output = foreground.composited(over: background).cropped(to: renderRect)
+
+        // 라벨 오버레이: 이미 renderSize 로 미리 렌더한 top-left origin 정적 이미지.
+        // 전경과 동일한 render-height flip 만 적용해 y-up 출력 공간으로 맞춘 뒤 위에 합성.
+        if let overlay = instruction.overlayImage {
+            let flipRender = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: render.height)
+            let overlayCI = CIImage(cgImage: overlay).transformed(by: flipRender)
+            output = overlayCI.composited(over: output).cropped(to: renderRect)
+        }
+
         ciContext.render(output, to: dest)
         request.finish(withComposedVideoFrame: dest)
     }
