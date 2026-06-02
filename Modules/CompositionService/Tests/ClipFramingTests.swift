@@ -60,4 +60,22 @@ struct ClipFramingTests {
         #expect(abs(o.x - 0.5) < 0.0001, "x \(o.x)")
         #expect(abs(o.y - (-0.5)) < 0.0001, "y \(o.y)")
     }
+
+    /// resolvedRect 의 비제로 offset 경로 검증. scale=2 portrait + offset.x=0.5(=maxFrac) → 중심 +540px.
+    @Test func testResolvedRect_Scale2_WithOffset_ShiftsCenter() {
+        let r = ClipFraming.resolvedRect(display: CGSize(width: 1080, height: 1920), rotation: .r0, render: render,
+                                         transform: ClipTransform(scale: 2, offset: CGPoint(x: 0.5, y: 0)))
+        #expect(abs(r.width - 2160) < 0.5, "w \(r.width)")
+        #expect(abs(r.midX - 1080) < 0.5, "midX \(r.midX)")
+        #expect(abs(r.midY - 960) < 0.5, "midY \(r.midY)")
+    }
+
+    /// resolvedRect 의 회전(orientedSize) 경로. 가로 1920×1080 + r90 → 1080×1920 정확히 채움.
+    @Test func testResolvedRect_R90_Landscape_FillsCanvas() {
+        let r = ClipFraming.resolvedRect(display: CGSize(width: 1920, height: 1080), rotation: .r90, render: render, transform: .fit)
+        #expect(abs(r.width - 1080) < 0.5, "w \(r.width)")
+        #expect(abs(r.height - 1920) < 0.5, "h \(r.height)")
+        #expect(abs(r.minX - 0) < 0.5, "x \(r.minX)")
+        #expect(abs(r.minY - 0) < 0.5, "y \(r.minY)")
+    }
 }
