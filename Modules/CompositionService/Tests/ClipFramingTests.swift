@@ -78,4 +78,24 @@ struct ClipFramingTests {
         #expect(abs(r.minX - 0) < 0.5, "x \(r.minX)")
         #expect(abs(r.minY - 0) < 0.5, "y \(r.minY)")
     }
+
+    /// 축소(scale<1): 1080×1920 clip을 0.5배 → scaled 540×960. 프레임보다 작아 프레임 안에서 위치 이동 가능.
+    /// maxFracX=(1080-540)/2/1080=0.25, maxFracY=(1920-960)/2/1920=0.25.
+    @Test func testClampedOffset_ZoomedOut_AllowsInFramePositioning() {
+        let o = ClipFraming.clampedOffset(CGPoint(x: 1.0, y: -1.0),
+                                          display: CGSize(width: 1080, height: 1920), rotation: .r0,
+                                          render: render, scale: 0.5)
+        #expect(abs(o.x - 0.25) < 0.0001, "x \(o.x)")
+        #expect(abs(o.y - (-0.25)) < 0.0001, "y \(o.y)")
+    }
+
+    /// 축소 resolvedRect: 0.5배 → 540×960, 가운데 (540,960). (이미 통과해야 정상 — resolvedRect 는 scale 직접 사용)
+    @Test func testResolvedRect_ZoomedOut_HalfSizeCentered() {
+        let r = ClipFraming.resolvedRect(display: CGSize(width: 1080, height: 1920), rotation: .r0, render: render,
+                                         transform: ClipTransform(scale: 0.5, offset: .zero))
+        #expect(abs(r.width - 540) < 0.5, "w \(r.width)")
+        #expect(abs(r.height - 960) < 0.5, "h \(r.height)")
+        #expect(abs(r.midX - 540) < 0.5)
+        #expect(abs(r.midY - 960) < 0.5)
+    }
 }

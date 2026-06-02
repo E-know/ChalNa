@@ -235,4 +235,21 @@ struct CompositionTransformTests {
         #expect(abs(center.x - 1080) < 0.5, "cx \(center.x)")
         #expect(abs(center.y - 960) < 0.5, "cy \(center.y)")
     }
+
+    /// 축소(scale 0.5): 1080×1920 → totalScale 0.5, scaledSize 540×960, centerTranslate (270,480).
+    /// export 가 바닥(max(1.0,...))을 막으면 이 테스트는 실패한다(맞춤으로 렌더).
+    @Test func testTransform_UserScaleHalf_ShrinksBelowFit() {
+        let natural = CGSize(width: 1080, height: 1920)
+        let render = CGSize(width: 1080, height: 1920)
+        let t = AVFoundationCompositionService.transform(
+            naturalSize: natural, preferredTransform: .identity, rotation: .r0,
+            renderSize: render, framing: ClipTransform(scale: 0.5, offset: .zero)
+        )
+        let topLeft = CGPoint(x: 0, y: 0).applying(t)
+        let bottomRight = CGPoint(x: natural.width, y: natural.height).applying(t)
+        #expect(abs(topLeft.x - 270) < 0.5, "x \(topLeft.x)")
+        #expect(abs(topLeft.y - 480) < 0.5, "y \(topLeft.y)")
+        #expect(abs(bottomRight.x - 810) < 0.5, "x \(bottomRight.x)")
+        #expect(abs(bottomRight.y - 1440) < 0.5, "y \(bottomRight.y)")
+    }
 }

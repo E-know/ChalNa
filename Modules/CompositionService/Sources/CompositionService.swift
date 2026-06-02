@@ -663,7 +663,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
         // fit 배율은 ClipFraming 과 공유. 사용자 배율(>=1)을 곱한다.
         let fitScale = ClipFraming.fitScale(display: displaySize, rotation: rotation, render: renderSize)
-        let userScale = max(1.0, framing.scale)
+        let userScale = max(0.05, framing.scale)
         let totalScale = fitScale * userScale
 
         let scaledSize = CGSize(width: postRotationSize.width * totalScale,

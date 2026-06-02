@@ -26,8 +26,8 @@ public enum ClipFraming {
         let fit = fitScale(display: display, rotation: rotation, render: render)
         let scaledW = s.width * fit * scale
         let scaledH = s.height * fit * scale
-        let maxFracX = render.width > 0 ? max(0, (scaledW - render.width) / 2) / render.width : 0
-        let maxFracY = render.height > 0 ? max(0, (scaledH - render.height) / 2) / render.height : 0
+        let maxFracX = render.width > 0 ? abs(scaledW - render.width) / 2 / render.width : 0
+        let maxFracY = render.height > 0 ? abs(scaledH - render.height) / 2 / render.height : 0
         return CGPoint(
             x: min(max(proposed.x, -maxFracX), maxFracX),
             y: min(max(proposed.y, -maxFracY), maxFracY)
