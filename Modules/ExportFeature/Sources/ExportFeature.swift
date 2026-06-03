@@ -1,6 +1,7 @@
 import ComposableArchitecture
 import Foundation
 import Models
+import AppCore
 import CompositionService
 import PhotosService
 import AnalyticsService
@@ -63,12 +64,12 @@ public struct ExportFeature {
     // MARK: - Action
 
     public enum Action {
-        case startExport(clips: [Clip], rotations: [Clip.ID: ClipRotation], clipLabels: [Clip.ID: ClipLabel])
+        case startExport(clips: [Clip], rotations: [Clip.ID: ClipRotation], transforms: [Clip.ID: ClipTransform], clipLabels: [Clip.ID: ClipLabel])
         case exportProgress(Double)
         case exportCompleted(URL)
         case exportFailed(String)
 
-        case retryTapped(clips: [Clip], rotations: [Clip.ID: ClipRotation], clipLabels: [Clip.ID: ClipLabel])
+        case retryTapped(clips: [Clip], rotations: [Clip.ID: ClipRotation], transforms: [Clip.ID: ClipTransform], clipLabels: [Clip.ID: ClipLabel])
 
         case saveToPhotoLibraryTapped
         case saveCompleted(PhotoSaveResult)
@@ -89,6 +90,7 @@ public struct ExportFeature {
     @Dependency(\.compositionClient) var compositionClient
     @Dependency(\.photoLibraryClient) var photoLibraryClient
     @Dependency(\.analyticsTracker) var analyticsTracker
+    @Dependency(\.exportQuotaClient) var exportQuotaClient
 
     private enum CancelID { case exportStream }
 
@@ -97,8 +99,20 @@ public struct ExportFeature {
     public var body: some ReducerOf<Self> {
         Reduce { state, action in
             switch action {
-            case let .startExport(clips, rotations, clipLabels):
+            case let .startExport(clips, rotations, transforms, clipLabels):
                 guard !clips.isEmpty else { return .none }
+                switch exportQuotaClient.reserveExport() {
+                case .allowed:
+                    break
+                case let .blocked(reason):
+                    state.phase = .failed
+                    state.progress = 0
+                    state.errorMessage = reason.message
+                    state.exportedURL = nil
+                    state.didAddToLibrary = false
+                    analyticsTracker.log(.exportFailed(reason: "quota_\(reason)"))
+                    return .none
+                }
                 state.phase = .exporting
                 state.progress = 0
                 state.errorMessage = nil
@@ -114,7 +128,7 @@ public struct ExportFeature {
                     dateOpacity: state.dateOpacity
                 )
                 return .run { send in
-                    for await event in compositionClient.export(clips, rotations, labelSettings, clipLabels) {
+                    for await event in compositionClient.export(clips, rotations, transforms, labelSettings, clipLabels) {
                         switch event {
                         case let .progress(p):
                             await send(.exportProgress(p))
@@ -151,8 +165,8 @@ public struct ExportFeature {
                 analyticsTracker.log(.exportFailed(reason: msg))
                 return .none
 
-            case let .retryTapped(clips, rotations, clipLabels):
-                return .send(.startExport(clips: clips, rotations: rotations, clipLabels: clipLabels))
+            case let .retryTapped(clips, rotations, transforms, clipLabels):
+                return .send(.startExport(clips: clips, rotations: rotations, transforms: transforms, clipLabels: clipLabels))
 
             case .saveToPhotoLibraryTapped:
                 guard let url = state.exportedURL,
@@ -169,13 +183,13 @@ public struct ExportFeature {
                 switch result {
                 case .ok:
                     state.didAddToLibrary = true
-                    state.saveToast = "사진 앱에 저장됐어요 ✦"
+                    state.saveToast = String(localized: "사진 앱에 저장됐어요 ✦")
                     analyticsTracker.log(.vlogSavedToLibrary)
                 case .denied:
-                    state.saveToast = "사진 보관함 접근 권한이 필요해요"
+                    state.saveToast = String(localized: "사진 보관함 접근 권한이 필요해요")
                     analyticsTracker.log(.vlogSaveFailed(reason: "denied"))
                 case let .failed(msg):
-                    state.saveToast = "저장 실패 — \(msg)"
+                    state.saveToast = String(localized: "저장 실패 — \(msg)")
                     analyticsTracker.log(.vlogSaveFailed(reason: msg))
                 }
                 return .none
@@ -205,9 +219,9 @@ public struct ExportFeature {
 public extension ExportFeature.ExportPhase {
     var title: String {
         switch self {
-        case .idle, .exporting: return "저장 중"
-        case .done:             return "완성"
-        case .failed:           return "저장 실패"
+        case .idle, .exporting: return String(localized: "저장 중")
+        case .done:             return String(localized: "완성")
+        case .failed:           return String(localized: "저장 실패")
         }
     }
 

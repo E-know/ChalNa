@@ -76,5 +76,5 @@ public struct ChalNaTextField: View {
         ChalNaTextField(label: "Error 상태", placeholder: "값을 입력하세요", errorText: "30자 이내로 입력해 주세요.", text: $failing)
     }
     .padding(24)
-    .background(ChalNaColor.cream)
+    .background(ChalNaColor.white)
 }

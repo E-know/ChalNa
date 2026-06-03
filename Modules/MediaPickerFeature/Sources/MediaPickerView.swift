@@ -34,46 +34,44 @@ public struct MediaPickerView: View {
                 .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
                 .zIndex(1)
 
-            ZStack(alignment: .bottom) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
-                        intro
-                            .padding(.horizontal, 24)
-                            .padding(.top, 24)
-                            .trackScrollOffset(in: "media-picker-scroll")
-                            .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    intro
+                        .padding(.horizontal, 24)
+                        .padding(.top, 24)
+                        .trackScrollOffset(in: "media-picker-scroll")
+                        .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
 
-                        titleField
-                            .padding(.horizontal, 24)
+                    titleField
+                        .padding(.horizontal, 24)
 
-                        pickerLauncher
-                            .padding(.horizontal, 24)
-                            .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
+                    pickerLauncher
+                        .padding(.horizontal, 24)
+                        .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
 
-                        selectionGrid
-                            .padding(.horizontal, 24)
-                            .padding(.top, 12)
-                            .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
-                    }
-                    .padding(.bottom, 96)
+                    selectionGrid
+                        .padding(.horizontal, 24)
+                        .padding(.top, 12)
+                        .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
                 }
-                .coordinateSpace(name: "media-picker-scroll")
-                .scrollDismissesKeyboard(.interactively)
-                .background(
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .onTapGesture { dismissTitleKeyboard() }
-                )
-                .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
-                    store.send(
-                        .scrollProgressChanged(offset / 8),
-                        animation: .easeInOut(duration: 0.15)
-                    )
-                }
-
-                bottomActionArea
-                    .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
+                .padding(.bottom, 24)
             }
+            .coordinateSpace(name: "media-picker-scroll")
+            .scrollDismissesKeyboard(.interactively)
+            .background(
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { dismissTitleKeyboard() }
+            )
+            .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
+                store.send(
+                    .scrollProgressChanged(offset / 8),
+                    animation: .easeInOut(duration: 0.15)
+                )
+            }
+
+            bottomActionArea
+                .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
         }
         .chalNaScreen()
         .alert(
@@ -125,6 +123,11 @@ public struct MediaPickerView: View {
             }
         }
         .animation(.easeInOut(duration: 0.18), value: store.isPreparingPickedMedia)
+        // 사진 추출 중에는 화면 자동 잠금(idle timer)을 막아 작업이 중단되지 않게 한다.
+        .onChange(of: store.isPreparingPickedMedia) { _, isPreparing in
+            UIApplication.shared.isIdleTimerDisabled = isPreparing
+        }
+        .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
         .task { await store.send(.task).finish() }
     }
 
@@ -148,7 +151,9 @@ public struct MediaPickerView: View {
                         .foregroundColor(ChalNaColor.ink)
 
                     if let progress = store.preparingPickedMediaProgress, progress.total > 0 {
-                        Text("\(progress.done) / \(progress.total)")
+                        // total 자릿수에 맞춰 done 을 0 패딩 (예: 총 12개 → "05 / 12", 총 9개 → "5 / 9")
+                        let doneText = String(format: "%0\(String(progress.total).count)d", progress.done)
+                        Text("\(doneText) / \(progress.total)")
                             .font(ChalNaTypography.monoFallback(22, weight: .bold))
                             .foregroundColor(ChalNaColor.coral)
                             .monospacedDigit()
@@ -168,7 +173,7 @@ public struct MediaPickerView: View {
             .frame(minWidth: 220)
             .background(
                 RoundedRectangle(cornerRadius: ChalNaRadius.sheet, style: .continuous)
-                    .fill(ChalNaColor.cream)
+                    .fill(ChalNaColor.white)
             )
             .chalNaShadow(ChalNaShadow.lg)
             .padding(.horizontal, 48)
@@ -181,41 +186,18 @@ public struct MediaPickerView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack {
-            Button {
+        ChalNaNavigationHeader(
+            titleKey: "미디어 선택",
+            subtitleKey: "LIVE · VIDEO",
+            subtitleColor: ChalNaColor.coral
+        ) {
+            ChalNaHeaderBackButton {
                 dismissTitleKeyboard()
                 store.send(.dismissTapped)
                 router.pop()
-            } label: {
-                HStack(spacing: 2) {
-                    ChalNaIcon(.chevronLeft, size: 14)
-                    Text("뒤로").font(ChalNaTypography.krBody(14, weight: .medium))
-                }
-                .foregroundColor(ChalNaColor.taupe)
             }
-            .buttonStyle(.chalNaHeaderAction)
-            .accessibilityLabel("뒤로")
-
-            Spacer()
-
-            VStack(spacing: 2) {
-                Text("미디어 선택")
-                    .font(ChalNaTypography.krSemibold(15))
-                    .foregroundColor(ChalNaColor.ink)
-                Text("LIVE · VIDEO")
-                    .tagLabel(color: ChalNaColor.coral)
-            }
-
-            Spacer()
-
-            // 헤더 좌우 균형용 빈 영역 (뒤로 버튼과 같은 크기)
-            HStack(spacing: 2) {
-                ChalNaIcon(.chevronLeft, size: 14)
-                Text("뒤로").font(ChalNaTypography.krBody(14, weight: .medium))
-            }
-            .opacity(0)
-            .accessibilityHidden(true)
-            .allowsHitTesting(false)
+        } trailing: {
+            EmptyView()
         }
     }
 
@@ -224,8 +206,7 @@ public struct MediaPickerView: View {
     private var intro: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("PICK · YOUR CHALNA").tagLabel()
-            (Text("찰나의 순간을\n").font(ChalNaTypography.displayKR(26))
-             + Text("천천히 골라보세요.").font(ChalNaTypography.krBody(22, weight: .medium)))
+            introHeadline
                 .foregroundColor(ChalNaColor.ink)
                 .lineSpacing(2)
             Text("Live Photo와 짧은 영상을 불러올 수 있어요.\nLive Photo는 내부의 영상 부분을 사용합니다.")
@@ -233,6 +214,17 @@ public struct MediaPickerView: View {
                 .foregroundColor(ChalNaColor.taupe)
                 .padding(.top, 4)
         }
+    }
+
+    /// 첫 줄(큰 display)·둘째 줄(작은 body) 폰트가 달라 Text 두 개를 합치지만,
+    /// 로컬라이즈 키는 합쳐진 한 문장이라 번역을 가져와 \n 기준으로 쪼갠다(번역도 \n 위치를 따른다).
+    private var introHeadline: Text {
+        let full = String(localized: "찰나의 순간을\n천천히 골라보세요.")
+        let lines = full.split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
+        let first = String(lines.first ?? "")
+        let second = lines.count > 1 ? String(lines[1]) : ""
+        return Text(first + "\n").font(ChalNaTypography.displayKR(26))
+             + Text(second).font(ChalNaTypography.krBody(22, weight: .medium))
     }
 
     // MARK: - Title field
@@ -334,8 +326,8 @@ public struct MediaPickerView: View {
                         .font(ChalNaTypography.krSemibold(15))
                         .foregroundColor(ChalNaColor.ink)
                     Text(store.selectedDevAssetIDs.isEmpty
-                         ? "번들 fixture로 실제 export까지 확인"
-                         : "\(store.selectedDevAssetIDs.count)개 fixture 선택됨")
+                         ? LocalizedStringKey("번들 fixture로 실제 export까지 확인")
+                         : LocalizedStringKey("\(store.selectedDevAssetIDs.count)개 fixture 선택됨"))
                         .font(ChalNaTypography.krBody(12))
                         .foregroundColor(ChalNaColor.taupe)
                 }
@@ -444,7 +436,7 @@ public struct MediaPickerView: View {
                         .accessibilityAction {
                             store.send(.previewRequested(asset))
                         }
-                        .accessibilityAction(named: "선택에서 제외") {
+                        .accessibilityAction(named: Text("선택에서 제외")) {
                             store.send(.photoAssetTapped(asset))
                         }
                     }
@@ -489,7 +481,7 @@ public struct MediaPickerView: View {
                             DevMediaAssetCard(asset: asset, isSelected: isSelected)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("\(asset.title), \(asset.kind == .live ? "라이브 포토" : "비디오")")
+                        .accessibilityLabel("\(asset.title), \(asset.kind == .live ? String(localized: "라이브 포토") : String(localized: "비디오"))")
                     }
                 }
                 .padding(.vertical, 12)
@@ -557,7 +549,7 @@ public struct MediaPickerView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("선택에서 제외")
-        .accessibilityHint("\(asset.kind == .video ? "비디오" : "라이브 포토")를 선택에서 빼요")
+        .accessibilityHint("\(asset.kind == .video ? String(localized: "비디오") : String(localized: "라이브 포토"))를 선택에서 빼요")
     }
 
     // MARK: - Bottom bar
@@ -568,47 +560,20 @@ public struct MediaPickerView: View {
             .padding(.top, 8)
             .padding(.bottom, 16)
             .fixedSize(horizontal: false, vertical: true)
+            .background(
+                ChalNaColor.white
+                    .ignoresSafeArea(edges: .bottom)
+            )
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(ChalNaColor.Gray.g200)
+                    .frame(height: 1)
+            }
     }
 
     @ViewBuilder
     private var bottomBar: some View {
-        if #available(iOS 26.0, *) {
-            liquidGlassBottomBar
-        } else {
-            chalNaBottomBar
-        }
-    }
-
-    @available(iOS 26.0, *)
-    private var liquidGlassBottomBar: some View {
-        GlassEffectContainer(spacing: 8) {
-            HStack(spacing: 8) {
-                Button {
-                    dismissTitleKeyboard()
-                    store.send(.dismissTapped)
-                    router.pop()
-                } label: {
-                    Text("취소")
-                        .foregroundStyle(ChalNaColor.ink)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.glass)
-                .frame(maxWidth: .infinity)
-
-                Button {
-                    store.send(.primaryActionTapped)
-                } label: {
-                    confirmBottomLabel
-                        .foregroundStyle(ChalNaColor.ink)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.glassProminent)
-                .tint(ChalNaColor.coral)
-                .frame(maxWidth: .infinity)
-                .disabled(!canUsePrimaryAction || store.isResolving)
-                .opacity(canUsePrimaryAction ? 1 : 0.5)
-            }
-        }
+        chalNaBottomBar
     }
 
     private var chalNaBottomBar: some View {
@@ -631,7 +596,6 @@ public struct MediaPickerView: View {
             .buttonStyle(.chalNaCoral)
             .frame(maxWidth: .infinity)
             .disabled(!canUsePrimaryAction || store.isResolving)
-            .opacity(canUsePrimaryAction ? 1 : 0.5)
         }
     }
 
@@ -690,19 +654,19 @@ public struct MediaPickerView: View {
         guard case .photoLibrary = store.source else { return nil }
         let status = store.photoAuthorizationStatus
         if status == .denied || status == .restricted {
-            return "사진 권한을 허용해야 Live Photo 영상을 사용할 수 있어요."
+            return String(localized: "사진 권한을 허용해야 Live Photo 영상을 사용할 수 있어요.")
         }
         if status == .notDetermined {
-            return "먼저 사진 권한 범위를 선택해 주세요."
+            return String(localized: "먼저 사진 권한 범위를 선택해 주세요.")
         }
         if store.isPhotoLibraryLoading {
-            return "선택한 사진을 불러오는 중"
+            return String(localized: "선택한 사진을 불러오는 중")
         }
         if hasUnavailableMedia {
-            return "선택한 항목을 불러오지 못했어요. 다시 선택해 주세요."
+            return String(localized: "선택한 항목을 불러오지 못했어요. 다시 선택해 주세요.")
         }
         if !store.selectedAssetIDs.isEmpty, readyMediaCount < store.selectedAssetIDs.count {
-            return "사진 로딩 중 · \(readyMediaCount)/\(store.selectedAssetIDs.count)"
+            return String(localized: "사진 로딩 중 · \(readyMediaCount)/\(store.selectedAssetIDs.count)")
         }
         return nil
     }
@@ -716,13 +680,13 @@ public struct MediaPickerView: View {
 
     private var confirmButtonTitle: String {
         if selectedCount == 0 {
-            return "선택 후 다음"
+            return String(localized: "선택 후 다음")
         }
         if case .photoLibrary = store.source {
-            if hasUnavailableMedia { return "원본 확인 필요" }
-            if !canProceed { return "사진 로딩 중" }
+            if hasUnavailableMedia { return String(localized: "원본 확인 필요") }
+            if !canProceed { return String(localized: "사진 로딩 중") }
         }
-        return "Timeline으로 (\(selectedCount))"
+        return String(localized: "Timeline으로 (\(selectedCount))")
     }
 
     private var selectedCount: Int {
@@ -734,26 +698,26 @@ public struct MediaPickerView: View {
 
     private var photoLauncherTitle: String {
         let status = store.photoAuthorizationStatus
-        if status == .notDetermined { return "사진 권한 선택" }
-        if status == .denied || status == .restricted { return "사진 권한 열기" }
-        return store.selectedAssetIDs.isEmpty ? "사진 추가하기" : "다시 고르기"
+        if status == .notDetermined { return String(localized: "사진 권한 선택") }
+        if status == .denied || status == .restricted { return String(localized: "사진 권한 열기") }
+        return store.selectedAssetIDs.isEmpty ? String(localized: "사진 추가하기") : String(localized: "다시 고르기")
     }
 
     private var photoLauncherSubtitle: String {
         let status = store.photoAuthorizationStatus
-        if status == .notDetermined { return "먼저 권한 범위를 고른 뒤 선택해요" }
-        if status == .denied || status == .restricted { return "설정에서 사진 접근을 허용해 주세요" }
-        if store.isPhotoLibraryLoading { return "선택한 사진을 불러오는 중" }
-        if store.selectedAssetIDs.isEmpty { return "Live Photo와 짧은 영상만 가져올 수 있어요" }
-        return "\(store.selectedAssetIDs.count)개 선택됨 · 탭해서 추가해요"
+        if status == .notDetermined { return String(localized: "먼저 권한 범위를 고른 뒤 선택해요") }
+        if status == .denied || status == .restricted { return String(localized: "설정에서 사진 접근을 허용해 주세요") }
+        if store.isPhotoLibraryLoading { return String(localized: "선택한 사진을 불러오는 중") }
+        if store.selectedAssetIDs.isEmpty { return String(localized: "Live Photo와 짧은 영상만 가져올 수 있어요") }
+        return String(localized: "\(store.selectedAssetIDs.count)개 선택됨 · 탭해서 추가해요")
     }
 
     private var photoEmptyMessage: String {
         let status = store.photoAuthorizationStatus
-        if status == .notDetermined { return "먼저 사진 권한 범위를 선택해 주세요" }
-        if status == .denied || status == .restricted { return "사진 권한을 허용해야 Live Photo 영상을 만들 수 있어요" }
-        if store.isPhotoLibraryLoading { return "선택한 사진을 불러오고 있어요" }
-        return "아직 선택한 사진이 없어요. 위 카드를 눌러 골라보세요."
+        if status == .notDetermined { return String(localized: "먼저 사진 권한 범위를 선택해 주세요") }
+        if status == .denied || status == .restricted { return String(localized: "사진 권한을 허용해야 Live Photo 영상을 만들 수 있어요") }
+        if store.isPhotoLibraryLoading { return String(localized: "선택한 사진을 불러오고 있어요") }
+        return String(localized: "아직 선택한 사진이 없어요. 위 카드를 눌러 골라보세요.")
     }
 
     private var selectedLiveCount: Int {

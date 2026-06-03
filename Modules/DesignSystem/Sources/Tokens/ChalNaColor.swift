@@ -2,7 +2,7 @@ import SwiftUI
 
 // Danawa DDS Mobile v2.0 색상 토큰. ChalNa 식별자명은 그대로 두고 값만 다나와 톤으로 교체.
 public enum ChalNaColor {
-    public static let cream = Color("ChalNaCream", bundle: .module)  // White (#FFFFFF) - Background
+    public static let white = Color("ChalNaWhite", bundle: .module)  // White (#FFFFFF) - Background
     public static let ivory = Color("ChalNaIvory", bundle: .module)  // Gray-50 (#F8F8F8) - Surface
     public static let coral = Color("ChalNaCoral", bundle: .module)  // Purple-600 (#8B38E5) - Primary
     public static let sage  = Color("ChalNaSage",  bundle: .module)  // Cyan (#02B8D3) - Success / Info accent

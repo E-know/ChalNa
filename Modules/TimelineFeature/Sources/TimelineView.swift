@@ -34,9 +34,6 @@ public struct TimelineView: View {
             )
             .padding(.top, 12)
 
-            dateSticker
-                .padding(.top, 16)
-
             labelRow
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
@@ -133,89 +130,29 @@ public struct TimelineView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack {
-            Button {
+        ChalNaNavigationHeader(
+            title: headerTitle,
+            subtitle: headerSubtitle
+        ) {
+            ChalNaHeaderBackButton {
                 store.send(.dismissTapped)
                 router.pop()
-            } label: {
-                HStack(spacing: 2) {
-                    ChalNaIcon(.chevronLeft, size: 14)
-                    Text("뒤로").font(ChalNaTypography.krBody(14, weight: .medium))
-                }
-                .foregroundColor(ChalNaColor.taupe)
             }
-            .buttonStyle(.chalNaHeaderAction)
-            .accessibilityLabel("뒤로")
-
-            Spacer()
-
-            VStack(spacing: 2) {
-                HStack(spacing: 6) {
-                    if store.isPlaying { PulseDot() }
-                    Text(headerTitle)
-                        .font(ChalNaTypography.krSemibold(15))
-                        .foregroundColor(ChalNaColor.ink)
-                }
-                Text(headerSubtitle)
-                    .tagLabel(color: store.isPlaying ? ChalNaColor.coral : ChalNaColor.taupe)
-            }
-
-            Spacer()
-
-            // 헤더 좌우 균형용 빈 영역 (뒤로 버튼과 같은 크기)
-            HStack(spacing: 2) {
-                ChalNaIcon(.chevronLeft, size: 14)
-                Text("뒤로").font(ChalNaTypography.krBody(14, weight: .medium))
-            }
-            .opacity(0)
-            .accessibilityHidden(true)
-            .allowsHitTesting(false)
+        } trailing: {
+            EmptyView()
         }
     }
 
     private var canSave: Bool { !store.clips.isEmpty }
 
-    private var headerTitle: String {
-        store.isPlaying ? "재생 중" : "편집"
-    }
+    private var headerTitle: String { String(localized: "편집") }
 
-    private var headerSubtitle: String {
-        store.isPlaying ? "PLAYING" : store.title
-    }
+    private var headerSubtitle: String { store.title }
 
     // MARK: - Preview
 
     private var preview: some View {
         PreviewPanel(store: store, playback: playback)
-    }
-
-    // MARK: - Date sticker
-
-    @ViewBuilder
-    private var dateSticker: some View {
-        if let clip = store.currentClip {
-            HStack(spacing: 4) {
-                ChalNaIcon(.calendar, size: 12)
-                    .foregroundColor(ChalNaColor.taupe)
-                Text(dateStickerText(for: clip))
-                    .font(ChalNaTypography.monoFallback(ChalNaTypography.Size.small, weight: .medium))
-                    .foregroundColor(ChalNaColor.taupe)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(Capsule(style: .continuous).fill(ChalNaColor.ivory))
-        }
-    }
-
-    private static let dateStickerFormatter: DateFormatter = {
-        let df = DateFormatter()
-        df.dateFormat = "yyyy.MM.dd"
-        return df
-    }()
-
-    private func dateStickerText(for clip: Clip) -> String {
-        let note = clip.locationNote.map { " · \($0)" } ?? ""
-        return Self.dateStickerFormatter.string(from: clip.capturedAt) + note
     }
 
     // MARK: - Label row
@@ -267,14 +204,14 @@ public struct TimelineView: View {
     @ViewBuilder
     private var bottomBar: some View {
         if store.isPlaying {
-            EditToolbar(dimmed: true, rotationActive: currentRotationActive, canSave: canSave)
+            EditToolbar(dimmed: true, adjustActive: currentAdjustActive, canSave: canSave)
                 .padding(.bottom, 16)
         } else {
             EditToolbar(
-                rotationActive: currentRotationActive,
+                adjustActive: currentAdjustActive,
                 labelActive: currentLabelActive,
                 canSave: canSave,
-                onRotate: { rotateCurrentClip() },
+                onAdjust: { openAdjust() },
                 onLabel: { openLabelEditor() },
                 onDelete: { store.send(.deleteCurrentRequested) },
                 onSave: {
@@ -286,17 +223,17 @@ public struct TimelineView: View {
         }
     }
 
-    // MARK: - Rotation (session 환경 객체 사용)
+    // MARK: - Adjust (조정 화면 진입)
 
-    private var currentRotationActive: Bool {
+    /// 회전 또는 줌/이동이 적용돼 있으면 툴바 점 표시.
+    private var currentAdjustActive: Bool {
         guard let id = store.currentClip?.id else { return false }
-        return session.rotation(for: id) != .r0
+        return session.rotation(for: id) != .r0 || session.transform(for: id) != .fit
     }
 
-    private func rotateCurrentClip() {
+    private func openAdjust() {
         guard let id = store.currentClip?.id else { return }
-        session.cycleRotation(for: id)
-        store.send(.rotateCurrentTapped)
+        router.push(.clipAdjust(clipID: id))
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
@@ -309,17 +246,6 @@ public struct TimelineView: View {
 
     private func openLabelEditor() {
         labelEditorClip = store.currentClip
-    }
-}
-
-// MARK: - Pulse dot (header)
-
-private struct PulseDot: View {
-    var body: some View {
-        Circle()
-            .fill(ChalNaColor.coral)
-            .frame(width: 6, height: 6)
-            .overlay(Circle().stroke(ChalNaColor.coral.opacity(0.3), lineWidth: 3).padding(-3))
     }
 }
 

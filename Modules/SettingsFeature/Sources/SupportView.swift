@@ -8,7 +8,7 @@ public struct SupportView: View {
     @Environment(AppRouter.self) private var router
     @Bindable var store: StoreOf<SupportFeature>
 
-    private let placeholder = "불편한 점이나 제안을 자유롭게 적어주세요."
+    private let placeholder = String(localized: "불편한 점이나 제안을 자유롭게 적어주세요.")
 
     public init(store: StoreOf<SupportFeature>) {
         self.store = store
@@ -51,24 +51,25 @@ public struct SupportView: View {
         } message: { info in
             Text(info.message)
         }
+        .sheet(
+            isPresented: Binding(
+                get: { store.isRedeemPresented },
+                set: { store.send(.redeemPresentedChanged($0)) }
+            )
+        ) {
+            redeemCodeSheet
+                .presentationDetents([.height(280)])
+                .presentationDragIndicator(.visible)
+        }
     }
 
     // MARK: - Header
 
     private var header: some View {
-        ZStack {
-            Text("문의·신고")
-                .font(ChalNaTypography.title(ChalNaTypography.Size.h2, weight: .semibold))
-                .foregroundColor(ChalNaColor.ink)
-            HStack {
-                Button { router.pop() } label: {
-                    ChalNaIcon(.chevronLeft, size: 22)
-                        .foregroundColor(ChalNaColor.ink)
-                }
-                .buttonStyle(.chalNaHeaderAction)
-                .accessibilityLabel("뒤로")
-                Spacer()
-            }
+        ChalNaNavigationHeader(titleKey: "문의·신고") {
+            ChalNaHeaderBackButton { router.pop() }
+        } trailing: {
+            EmptyView()
         }
     }
 
@@ -93,12 +94,12 @@ public struct SupportView: View {
         let isSelected = store.category == category
         return Text(category.koreanName)
             .font(ChalNaTypography.krBody(ChalNaTypography.Size.small, weight: .semibold))
-            .foregroundColor(isSelected ? ChalNaColor.cream : ChalNaColor.taupe)
+            .foregroundColor(isSelected ? ChalNaColor.white : ChalNaColor.taupe)
             .padding(.horizontal, 18)
             .padding(.vertical, 10)
             .background(
                 Capsule(style: .continuous)
-                    .fill(isSelected ? ChalNaColor.ink : ChalNaColor.cream)
+                    .fill(isSelected ? ChalNaColor.ink : ChalNaColor.white)
             )
             .overlay(
                 Capsule(style: .continuous)
@@ -128,7 +129,7 @@ public struct SupportView: View {
         }
         .background(
             RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                .fill(ChalNaColor.cream)
+                .fill(ChalNaColor.white)
         )
         .overlay(
             RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
@@ -143,7 +144,7 @@ public struct SupportView: View {
             store.send(.sendTapped)
         } label: {
             if store.isSending {
-                ProgressView().tint(ChalNaColor.cream)
+                ProgressView().tint(ChalNaColor.white)
             } else {
                 Text("전송")
             }
@@ -154,6 +155,35 @@ public struct SupportView: View {
 
     private var isSendDisabled: Bool {
         store.isSending || store.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var redeemCodeSheet: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("리딤 코드")
+                .font(ChalNaTypography.title(ChalNaTypography.Size.h2, weight: .semibold))
+                .foregroundColor(ChalNaColor.ink)
+
+            Text("코드를 입력하면 2026년까지 영상 생성 제한이 해제돼요.")
+                .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
+                .foregroundColor(ChalNaColor.taupe)
+
+            ChalNaTextField(
+                placeholder: "Redeem Code",
+                errorText: store.redeemError,
+                text: $store.redeemCode.sending(\.redeemCodeChanged)
+            )
+
+            Button {
+                store.send(.redeemSubmitted)
+            } label: {
+                Text("적용")
+            }
+            .buttonStyle(.chalNa(.filled, size: .lg, fillWidth: true))
+            .disabled(store.redeemCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(ChalNaColor.white)
     }
 }
 

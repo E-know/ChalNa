@@ -6,7 +6,8 @@ import DesignSystem
 
 /// 고정 크기 영상 프리뷰 패널. Idle(큰 플레이 + 외부 스크럽바) · Playing(큰 일시정지 + 외부 스크럽바).
 struct PreviewPanel: View {
-    private static let previewHeight: CGFloat = 224
+    private static let previewHeight: CGFloat = 300
+    private static let render = CGSize(width: 1080, height: 1920)
 
     @Environment(EditSession.self) private var session
 
@@ -32,34 +33,49 @@ struct PreviewPanel: View {
     }
 
     private var previewCard: some View {
-        ZStack {
-            ChalNaColor.ink
-            thumbnail
+        GeometryReader { proxy in
+            let box = LabelBoxGeometry.fittedBox(aspect: 9.0 / 16.0, in: proxy.size)
+            clipCanvas(box: box)
                 .overlay(autoLabelsOverlay)
                 .overlay(labelOverlay)
+                .frame(width: box.width, height: box.height)
+                .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous))
                 .overlay(hudOverlay)
+                .frame(width: proxy.size.width, height: proxy.size.height)
         }
-        .frame(maxWidth: .infinity)
         .frame(height: Self.previewHeight)
-        .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous))
         .chalNaShadow(ChalNaShadow.md)
     }
 
     @ViewBuilder
-    private var thumbnail: some View {
+    private func clipCanvas(box: CGSize) -> some View {
         ZStack {
             if let clip = store.currentClip {
+                clip.thumbnailView(contentMode: .fill)
+                    .frame(width: box.width, height: box.height)
+                    .clipped()
+                    .blur(radius: 14)
+                    .overlay(Color.black.opacity(0.18))
+
+                let t = session.transform(for: clip.id)
+                let rrect = ClipFraming.resolvedRect(display: clip.displaySize ?? CGSize(width: 9, height: 16),
+                                                     rotation: currentRotation, render: Self.render, transform: t)
+                let factor = box.width / Self.render.width
                 RotatableContent(rotation: currentRotation) {
                     if clip.videoURL != nil && playback.hasVideo {
                         PlayerLayerView(player: playback.player)
                     } else {
-                        clip.thumbnailView(contentMode: .fit)
+                        clip.thumbnailView(contentMode: .fill)
                     }
                 }
+                .frame(width: rrect.width * factor, height: rrect.height * factor)
+                .position(x: rrect.midX * factor, y: rrect.midY * factor)
             } else {
                 ChalNaColor.ivory
             }
         }
+        .frame(width: box.width, height: box.height)
+        .clipped()
     }
 
     /// 자동 시간/날짜 라벨을 출력과 동일하게 미리보기에 표시(읽기 전용).

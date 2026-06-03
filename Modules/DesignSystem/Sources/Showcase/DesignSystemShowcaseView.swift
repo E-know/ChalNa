@@ -18,7 +18,7 @@ public struct DesignSystemShowcaseView: View {
             .padding(.horizontal, 24)
             .padding(.vertical, 32)
         }
-        .background(ChalNaColor.cream.ignoresSafeArea())
+        .background(ChalNaColor.white.ignoresSafeArea())
     }
 
     // MARK: - Header
@@ -41,7 +41,7 @@ public struct DesignSystemShowcaseView: View {
             VStack(alignment: .leading, spacing: 16) {
                 colorRow("Brand", swatches: [
                     ("Primary", ChalNaColor.coral, "#8B38E5"),
-                    ("Cream",   ChalNaColor.cream, "#FFFFFF"),
+                    ("White",   ChalNaColor.white, "#FFFFFF"),
                     ("Ivory",   ChalNaColor.ivory, "#F8F8F8"),
                     ("Ink",     ChalNaColor.ink,   "#1A1A1A"),
                     ("Taupe",   ChalNaColor.taupe, "#919191"),

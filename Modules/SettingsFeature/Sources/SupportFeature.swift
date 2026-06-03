@@ -1,5 +1,6 @@
 import ComposableArchitecture
 import AnalyticsService
+import AppCore
 
 /// 문의·신고 화면. 자유 텍스트 + 분류를 텔레그램 봇으로 전송.
 @Reducer
@@ -13,6 +14,10 @@ public struct SupportFeature {
         public var isSending = false
         /// nil 이면 알림 숨김. 성공 시 확인을 누르면 화면을 pop 한다(isSuccess 로 구분).
         public var alert: AlertInfo?
+        public var otherCategoryTapCount = 0
+        public var isRedeemPresented = false
+        public var redeemCode = ""
+        public var redeemError: String?
         public init() {}
     }
 
@@ -29,10 +34,14 @@ public struct SupportFeature {
         case sendSucceeded
         case sendFailed(reason: String)
         case alertDismissed
+        case redeemPresentedChanged(Bool)
+        case redeemCodeChanged(String)
+        case redeemSubmitted
     }
 
     @Dependency(\.feedbackClient) var feedbackClient
     @Dependency(\.analyticsTracker) var analyticsTracker
+    @Dependency(\.exportQuotaClient) var exportQuotaClient
 
     public var body: some ReducerOf<Self> {
         Reduce { state, action in
@@ -43,6 +52,17 @@ public struct SupportFeature {
 
             case let .categorySelected(category):
                 state.category = category
+                if category == .other {
+                    state.otherCategoryTapCount += 1
+                    if state.otherCategoryTapCount >= 5 {
+                        state.otherCategoryTapCount = 0
+                        state.redeemCode = ""
+                        state.redeemError = nil
+                        state.isRedeemPresented = true
+                    }
+                } else {
+                    state.otherCategoryTapCount = 0
+                }
                 return .none
 
             case .sendTapped:
@@ -64,7 +84,7 @@ public struct SupportFeature {
                 analyticsTracker.log(.feedbackSubmitted(category: state.category.rawValue))
                 state.isSending = false
                 state.text = ""
-                state.alert = AlertInfo(message: "소중한 의견 감사합니다. 잘 전달했어요.", isSuccess: true)
+                state.alert = AlertInfo(message: String(localized: "소중한 의견 감사합니다. 잘 전달했어요."), isSuccess: true)
                 return .none
 
             case let .sendFailed(reason):
@@ -75,6 +95,35 @@ public struct SupportFeature {
 
             case .alertDismissed:
                 state.alert = nil
+                return .none
+
+            case let .redeemPresentedChanged(isPresented):
+                state.isRedeemPresented = isPresented
+                if !isPresented {
+                    state.redeemCode = ""
+                    state.redeemError = nil
+                }
+                return .none
+
+            case let .redeemCodeChanged(code):
+                state.redeemCode = code
+                state.redeemError = nil
+                return .none
+
+            case .redeemSubmitted:
+                let code = state.redeemCode.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !code.isEmpty else {
+                    state.redeemError = String(localized: "리딤 코드를 입력해 주세요.")
+                    return .none
+                }
+                guard exportQuotaClient.redeem(code) else {
+                    state.redeemError = String(localized: "리딤 코드가 맞지 않아요.")
+                    return .none
+                }
+                state.isRedeemPresented = false
+                state.redeemCode = ""
+                state.redeemError = nil
+                state.alert = AlertInfo(message: String(localized: "2026년까지 영상 생성 제한이 해제됐어요."), isSuccess: false)
                 return .none
             }
         }

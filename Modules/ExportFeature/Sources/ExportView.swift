@@ -9,6 +9,7 @@ import SwiftData
 import Photos
 import AVKit
 import AVFoundation
+import UIKit
 
 /// Timeline에서 "저장"을 누르면 진입. AVFoundationCompositionService 를 구동해 mp4 를 만든다.
 public struct ExportView: View {
@@ -29,7 +30,7 @@ public struct ExportView: View {
             GeometryReader { proxy in
                 VStack(spacing: 0) {
                     cover(width: coverWidth(forAvailableHeight: proxy.size.height))
-                        .padding(.top, 16)
+                        .padding(.top, 28)
                         .padding(.horizontal, 32)
 
                     statusBlock
@@ -48,10 +49,15 @@ public struct ExportView: View {
         .chalNaScreen()
         .onAppear {
             guard store.phase == .idle else { return }
-            store.send(.startExport(clips: session.clips, rotations: session.rotations, clipLabels: session.labels))
+            store.send(.startExport(clips: session.clips, rotations: session.rotations, transforms: session.transforms, clipLabels: session.labels))
         }
         .onDisappear {
+            UIApplication.shared.isIdleTimerDisabled = false
             store.send(.dismissTapped)
+        }
+        // 영상 합성 중에는 화면 자동 잠금(idle timer)을 막아 작업이 중단되지 않게 한다.
+        .onChange(of: store.phase) { _, newPhase in
+            UIApplication.shared.isIdleTimerDisabled = (newPhase == .exporting)
         }
         .onChange(of: store.exportedURL) { _, newURL in
             if let newURL, !store.didAddToLibrary {
@@ -146,6 +152,7 @@ public struct ExportView: View {
             Text(store.phase.tag)
                 .tagLabel(color: tagColor)
         }
+        .frame(height: 44)
         .frame(maxWidth: .infinity)
     }
 
@@ -166,7 +173,7 @@ public struct ExportView: View {
         case .failed:           290
         }
         let envelope = max(available - reservedHeight, 200)
-        let widthFromHeight = (envelope - 60) * 16 / 9
+        let widthFromHeight = (envelope - 60) * 9 / 16
         return min(max(widthFromHeight, 240), 360)
     }
 
@@ -181,7 +188,7 @@ public struct ExportView: View {
                         store.send(.playerPresentedChanged(true))
                     } label: {
                         clip.thumbnailView()
-                            .frame(width: width, height: width * 9 / 16)
+                            .frame(width: width, height: width * 16 / 9)
                             .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous))
                             .overlay(
                                 RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
@@ -195,7 +202,7 @@ public struct ExportView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(!canPlay)
-                    .accessibilityLabel(canPlay ? "완성된 영상 재생" : "")
+                    .accessibilityLabel(canPlay ? LocalizedStringKey("완성된 영상 재생") : "")
                     .accessibilityAddTraits(canPlay ? .isButton : [])
 
                     if store.phase == .done {
@@ -261,7 +268,7 @@ public struct ExportView: View {
             .frame(height: 6)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("내보내기 진행률")
-            .accessibilityValue("\(Int(store.progress * 100))퍼센트")
+            .accessibilityValue(String(localized: "\(Int(store.progress * 100))퍼센트"))
 
             Text(statusLine)
                 .font(ChalNaTypography.krBody(13))
@@ -271,20 +278,20 @@ public struct ExportView: View {
 
     private var statusLabelLeft: String {
         switch store.phase {
-        case .idle, .exporting: return "EXPORT · IN PROGRESS"
-        case .done:             return "EXPORT · COMPLETE"
-        case .failed:           return "EXPORT · FAILED"
+        case .idle, .exporting: return String(localized: "EXPORT · IN PROGRESS")
+        case .done:             return String(localized: "EXPORT · COMPLETE")
+        case .failed:           return String(localized: "EXPORT · FAILED")
         }
     }
 
     private var statusLine: String {
         switch store.phase {
         case .idle, .exporting:
-            return "Vlog를 엮는 중… Live Photo의 영상 부분을 자동으로 추출해 이어 붙여요."
+            return String(localized: "Vlog를 엮는 중… Live Photo의 영상 부분을 자동으로 추출해 이어 붙여요.")
         case .done:
-            return "필름이 완성되었어요. 공유하거나 사진 보관함에 저장할 수 있어요."
+            return String(localized: "필름이 완성되었어요. 공유하거나 사진 보관함에 저장할 수 있어요.")
         case .failed:
-            return store.errorMessage ?? "저장 중 문제가 발생했어요."
+            return store.errorMessage ?? String(localized: "저장 중 문제가 발생했어요.")
         }
     }
 
@@ -310,11 +317,7 @@ public struct ExportView: View {
 
     @ViewBuilder
     private var completedCTAs: some View {
-        if #available(iOS 26.0, *) {
-            liquidGlassCompletedCTAs
-        } else {
-            paperCompletedCTAs
-        }
+        paperCompletedCTAs
     }
 
     private var paperCompletedCTAs: some View {
@@ -340,7 +343,7 @@ public struct ExportView: View {
                             } else {
                                 ChalNaIcon(.download, size: 14)
                             }
-                            Text(store.isSaving ? "저장 중…" : "저장하기")
+                            Text(store.isSaving ? LocalizedStringKey("저장 중…") : LocalizedStringKey("저장하기"))
                         }
                         .frame(maxWidth: .infinity)
                     }
@@ -355,9 +358,14 @@ public struct ExportView: View {
                     .buttonStyle(.chalNaOutline)
                     .frame(maxWidth: .infinity)
 
-                Button("홈으로 →") {
+                Button {
                     store.send(.homeTapped)
                     router.popToRoot()
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("홈으로")
+                        ChalNaIcon(.chevronRight, size: 14)
+                    }
                 }
                 .buttonStyle(.chalNaText)
                 .frame(maxWidth: .infinity)
@@ -365,83 +373,15 @@ public struct ExportView: View {
         }
     }
 
-    @available(iOS 26.0, *)
-    private var liquidGlassCompletedCTAs: some View {
-        GlassEffectContainer(spacing: 12) {
-            VStack(spacing: 12) {
-                if let url = store.exportedURL {
-                    HStack(spacing: 12) {
-                        ShareLink(item: url) {
-                            HStack(spacing: 6) {
-                                ChalNaIcon(.share, size: 14)
-                                Text("공유하기")
-                            }
-                            .foregroundStyle(ChalNaColor.ink)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                        }
-                        .buttonStyle(.glass)
-                        .frame(maxWidth: .infinity)
-
-                        Button {
-                            store.send(.saveToPhotoLibraryTapped)
-                        } label: {
-                            HStack(spacing: 6) {
-                                if store.isSaving {
-                                    ProgressView().controlSize(.small).tint(ChalNaColor.ink)
-                                } else {
-                                    ChalNaIcon(.download, size: 14)
-                                }
-                                Text(store.isSaving ? "저장 중…" : "저장하기")
-                            }
-                            .foregroundStyle(ChalNaColor.ink)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                        }
-                        .buttonStyle(.glassProminent)
-                        .tint(ChalNaColor.coral)
-                        .frame(maxWidth: .infinity)
-                        .disabled(store.isSaving)
-                    }
-                }
-
-                HStack(spacing: 12) {
-                    Button {
-                        startAnotherFilm()
-                    } label: {
-                        Text("다른 영상 만들기")
-                            .foregroundStyle(ChalNaColor.ink)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    }
-                    .buttonStyle(.glass)
-                    .frame(maxWidth: .infinity)
-
-                    Button {
-                        store.send(.homeTapped)
-                        router.popToRoot()
-                    } label: {
-                        Text("홈으로 →")
-                            .foregroundStyle(ChalNaColor.ink)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    }
-                    .buttonStyle(.glass)
-                    .frame(maxWidth: .infinity)
-                }
-            }
-        }
-    }
-
     @ViewBuilder
     private var failedCTAs: some View {
-        if #available(iOS 26.0, *) {
-            liquidGlassFailedCTAs
-        } else {
-            paperFailedCTAs
-        }
+        paperFailedCTAs
     }
 
     private var paperFailedCTAs: some View {
         VStack(spacing: 12) {
             Button {
-                store.send(.retryTapped(clips: session.clips, rotations: session.rotations, clipLabels: session.labels))
+                store.send(.retryTapped(clips: session.clips, rotations: session.rotations, transforms: session.transforms, clipLabels: session.labels))
             } label: {
                 HStack(spacing: 8) {
                     ChalNaIcon(.plus, size: 14)
@@ -454,36 +394,6 @@ public struct ExportView: View {
             Button("편집으로 돌아가기") { router.pop() }
                 .buttonStyle(.chalNaOutline)
                 .frame(maxWidth: .infinity)
-        }
-    }
-
-    @available(iOS 26.0, *)
-    private var liquidGlassFailedCTAs: some View {
-        GlassEffectContainer(spacing: 12) {
-            VStack(spacing: 12) {
-                Button {
-                    store.send(.retryTapped(clips: session.clips, rotations: session.rotations, clipLabels: session.labels))
-                } label: {
-                    HStack(spacing: 8) {
-                        ChalNaIcon(.plus, size: 14)
-                        Text("다시 시도")
-                    }
-                    .foregroundStyle(ChalNaColor.ink)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.glassProminent)
-                .tint(ChalNaColor.coral)
-
-                Button {
-                    router.pop()
-                } label: {
-                    Text("편집으로 돌아가기")
-                        .foregroundStyle(ChalNaColor.ink)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.glass)
-                .frame(maxWidth: .infinity)
-            }
         }
     }
 

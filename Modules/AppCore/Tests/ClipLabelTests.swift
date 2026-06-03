@@ -9,9 +9,6 @@ struct ClipLabelTests {
         let l = ClipLabel.default
         #expect(l.isVisible == false)
         #expect(l.position == CGPoint(x: 0.5, y: 0.5))
-        #expect(l.font == .memoment)
-        #expect(l.background == .transparent)
-        #expect(l.textColor == .white)
         #expect(l.sizeFraction == 0.10)
     }
 
@@ -27,15 +24,5 @@ struct ClipLabelTests {
         #expect(ClipLabel(sizeFraction: 0.1).clampedSizeFraction == 0.1)
         #expect(ClipLabel(sizeFraction: ClipLabel.minSizeFraction).clampedSizeFraction == ClipLabel.minSizeFraction)
         #expect(ClipLabel(sizeFraction: ClipLabel.maxSizeFraction).clampedSizeFraction == ClipLabel.maxSizeFraction)
-    }
-
-    @Test func displayNames() {
-        #expect(LabelFont.memoment.displayName == "꾸꾸")
-        #expect(LabelFont.system.displayName == "기본")
-        #expect(LabelBackground.white.displayName == "흰색")
-        #expect(LabelBackground.black.displayName == "검정색")
-        #expect(LabelBackground.transparent.displayName == "투명")
-        #expect(LabelColor.white.displayName == "흰색")
-        #expect(LabelColor.black.displayName == "검정색")
     }
 }

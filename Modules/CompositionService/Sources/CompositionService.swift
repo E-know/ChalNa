@@ -3,6 +3,7 @@ import Models
 import AVFoundation
 import CoreGraphics
 import QuartzCore
+import CoreImage
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -23,22 +24,23 @@ public enum ExportError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .noVideoClips:
-            return "합성 가능한 영상이 없어요. 영상 또는 Live Photo를 골라주세요."
+            return String(localized: "합성 가능한 영상이 없어요. 영상 또는 Live Photo를 골라주세요.")
         case .sessionSetupFailed:
-            return "내보내기 세션을 준비하지 못했어요."
+            return String(localized: "내보내기 세션을 준비하지 못했어요.")
         case .trackCreationFailed:
-            return "비디오 트랙을 만들 수 없어요."
+            return String(localized: "비디오 트랙을 만들 수 없어요.")
         case .exportFailed(let msg):
-            return "저장 중 문제가 생겼어요: \(msg)"
+            return String(localized: "저장 중 문제가 생겼어요: \(msg)")
         }
     }
 }
 
 public protocol CompositionServicing: Sendable {
-    /// 클립 배열·회전·자동 라벨 설정·클립별 사용자 라벨을 받아 mp4를 만들고 진행률/완료/실패를 스트림으로 흘려보낸다.
+    /// 클립 배열·회전·클립별 변환·자동 라벨 설정·클립별 사용자 라벨을 받아 mp4를 만든다.
     func export(
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation],
+        transforms: [Clip.ID: ClipTransform],
         labelSettings: LabelSettings,
         clipLabels: [Clip.ID: ClipLabel]
     ) -> AsyncStream<ExportEvent>
@@ -47,15 +49,15 @@ public protocol CompositionServicing: Sendable {
 public extension CompositionServicing {
     /// 사용자 라벨 없는 호출 → 빈 라벨(현행 동작).
     func export(clips: [Clip], rotations: [Clip.ID: ClipRotation], labelSettings: LabelSettings) -> AsyncStream<ExportEvent> {
-        export(clips: clips, rotations: rotations, labelSettings: labelSettings, clipLabels: [:])
+        export(clips: clips, rotations: rotations, transforms: [:], labelSettings: labelSettings, clipLabels: [:])
     }
     /// 라벨 설정 없는 호출 → 기본값.
     func export(clips: [Clip], rotations: [Clip.ID: ClipRotation]) -> AsyncStream<ExportEvent> {
-        export(clips: clips, rotations: rotations, labelSettings: .default, clipLabels: [:])
+        export(clips: clips, rotations: rotations, transforms: [:], labelSettings: .default, clipLabels: [:])
     }
     /// 회전·라벨 설정 없는 호출.
     func export(clips: [Clip]) -> AsyncStream<ExportEvent> {
-        export(clips: clips, rotations: [:], labelSettings: .default, clipLabels: [:])
+        export(clips: clips, rotations: [:], transforms: [:], labelSettings: .default, clipLabels: [:])
     }
 }
 
@@ -66,6 +68,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
     public nonisolated func export(
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation],
+        transforms: [Clip.ID: ClipTransform],
         labelSettings: LabelSettings,
         clipLabels: [Clip.ID: ClipLabel]
     ) -> AsyncStream<ExportEvent> {
@@ -75,7 +78,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
                     continuation.finish()
                     return
                 }
-                await self.run(clips: clips, rotations: rotations, labelSettings: labelSettings, clipLabels: clipLabels, continuation: continuation)
+                await self.run(clips: clips, rotations: rotations, transforms: transforms, labelSettings: labelSettings, clipLabels: clipLabels, continuation: continuation)
             }
             continuation.onTermination = { _ in task.cancel() }
         }
@@ -86,12 +89,13 @@ public actor AVFoundationCompositionService: CompositionServicing {
     private func run(
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation],
+        transforms: [Clip.ID: ClipTransform],
         labelSettings: LabelSettings,
         clipLabels: [Clip.ID: ClipLabel],
         continuation: AsyncStream<ExportEvent>.Continuation
     ) async {
         do {
-            let built = try await buildComposition(clips: clips, rotations: rotations, labelSettings: labelSettings, clipLabels: clipLabels)
+            let built = try await buildComposition(clips: clips, rotations: rotations, transforms: transforms, labelSettings: labelSettings, clipLabels: clipLabels)
             guard built.hasContent else {
                 throw ExportError.noVideoClips
             }
@@ -130,7 +134,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
             continuation.yield(.progress(1.0))
             continuation.yield(.completed(outputURL))
         } catch let err as ExportError {
-            continuation.yield(.failed(err.errorDescription ?? "알 수 없는 오류"))
+            continuation.yield(.failed(err.errorDescription ?? String(localized: "알 수 없는 오류")))
         } catch {
             continuation.yield(.failed(error.localizedDescription))
         }
@@ -148,6 +152,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
     private func buildComposition(
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation],
+        transforms: [Clip.ID: ClipTransform],
         labelSettings: LabelSettings,
         clipLabels: [Clip.ID: ClipLabel]
     ) async throws -> BuiltComposition {
@@ -160,13 +165,13 @@ public actor AVFoundationCompositionService: CompositionServicing {
         }
         var compAudioTrack: AVMutableCompositionTrack?
 
-        // 1) 출력 캔버스는 "가장 큰 oriented height"를 가진 클립의 W×H 비율 그대로.
+        // 1) 출력 캔버스는 항상 outputSize(9:16, 1080×1920) 고정.
         //    비율이 다른 클립은 `transform()`이 aspectFit + 가운데 정렬해 letterbox/pillarbox 처리.
         let renderSize = await Self.resolveRenderSize(clips: clips, rotations: rotations)
 
         // 2) 시간순으로 트랙을 채우면서 클립별 layerInstruction 누적.
         var cursor = CMTime.zero
-        var layerInstructions: [(timeRange: CMTimeRange, transform: CGAffineTransform, capturedAt: Date, clipID: Clip.ID, placedRect: CGRect)] = []
+        var layerInstructions: [(timeRange: CMTimeRange, transform: CGAffineTransform, backgroundTransform: CGAffineTransform, capturedAt: Date, clipID: Clip.ID, placedRect: CGRect, thumbnailData: Data?)] = []
 
         for clip in clips {
             guard let videoURL = clip.videoURL else { continue }
@@ -208,6 +213,14 @@ public actor AVFoundationCompositionService: CompositionServicing {
                 naturalSize: naturalSize,
                 preferredTransform: preferredTransform,
                 rotation: userRotation,
+                renderSize: renderSize,
+                framing: transforms[clip.id] ?? .fit
+            )
+
+            let backgroundTransform = Self.fillTransform(
+                naturalSize: naturalSize,
+                preferredTransform: preferredTransform,
+                rotation: userRotation,
                 renderSize: renderSize
             )
 
@@ -218,34 +231,40 @@ public actor AVFoundationCompositionService: CompositionServicing {
                 rotation: userRotation,
                 renderSize: renderSize
             )
-            layerInstructions.append((placedRange, transform, clip.capturedAt, clip.id, pRect))
+            layerInstructions.append((placedRange, transform, backgroundTransform, clip.capturedAt, clip.id, pRect, clip.thumbnailData))
 
             cursor = CMTimeAdd(cursor, clipDuration)
         }
 
         let hasContent = cursor > .zero
 
-        // 3) AVMutableVideoComposition 구성.
+        // 3) AVMutableVideoComposition 구성. 여백(letterbox)을 클립의 블러 필로 채우기 위해
+        //    커스텀 컴포지터(`ChalNaVideoCompositor`)와 클립별 `ChalNaCompositionInstruction` 을 쓴다.
         let videoComposition = AVMutableVideoComposition()
         videoComposition.renderSize = renderSize
         videoComposition.frameDuration = CMTime(value: 1, timescale: 30)
+        videoComposition.customVideoCompositorClass = ChalNaVideoCompositor.self
+        let blurRadius = min(renderSize.width, renderSize.height) * 0.04
         videoComposition.instructions = layerInstructions.map { entry in
-            let inst = AVMutableVideoCompositionInstruction()
-            inst.timeRange = entry.timeRange
-            let layer = AVMutableVideoCompositionLayerInstruction(assetTrack: compVideoTrack)
-            layer.setTransform(entry.transform, at: entry.timeRange.start)
-            inst.layerInstructions = [layer]
-            return inst
-        }
-
-        // 4) 각 클립 placedRange 동안 라벨 오버레이 (자동 시간/날짜 + 사용자 커스텀 라벨).
-        let hasVisibleCustomLabel = clipLabels.values.contains { $0.isVisible }
-        if hasContent && (labelSettings.timeEnabled || labelSettings.dateEnabled || hasVisibleCustomLabel) {
-            videoComposition.animationTool = Self.makeDateLabelAnimationTool(
+            // 클립별 라벨(시간/날짜/커스텀)을 정적 CGImage 로 미리 렌더해 컴포지터가 전경 위에 합성.
+            var overlay: CGImage?
+            #if canImport(UIKit)
+            overlay = Self.renderLabelOverlayImage(
                 renderSize: renderSize,
-                entries: layerInstructions.map { ($0.timeRange, $0.capturedAt, $0.clipID, $0.placedRect) },
+                capturedAt: entry.capturedAt,
+                placedRect: entry.placedRect,
                 labelSettings: labelSettings,
-                clipLabels: clipLabels
+                clipLabel: clipLabels[entry.clipID] ?? .default
+            )
+            #endif
+            return ChalNaCompositionInstruction(
+                timeRange: entry.timeRange,
+                trackID: compVideoTrack.trackID,
+                foreground: entry.transform,
+                background: entry.backgroundTransform,
+                blurRadius: blurRadius,
+                scrimAlpha: 0.18,
+                overlayImage: overlay
             )
         }
 
@@ -258,24 +277,36 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
     // MARK: - Date label overlay
 
-    /// 우측 하단 작은 라벨용 — 날짜만 (`yyyy/MM/dd`).
-    /// 사용자의 현재 타임존 · POSIX 로케일(ICU 의존 제거).
-    private static let dateOnlyFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = .current
-        f.dateFormat = "yyyy/MM/dd"
-        return f
-    }()
+    /// 앱에서 선택한 표시 언어(없으면 시스템)에 맞춘 오버레이 로케일.
+    /// 스위즐은 `Bundle` 만 바꾸므로 `Locale.current` 는 기기 언어를 반영한다.
+    /// 따라서 앱 선택 언어("appLanguage")를 직접 읽어 매핑한다.
+    private static func overlayLocale() -> Locale {
+        switch UserDefaults.standard.string(forKey: "appLanguage") {
+        case "ko": return Locale(identifier: "ko")
+        case "en": return Locale(identifier: "en")
+        case "ja": return Locale(identifier: "ja")
+        default:   return Locale.current
+        }
+    }
 
-    /// 화면 정중앙 큰 라벨용 — 시:분 (`HH:mm`).
-    private static let timeOnlyFormatter: DateFormatter = {
+    /// 우측 하단 작은 라벨용 — 날짜. 글리프-세이프 숫자 형식(로케일별 순서만 다름).
+    /// en: `MM/dd/yyyy`, 그 외(ko·ja): `yyyy/MM/dd`. 현재 타임존.
+    private static func dateOnlyFormatter(_ locale: Locale) -> DateFormatter {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
+        f.locale = locale
         f.timeZone = .current
-        f.dateFormat = "HH:mm"
+        f.dateFormat = (locale.language.languageCode?.identifier == "en") ? "MM/dd/yyyy" : "yyyy/MM/dd"
         return f
-    }()
+    }
+
+    /// 화면 정중앙 큰 라벨용 — 시:분. en: 12시간(`h:mm a`), 그 외: 24시간(`HH:mm`).
+    private static func timeOnlyFormatter(_ locale: Locale) -> DateFormatter {
+        let f = DateFormatter()
+        f.locale = locale
+        f.timeZone = .current
+        f.dateFormat = (locale.language.languageCode?.identifier == "en") ? "h:mm a" : "HH:mm"
+        return f
+    }
 
     /// `UIAppFonts`로 등록된 KERISKEDU 패밀리에서 Line(outline) 변형의 PostScript name 우선 선택.
     /// 매칭 실패 시 빈 문자열 → `UIFont(name:size:)`가 nil 리턴 → 시스템 폰트로 fallback.
@@ -302,121 +333,101 @@ public actor AVFoundationCompositionService: CompositionServicing {
         return ""
     }()
 
-    /// 클립별 촬영일시를 설정에 따라 오버레이로 합성하는 `AVVideoCompositionCoreAnimationTool`.
-    /// - 시각 `HH:mm`: 큰 글씨(minDim×0.18), opacity 0.5
-    /// - 날짜 `yyyy/MM/dd`: 작은 글씨(minDim×0.035), opacity 1.0
-    /// 표시 여부·위치는 `labelSettings`를 따른다. 각 라벨은 자신의 timeRange 동안만 보인다.
-    /// 시각·날짜가 모두 켜져 있고 위치가 같으면 세로 스택(시각 위 / 날짜 아래)으로 묶어 배치한다.
-    private static func makeDateLabelAnimationTool(
+    #if canImport(UIKit)
+    /// 한 클립 구간의 라벨(시간/날짜/커스텀)을 `renderSize` 의 투명 CALayer 트리로 쌓아 정적 CGImage 로 렌더한다.
+    /// 라벨이 하나도 보이지 않으면 nil 을 반환해 컴포지터가 합성을 스킵하게 한다.
+    ///
+    /// 좌표계: 라벨 origin 들은 CoreAnimation y-UP(좌하단 원점)으로 계산된다. 이를 top-left 원점
+    /// CGContext 로 렌더하면 상하가 뒤집히므로 `parentLayer.isGeometryFlipped = true` 로 보정한다
+    /// → y-up 으로 계산한 TOP 라벨이 이미지 위쪽에 실제로 그려진다.
+    private static func renderLabelOverlayImage(
         renderSize: CGSize,
-        entries: [(timeRange: CMTimeRange, capturedAt: Date, clipID: Clip.ID, placedRect: CGRect)],
+        capturedAt: Date,
+        placedRect: CGRect,
         labelSettings: LabelSettings,
-        clipLabels: [Clip.ID: ClipLabel]
-    ) -> AVVideoCompositionCoreAnimationTool {
+        clipLabel: ClipLabel
+    ) -> CGImage? {
+        let custom = clipLabel
+        let anyVisible = labelSettings.timeEnabled || labelSettings.dateEnabled || custom.isVisible
+        guard anyVisible else { return nil }
+
         let parentLayer = CALayer()
-        let videoLayer = CALayer()
         parentLayer.frame = CGRect(origin: .zero, size: renderSize)
-        videoLayer.frame = parentLayer.frame
-        parentLayer.addSublayer(videoLayer)
+        parentLayer.backgroundColor = UIColor.clear.cgColor
 
         let minDim = min(renderSize.width, renderSize.height)
         let dateFontSize = minDim * LabelLayout.dateFontFraction
         let timeFontSize = minDim * LabelLayout.timeFontFraction
         let padding = CGSize(width: renderSize.width * LabelLayout.paddingFraction, height: renderSize.height * LabelLayout.paddingFraction)
         let stackGap = minDim * LabelLayout.stackGapFraction
-        // 둘 다 켜져 있고 같은 구역이면 겹치므로 세로 스택으로 묶는다.
         let stacked = labelSettings.timeEnabled && labelSettings.dateEnabled
             && labelSettings.timePosition == labelSettings.datePosition
 
-        #if canImport(UIKit)
-        // 자동 시간·날짜 레이어 추가 "뒤"에 호출 — 커스텀 라벨을 그 위에 얹는다.
-        func addCustomLabel(for entry: (timeRange: CMTimeRange, capturedAt: Date, clipID: Clip.ID, placedRect: CGRect)) {
-            let custom = clipLabels[entry.clipID] ?? .default
-            guard custom.isVisible else { return }
-            for layer in makeCustomLabelLayers(
-                label: custom,
-                placedRect: entry.placedRect,
+        let locale = overlayLocale()
+        let dateText = dateOnlyFormatter(locale).string(from: capturedAt)
+        let timeText = timeOnlyFormatter(locale).string(from: capturedAt)
+
+        if stacked {
+            let timeSize = measureOverlayText(timeText, fontSize: timeFontSize)
+            let dateSize = measureOverlayText(dateText, fontSize: dateFontSize)
+            let origins = LabelLayout.stackedOrigins(
+                position: labelSettings.timePosition,
+                timeSize: timeSize,
+                dateSize: dateSize,
+                gap: stackGap,
                 renderSize: renderSize,
-                timeRange: entry.timeRange
+                padding: padding
+            )
+            parentLayer.addSublayer(makeOverlayTextLayer(
+                text: dateText, fontSize: dateFontSize,
+                opacity: labelSettings.dateOpacity
+            ) { _ in origins.date })
+            parentLayer.addSublayer(makeOverlayTextLayer(
+                text: timeText, fontSize: timeFontSize,
+                opacity: labelSettings.timeOpacity
+            ) { _ in origins.time })
+        } else {
+            if labelSettings.dateEnabled {
+                parentLayer.addSublayer(makeOverlayTextLayer(
+                    text: dateText, fontSize: dateFontSize,
+                    opacity: labelSettings.dateOpacity
+                ) { size in
+                    labelSettings.datePosition.origin(renderSize: renderSize, textSize: size, padding: padding)
+                })
+            }
+            if labelSettings.timeEnabled {
+                parentLayer.addSublayer(makeOverlayTextLayer(
+                    text: timeText, fontSize: timeFontSize,
+                    opacity: labelSettings.timeOpacity
+                ) { size in
+                    labelSettings.timePosition.origin(renderSize: renderSize, textSize: size, padding: padding)
+                })
+            }
+        }
+
+        if custom.isVisible {
+            for layer in makeCustomLabelLayers(
+                label: custom, placedRect: placedRect, renderSize: renderSize
             ) {
                 parentLayer.addSublayer(layer)
             }
         }
-        #endif
 
-        for entry in entries {
-            let dateText = dateOnlyFormatter.string(from: entry.capturedAt)
-            let timeText = timeOnlyFormatter.string(from: entry.capturedAt)
+        // 라벨 origin 은 CoreAnimation y-UP(좌하단). `isGeometryFlipped = true` 로 하면
+        // sublayer 좌표가 시각상 올바르게(상단=상단) 그려지면서 글자 자체는 뒤집히지 않는다.
+        // → 결과 CGImage 는 "정상 방향(top-left)" 스크린샷. 이후 컴포지터가 전경과 동일하게 다룬다.
+        parentLayer.isGeometryFlipped = true
 
-            if stacked {
-                let timeSize = measureOverlayText(timeText, fontSize: timeFontSize)
-                let dateSize = measureOverlayText(dateText, fontSize: dateFontSize)
-                let origins = LabelLayout.stackedOrigins(
-                    position: labelSettings.timePosition,
-                    timeSize: timeSize,
-                    dateSize: dateSize,
-                    gap: stackGap,
-                    renderSize: renderSize,
-                    padding: padding
-                )
-                let dateLayer = makeOverlayTextLayer(
-                    text: dateText,
-                    fontSize: dateFontSize,
-                    timeRange: entry.timeRange,
-                    opacity: labelSettings.dateOpacity
-                ) { _ in origins.date }
-                parentLayer.addSublayer(dateLayer)
-
-                let timeLayer = makeOverlayTextLayer(
-                    text: timeText,
-                    fontSize: timeFontSize,
-                    timeRange: entry.timeRange,
-                    opacity: labelSettings.timeOpacity
-                ) { _ in origins.time }
-                parentLayer.addSublayer(timeLayer)
-
-                #if canImport(UIKit)
-                addCustomLabel(for: entry)
-                #endif
-                continue
-            }
-
-            if labelSettings.dateEnabled {
-                let dateLayer = makeOverlayTextLayer(
-                    text: dateText,
-                    fontSize: dateFontSize,
-                    timeRange: entry.timeRange,
-                    opacity: labelSettings.dateOpacity
-                ) { size in
-                    labelSettings.datePosition.origin(renderSize: renderSize, textSize: size, padding: padding)
-                }
-                parentLayer.addSublayer(dateLayer)
-            }
-
-            if labelSettings.timeEnabled {
-                let timeLayer = makeOverlayTextLayer(
-                    text: timeText,
-                    fontSize: timeFontSize,
-                    timeRange: entry.timeRange,
-                    opacity: labelSettings.timeOpacity
-                ) { size in
-                    labelSettings.timePosition.origin(renderSize: renderSize, textSize: size, padding: padding)
-                }
-                parentLayer.addSublayer(timeLayer)
-            }
-
-            #if canImport(UIKit)
-            addCustomLabel(for: entry)
-            #endif
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = false
+        let renderer = UIGraphicsImageRenderer(size: renderSize, format: format)
+        let uiImage = renderer.image { ctx in
+            parentLayer.render(in: ctx.cgContext)
         }
-
-        return AVVideoCompositionCoreAnimationTool(
-            postProcessingAsVideoLayer: videoLayer,
-            in: parentLayer
-        )
+        return uiImage.cgImage
     }
 
-    #if canImport(UIKit)
     /// 오버레이 라벨용 UIFont. KERISKEDU(UIAppFonts 등록, PostScript name 매칭 성공 시)
     /// 커스텀 폰트, 실패하면 시스템 bold로 fallback.
     private static func overlayUIFont(fontSize: CGFloat) -> UIFont {
@@ -449,11 +460,10 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
     /// 흰색 KERISKEDU(없으면 시스템 bold) 텍스트에 검은 그림자를 입혀 만든 `CATextLayer`.
     /// `placement` 클로저는 실측 텍스트 사이즈를 받아 좌하단 원점(CoreAnimation) 기준 좌측 하단 좌표를 반환한다.
-    /// timeRange 구간 동안만 `opacity` 값으로 표시, 그 외엔 model value(0)로 복귀.
+    /// opacity 를 목표값으로 고정한다(클립 구간 동안만 컴포지터가 합성하므로 per-frame gating 불필요).
     private static func makeOverlayTextLayer(
         text: String,
         fontSize: CGFloat,
-        timeRange: CMTimeRange,
         opacity: CGFloat = 1.0,
         placement: (CGSize) -> CGPoint
     ) -> CATextLayer {
@@ -485,88 +495,59 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
         let origin = placement(textSize)
         textLayer.frame = CGRect(origin: origin, size: textSize)
-        textLayer.opacity = 0
-
-        // 해당 클립의 timeRange 동안만 보이게. `AVCoreAnimationBeginTimeAtZero` 는
-        // CoreAnimation에서 "합성 0초"를 의미하는 매직값 (0은 "즉시"라 의미가 다름).
-        // fillMode = .removed: 활성 구간 밖에서는 model value(opacity=0)로 복귀해 다음 클립과 겹치지 않게 함.
-        let show = CABasicAnimation(keyPath: "opacity")
-        show.fromValue = opacity
-        show.toValue = opacity
-        show.beginTime = AVCoreAnimationBeginTimeAtZero + CMTimeGetSeconds(timeRange.start)
-        show.duration = max(0.01, CMTimeGetSeconds(timeRange.duration))
-        show.fillMode = .removed
-        show.isRemovedOnCompletion = false
-        textLayer.add(show, forKey: "show")
+        textLayer.opacity = Float(opacity)
 
         return textLayer
     }
 
     #if canImport(UIKit)
-    /// 커스텀 라벨용 UIFont. `.memoment` 는 등록된 MemomentKkukkukk family 런타임 탐색(첫 호출 1회 진단 print),
-    /// 실패하거나 `.system` 이면 시스템 semibold.
-    private static let memomentLabelFontName: String = {
-        let families = UIFont.familyNames.filter { $0.localizedCaseInsensitiveContains("Memoment") }
-        print("[CompositionService] Memoment families: \(families)")
-        for family in families {
-            let names = UIFont.fontNames(forFamilyName: family)
-            print("[CompositionService] family=\(family) names=\(names)")
-            if let any = names.first { return any }
-        }
-        return ""
-    }()
-
-    private static func overlayCustomUIFont(font: LabelFont, fontSize: CGFloat) -> UIFont {
-        if font == .memoment, !memomentLabelFontName.isEmpty,
-           let f = UIFont(name: memomentLabelFontName, size: fontSize) {
-            return f
-        }
-        return .systemFont(ofSize: fontSize, weight: .semibold)
+    /// 박스 자막 라벨용 UIFont — 시스템 light 고정.
+    private static func overlayCustomUIFont(fontSize: CGFloat) -> UIFont {
+        .systemFont(ofSize: fontSize, weight: .light)
     }
 
-    /// 커스텀 라벨 텍스트 실측(선택 폰트 기준).
-    private static func measureCustomText(_ text: String, font: LabelFont, fontSize: CGFloat) -> CGSize {
+    /// 박스 자막 텍스트 실측(시스템 light + 자간 기준).
+    private static func measureCustomText(_ text: String, fontSize: CGFloat) -> CGSize {
         let attributed = NSAttributedString(
             string: text,
-            attributes: [.font: overlayCustomUIFont(font: font, fontSize: fontSize)]
+            attributes: [
+                .font: overlayCustomUIFont(fontSize: fontSize),
+                .kern: ClipLabel.BoxStyle.letterSpacing(for: fontSize),
+            ]
         )
         let m = attributed.size()
         return CGSize(width: ceil(m.width), height: ceil(m.height))
     }
 
-    /// 사용자 라벨 한 개를 그릴 레이어들(배경 박스가 있으면 [bg, text], 없으면 [text]).
-    /// 모두 클립 `timeRange` 동안만 보인다.
+    /// 박스 자막 라벨 한 개를 그릴 레이어들([배경 박스, 텍스트]).
+    /// 스타일은 흰 배경 + 검정 글씨 + 검정 테두리로 고정.
     private static func makeCustomLabelLayers(
         label: ClipLabel,
         placedRect: CGRect,
-        renderSize: CGSize,
-        timeRange: CMTimeRange
+        renderSize: CGSize
     ) -> [CALayer] {
         let fontSize = max(8, label.clampedSizeFraction * placedRect.height)
-        let textSize = measureCustomText(label.text, font: label.font, fontSize: fontSize)
-        let textColorUI: UIColor = (label.textColor == .white) ? .white : .black
+        let textSize = measureCustomText(label.text, fontSize: fontSize)
         let origin = customLabelOrigin(placedRect: placedRect, position: label.position, textSize: textSize, renderSize: renderSize)
 
         let textLayer = CATextLayer()
         textLayer.string = NSAttributedString(
             string: label.text,
             attributes: [
-                .font: overlayCustomUIFont(font: label.font, fontSize: fontSize),
-                .foregroundColor: textColorUI,
+                .font: overlayCustomUIFont(fontSize: fontSize),
+                .foregroundColor: UIColor.black,
+                .kern: ClipLabel.BoxStyle.letterSpacing(for: fontSize),
             ]
         )
         textLayer.contentsScale = 2.0
         textLayer.isWrapped = false
         textLayer.alignmentMode = .center
         textLayer.frame = CGRect(origin: origin, size: textSize)
-        textLayer.opacity = 0
-        addShowAnimation(to: textLayer, timeRange: timeRange)
+        textLayer.opacity = 1
 
-        guard label.background != .transparent else { return [textLayer] }
-
-        let bgColorUI: UIColor = (label.background == .white) ? .white : .black
-        let padX = fontSize * 0.35
-        let padY = fontSize * 0.22
+        // 흰 배경 + 검정 테두리 박스. (프리뷰 ClipLabelText 와 동일한 ClipLabel.BoxStyle 사용)
+        let padX = fontSize * ClipLabel.BoxStyle.horizontalPaddingFraction
+        let padY = fontSize * ClipLabel.BoxStyle.verticalPaddingFraction
         let bgLayer = CALayer()
         bgLayer.frame = CGRect(
             x: origin.x - padX,
@@ -574,149 +555,111 @@ public actor AVFoundationCompositionService: CompositionServicing {
             width: textSize.width + padX * 2,
             height: textSize.height + padY * 2
         )
-        bgLayer.backgroundColor = bgColorUI.cgColor
-        bgLayer.cornerRadius = min(fontSize * 0.4, 12)
-        bgLayer.opacity = 0
-        addShowAnimation(to: bgLayer, timeRange: timeRange)
-        return [bgLayer, textLayer]
-    }
+        bgLayer.backgroundColor = UIColor.white.cgColor
+        bgLayer.borderColor = UIColor.black.cgColor
+        bgLayer.borderWidth = fontSize * ClipLabel.BoxStyle.borderWidthFraction
+        bgLayer.opacity = 1
 
-    /// 레이어를 클립 `timeRange` 동안만 opacity=1 로 보이게 하는 애니메이션(그 외엔 model value 0).
-    private static func addShowAnimation(to layer: CALayer, timeRange: CMTimeRange) {
-        let show = CABasicAnimation(keyPath: "opacity")
-        show.fromValue = 1.0
-        show.toValue = 1.0
-        show.beginTime = AVCoreAnimationBeginTimeAtZero + CMTimeGetSeconds(timeRange.start)
-        show.duration = max(0.01, CMTimeGetSeconds(timeRange.duration))
-        show.fillMode = .removed
-        show.isRemovedOnCompletion = false
-        layer.add(show, forKey: "show")
+        return [bgLayer, textLayer]
     }
     #endif
 
     // MARK: - RenderSize
 
-    /// 출력 캔버스 결정 — "비율을 최대한 길게(가장 큰 높이를 가진 클립 기준)":
-    /// 1) 모든 클립의 oriented size를 모은다 (사용자 회전 r90/r270이 axes를 swap한 뒤).
-    /// 2) 그 중 **height가 가장 큰 클립의 W × H를 그대로 캔버스로 사용**.
-    ///    동률은 처음 등장한 클립이 우선 (덮어쓰기 안 함).
-    /// 3) mp4 인코더가 짝수 픽셀을 선호하므로 2의 배수로 스냅(올림).
-    /// 4) 모든 클립의 사이즈 추출 실패 시 fallback 9:16 세로(1080×1920).
-    ///
-    /// 비율이 다른 클립은 `transform()`이 aspectFit + 가운데 정렬해 자동 letterbox/pillarbox 처리한다.
+    /// 최종 출력 캔버스 — 9:16 세로 고정.
+    public static let outputSize = CGSize(width: 1080, height: 1920)
+
+    /// 출력 캔버스는 입력 클립과 무관하게 항상 `outputSize`(1080×1920).
+    /// 비율이 다른 클립은 `transform()` 이 aspectFit + 가운데 정렬로 자동 letterbox/pillarbox 처리하고,
+    /// 남는 여백은 블러 배경 레이어가 채운다. (시그니처는 호출부 호환을 위해 유지)
     public static func resolveRenderSize(
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation]
     ) async -> CGSize {
-        let fallback = CGSize(width: 1080, height: 1920)
-        var best: CGSize? = nil
-        var bestHeight: CGFloat = 0
-
-        for clip in clips {
-            guard let raw = await effectiveSize(for: clip) else { continue }
-            let rot = rotations[clip.id] ?? .r0
-            let oriented = rot.swapsAxes
-                ? CGSize(width: raw.height, height: raw.width)
-                : raw
-            if oriented.height > bestHeight {     // 동률은 갱신 안 함 → 첫 등장 우선
-                bestHeight = oriented.height
-                best = oriented
-            }
-        }
-
-        guard let pick = best else { return fallback }
-        return CGSize(width: snapEven(pick.width), height: snapEven(pick.height))
-    }
-
-    /// 정수 픽셀 중에서 2의 배수로 절상 스냅. H.264 인코더의 짝수 dim 선호를 만족시키기 위해.
-    private static func snapEven(_ v: CGFloat) -> CGFloat {
-        let r = round(v)
-        return r.truncatingRemainder(dividingBy: 2) == 0 ? r : r + 1
-    }
-
-    /// 한 클립의 "preferredTransform 적용 후 displaySize"를 계산.
-    /// 1순위: Clip.displaySize (PHAsset에서 추출됨), 2순위: AVAsset 트랙에서 직접 로드.
-    /// 둘 다 실패하면 nil. width/height가 0 이하면 무효 처리.
-    private static func effectiveSize(for clip: Clip) async -> CGSize? {
-        if let size = clip.displaySize, size.width > 0, size.height > 0 {
-            return size
-        }
-        if let url = clip.videoURL {
-            let asset = AVURLAsset(url: url)
-            if let track = (try? await asset.loadTracks(withMediaType: .video))?.first {
-                let natural = (try? await track.load(.naturalSize)) ?? .zero
-                let transform = (try? await track.load(.preferredTransform)) ?? .identity
-                let display = natural.applying(transform)
-                let w = abs(display.width)
-                let h = abs(display.height)
-                if w > 0, h > 0 {
-                    return CGSize(width: w, height: h)
-                }
-            }
-        }
-        return nil
+        outputSize
     }
 
     // MARK: - Transform helper
 
-    private static let minDisplayDimension: CGFloat = 1.0
-
-    /// 한 클립이 renderSize 안에서 비율 유지된 채 최대 크기로 fit되어 가운데 정렬되도록 하는 affine transform.
-    /// 비율이 다르면 한 축에만 letterbox.
+    /// 한 클립을 renderSize 안에 aspectFit(=맞춤)으로 배치하고, 사용자 변환(scale·offset)을 추가 적용한 affine transform.
+    /// framing == .fit 이면 기존 맞춤 동작과 동일(회귀 가드).
     public static func transform(
+        naturalSize: CGSize,
+        preferredTransform: CGAffineTransform,
+        rotation: ClipRotation,
+        renderSize: CGSize,
+        framing: ClipTransform
+    ) -> CGAffineTransform {
+        let displayRect = CGRect(origin: .zero, size: naturalSize).applying(preferredTransform)
+        let displaySize = CGSize(width: abs(displayRect.width), height: abs(displayRect.height))
+        let postRotationSize: CGSize = rotation.swapsAxes
+            ? CGSize(width: displaySize.height, height: displaySize.width)
+            : displaySize
+
+        let normalizeAfterPreferred = CGAffineTransform(translationX: -displayRect.minX, y: -displayRect.minY)
+
+        let rotationMatrix = rotation.transform
+        let rotatedRect = CGRect(origin: .zero, size: displaySize).applying(rotationMatrix)
+        let rotationNormalize = CGAffineTransform(translationX: -rotatedRect.minX, y: -rotatedRect.minY)
+
+        // fit 배율은 ClipFraming 과 공유. 사용자 배율(>=1)을 곱한다.
+        let fitScale = ClipFraming.fitScale(display: displaySize, rotation: rotation, render: renderSize)
+        let userScale = max(0.05, framing.scale)
+        let totalScale = fitScale * userScale
+
+        let scaledSize = CGSize(width: postRotationSize.width * totalScale,
+                                height: postRotationSize.height * totalScale)
+        let scaleMatrix = CGAffineTransform(scaleX: totalScale, y: totalScale)
+        let centerTranslate = CGAffineTransform(translationX: (renderSize.width - scaledSize.width) / 2,
+                                                y: (renderSize.height - scaledSize.height) / 2)
+
+        // 사용자 이동(정규화 비율 → 픽셀). clamp 도 ClipFraming 공유.
+        let clampedFrac = ClipFraming.clampedOffset(framing.offset, display: displaySize,
+                                                    rotation: rotation, render: renderSize, scale: userScale)
+        let offsetTranslate = CGAffineTransform(translationX: clampedFrac.x * renderSize.width,
+                                                y: clampedFrac.y * renderSize.height)
+
+        return preferredTransform
+            .concatenating(normalizeAfterPreferred)
+            .concatenating(rotationMatrix)
+            .concatenating(rotationNormalize)
+            .concatenating(scaleMatrix)
+            .concatenating(centerTranslate)
+            .concatenating(offsetTranslate)
+    }
+
+    /// `transform()` 의 aspectFILL 버전. 배경 블러 필 전용 — 항상 캔버스를 꽉 채우고(중앙) 사용자 scale/offset 은 무시한다.
+    /// preferredTransform·회전 처리는 `transform()` 과 동일, fit 의 `min(...)` 배율만 `max(...)` 로 교체.
+    public static func fillTransform(
         naturalSize: CGSize,
         preferredTransform: CGAffineTransform,
         rotation: ClipRotation,
         renderSize: CGSize
     ) -> CGAffineTransform {
-        // preferredTransform 적용 후 displaySize.
         let displayRect = CGRect(origin: .zero, size: naturalSize).applying(preferredTransform)
         let displaySize = CGSize(width: abs(displayRect.width), height: abs(displayRect.height))
-
-        // 사용자 회전 후 displaySize.
         let postRotationSize: CGSize = rotation.swapsAxes
             ? CGSize(width: displaySize.height, height: displaySize.width)
             : displaySize
 
-        // 합성 순서:
-        //   1) preferredTransform 적용된 좌표는 음수 영역에 있을 수 있어 (0,0)으로 끌어올리는 평행이동
-        //   2) 회전(원점 기준 rotate + 회전 후 음수 영역을 다시 (0,0)으로 끌어올리는 평행이동)
-        //   3) aspectFit scale (rotationNormalize 후 (0,0)–postRotationSize에 정렬된 사각형을 비율유지로 확대/축소)
-        //   4) scaledSize 기준 가운데 translate (한 축은 꽉, 다른 축은 letterbox)
-        let normalizeAfterPreferred = CGAffineTransform(
-            translationX: -displayRect.minX,
-            y: -displayRect.minY
-        )
+        let normalizeAfterPreferred = CGAffineTransform(translationX: -displayRect.minX, y: -displayRect.minY)
 
-        // 사용자 회전 적용. rotation을 (0,0) 기준에서 돌리면 사분면 밖으로 나가므로
-        // 다시 (0,0)으로 끌어올리는 보정을 더한다.
         let rotationMatrix = rotation.transform
         let rotatedRect = CGRect(origin: .zero, size: displaySize).applying(rotationMatrix)
-        let rotationNormalize = CGAffineTransform(
-            translationX: -rotatedRect.minX,
-            y: -rotatedRect.minY
-        )
+        let rotationNormalize = CGAffineTransform(translationX: -rotatedRect.minX, y: -rotatedRect.minY)
 
-        // aspectFit scale. 0 또는 NaN/Inf 가드.
-        let safeW = max(postRotationSize.width,  Self.minDisplayDimension)
-        let safeH = max(postRotationSize.height, Self.minDisplayDimension)
-        let fitScaleRaw = min(renderSize.width / safeW, renderSize.height / safeH)
-        let fitScale: CGFloat = (fitScaleRaw.isFinite && fitScaleRaw > 0) ? fitScaleRaw : 1.0
+        // fill 배율: 짧은 축이 아니라 긴 축 기준으로 캔버스를 덮도록 max.
+        let w = max(postRotationSize.width, 1)
+        let h = max(postRotationSize.height, 1)
+        let rawScale = max(renderSize.width / w, renderSize.height / h)
+        let fillScale = (rawScale.isFinite && rawScale > 0) ? rawScale : 1
 
-        let scaledSize = CGSize(
-            width: postRotationSize.width * fitScale,
-            height: postRotationSize.height * fitScale
-        )
-        let scaleMatrix = CGAffineTransform(scaleX: fitScale, y: fitScale)
+        let scaledSize = CGSize(width: postRotationSize.width * fillScale,
+                                height: postRotationSize.height * fillScale)
+        let scaleMatrix = CGAffineTransform(scaleX: fillScale, y: fillScale)
+        let centerTranslate = CGAffineTransform(translationX: (renderSize.width - scaledSize.width) / 2,
+                                                y: (renderSize.height - scaledSize.height) / 2)
 
-        let centerTranslate = CGAffineTransform(
-            translationX: (renderSize.width - scaledSize.width) / 2,
-            y: (renderSize.height - scaledSize.height) / 2
-        )
-
-        // 적용 순서: 좌측에 곱한 행렬이 먼저 적용됨 (CGAffineTransform.concatenating(_) 의미).
-        // CGAffineTransform.concatenating(b) 은 self * b 라서, a.concatenating(b) = b ∘ a
-        // 즉 점에 a를 먼저, b를 나중에 적용. 따라서 아래처럼 누적한다.
         return preferredTransform
             .concatenating(normalizeAfterPreferred)
             .concatenating(rotationMatrix)
@@ -725,8 +668,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
             .concatenating(centerTranslate)
     }
 
-    /// 한 클립이 renderSize 안에서 aspectFit + 가운데 정렬됐을 때 차지하는 사각형.
-    /// `transform()` 과 동일한 fit-scale·center 계산을 공유한다. 가운데 정렬이라 y-up/y-down 무관.
+    /// 한 클립이 renderSize 안에서 aspectFit + 가운데 정렬됐을 때 차지하는 사각형(줌 미반영 = 라벨 기준).
     public static func placedRect(
         naturalSize: CGSize,
         preferredTransform: CGAffineTransform,
@@ -735,22 +677,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
     ) -> CGRect {
         let displayRect = CGRect(origin: .zero, size: naturalSize).applying(preferredTransform)
         let displaySize = CGSize(width: abs(displayRect.width), height: abs(displayRect.height))
-        let postRotationSize: CGSize = rotation.swapsAxes
-            ? CGSize(width: displaySize.height, height: displaySize.width)
-            : displaySize
-        let safeW = max(postRotationSize.width, minDisplayDimension)
-        let safeH = max(postRotationSize.height, minDisplayDimension)
-        let fitScaleRaw = min(renderSize.width / safeW, renderSize.height / safeH)
-        let fitScale: CGFloat = (fitScaleRaw.isFinite && fitScaleRaw > 0) ? fitScaleRaw : 1.0
-        let scaledSize = CGSize(
-            width: postRotationSize.width * fitScale,
-            height: postRotationSize.height * fitScale
-        )
-        let origin = CGPoint(
-            x: (renderSize.width - scaledSize.width) / 2,
-            y: (renderSize.height - scaledSize.height) / 2
-        )
-        return CGRect(origin: origin, size: scaledSize)
+        return ClipFraming.resolvedRect(display: displaySize, rotation: rotation, render: renderSize, transform: .fit)
     }
 
     /// 클립 이미지 사각형 기준 정규화 위치(라벨 중심, y=위→아래)를

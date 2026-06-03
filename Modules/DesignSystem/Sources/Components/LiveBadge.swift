@@ -35,6 +35,6 @@ public struct LiveBadge: View {
             .background(Color.black)
         LiveBadge(size: 18, style: .dark)
             .padding(16)
-            .background(ChalNaColor.cream)
+            .background(ChalNaColor.white)
     }
 }

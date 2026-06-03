@@ -13,29 +13,27 @@ struct SplashView: View {
     var body: some View {
         ZStack {
             VStack(spacing: 16) {
-                Image("SplashIcon")
+                Image("splash_icon")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 120, height: 120)
-                    // iOS 홈 화면 아이콘 스퀴클 마스크 비율(≈0.2237 × 120pt). UI 반경이 아닌 플랫폼 유래 값.
-                    .clipShape(RoundedRectangle(cornerRadius: 27, style: .continuous))
-                    .chalNaShadow(ChalNaShadow.md)
+                    .shadow(color: .white, radius: 4)
 
                 // 앱 브랜드 라벨 — 앱에 등록된 KERISKEDU(영상 오버레이와 동일 패밀리).
                 VStack(spacing: 2) {
                     Text("찰나")
-                        .font(.custom(Self.kerisFontName, size: 32))
+                        .font(.custom(Self.kerisFontName, size: 48))
                     Text("ChalNa")
-                        .font(.custom(Self.kerisFontName, size: 15))
+                        .font(.custom(Self.kerisFontName, size: 24))
                 }
-                .foregroundStyle(ChalNaColor.ink)
+                .foregroundStyle(ChalNaColor.white)
             }
             // Reduce Motion 시 확대 생략(페이드만)
             .scaleEffect(scale)
             .opacity(appeared ? 1 : 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .chalNaScreen()
+        .background(ChalNaColor.Purple.p900.ignoresSafeArea())
         .onAppear {
             withAnimation(.easeOut(duration: 0.5)) { appeared = true }
         }

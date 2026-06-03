@@ -294,5 +294,5 @@ private struct LucideShape: Shape {
         }
     }
     .padding(32)
-    .background(ChalNaColor.cream)
+    .background(ChalNaColor.white)
 }

@@ -57,6 +57,7 @@ public struct LabelSettingsView: View {
                     )
                     .padding(.horizontal, 24)
                 }
+                .padding(.top, 16)
                 .padding(.bottom, 64)
             }
         }
@@ -66,19 +67,10 @@ public struct LabelSettingsView: View {
     // MARK: - Header
 
     private var header: some View {
-        ZStack {
-            Text("라벨")
-                .font(ChalNaTypography.title(ChalNaTypography.Size.h2, weight: .semibold))
-                .foregroundColor(ChalNaColor.ink)
-            HStack {
-                Button { router.pop() } label: {
-                    ChalNaIcon(.chevronLeft, size: 22)
-                        .foregroundColor(ChalNaColor.ink)
-                }
-                .buttonStyle(.chalNaHeaderAction)
-                .accessibilityLabel("뒤로")
-                Spacer()
-            }
+        ChalNaNavigationHeader(titleKey: "라벨") {
+            ChalNaHeaderBackButton { router.pop() }
+        } trailing: {
+            EmptyView()
         }
     }
 

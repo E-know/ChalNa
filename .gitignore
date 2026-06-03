@@ -137,3 +137,6 @@ understand/
 
 # Superpowers brainstorm 산출물
 .superpowers/
+
+# Claude Code 시스템 파일
+.claude/

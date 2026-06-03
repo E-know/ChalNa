@@ -154,7 +154,7 @@ final class FilmStripVC: UIViewController,
                     .font(ChalNaTypography.monoFallback(9, weight: .medium))
                     .foregroundColor(visualState == .selected || visualState == .playing
                         ? ChalNaColor.coral
-                        : ChalNaColor.cream.opacity(0.7))
+                        : ChalNaColor.white.opacity(0.7))
             }
         }
         .margins(.all, 0)
@@ -163,15 +163,15 @@ final class FilmStripVC: UIViewController,
         cell.clipsToBounds = false
         cell.isAccessibilityElement = true
         cell.accessibilityLabel = accessibilityLabel(for: clip, index: flatIndex, isCurrent: isCurrent)
-        cell.accessibilityHint = "선택하려면 두 번 탭하고, 순서를 바꾸려면 사용자 동작을 사용하세요."
+        cell.accessibilityHint = String(localized: "선택하려면 두 번 탭하고, 순서를 바꾸려면 사용자 동작을 사용하세요.")
         var traits: UIAccessibilityTraits = [.button]
         if isCurrent { traits.insert(.selected) }
         cell.accessibilityTraits = traits
         cell.accessibilityCustomActions = [
-            UIAccessibilityCustomAction(name: "앞으로 이동") { [weak self] _ in
+            UIAccessibilityCustomAction(name: String(localized: "앞으로 이동")) { [weak self] _ in
                 self?.moveClipForAccessibility(clipID, by: -1) ?? false
             },
-            UIAccessibilityCustomAction(name: "뒤로 이동") { [weak self] _ in
+            UIAccessibilityCustomAction(name: String(localized: "뒤로 이동")) { [weak self] _ in
                 self?.moveClipForAccessibility(clipID, by: 1) ?? false
             },
         ]
@@ -185,7 +185,7 @@ final class FilmStripVC: UIViewController,
         }
         .margins(.all, 0)
         cell.isAccessibilityElement = true
-        cell.accessibilityLabel = "\(dayKey) 촬영일"
+        cell.accessibilityLabel = String(localized: "\(dayKey) 촬영일")
         cell.accessibilityTraits = [.staticText]
         cell.accessibilityCustomActions = nil
     }
@@ -471,9 +471,9 @@ final class FilmStripVC: UIViewController,
     }
 
     private func accessibilityLabel(for clip: Clip, index: Int, isCurrent: Bool) -> String {
-        let kind = clip.kind == .live ? "라이브 포토" : "비디오"
-        let selected = isCurrent ? ", 선택됨" : ""
-        return "\(index + 1)번째 클립, \(kind), \(clip.durationSecondsLabel)\(selected)"
+        let kind = clip.kind == .live ? String(localized: "라이브 포토") : String(localized: "비디오")
+        let selected = isCurrent ? String(localized: ", 선택됨") : ""
+        return String(localized: "\(index + 1)번째 클립, \(kind), \(clip.durationSecondsLabel)\(selected)")
     }
 
     private func moveClipForAccessibility(_ clipID: Clip.ID, by delta: Int) -> Bool {
@@ -483,7 +483,7 @@ final class FilmStripVC: UIViewController,
         onMove?(clipID, target)
         UIAccessibility.post(
             notification: .announcement,
-            argument: "\(target + 1)번째 위치로 이동했습니다."
+            argument: String(localized: "\(target + 1)번째 위치로 이동했습니다.")
         )
         return true
     }

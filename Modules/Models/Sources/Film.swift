@@ -55,7 +55,7 @@ public extension Film {
     var metaLabel: String {
         let m = Int(totalDurationSeconds) / 60
         let s = Int(totalDurationSeconds) % 60
-        return String(format: "%d CLIPS · %02d:%02d", clipCount, m, s)
+        return String(format: String(localized: "%d CLIPS · %02d:%02d"), clipCount, m, s)
     }
 }
 

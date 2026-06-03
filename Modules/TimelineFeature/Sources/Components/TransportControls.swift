@@ -9,18 +9,18 @@ struct TransportControls: View {
     let onNext: () -> Void
 
     var body: some View {
-        HStack(spacing: 24) {
+        HStack(spacing: 20) {
             sideButton(icon: .skipBack, label: "이전 클립", action: onPrev)
             centerButton
             sideButton(icon: .skipForward, label: "다음 클립", action: onNext)
         }
     }
 
-    private func sideButton(icon: ChalNaIconKind, label: String, action: @escaping () -> Void) -> some View {
+    private func sideButton(icon: ChalNaIconKind, label: LocalizedStringKey, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             ZStack {
-                Circle().fill(ChalNaColor.ivory).frame(width: 40, height: 40)
-                ChalNaIcon(icon, size: 14).foregroundColor(ChalNaColor.ink)
+                Circle().fill(ChalNaColor.ivory).frame(width: 36, height: 36)
+                ChalNaIcon(icon, size: 13).foregroundColor(ChalNaColor.ink)
             }
         }
         .buttonStyle(.plain)
@@ -31,16 +31,16 @@ struct TransportControls: View {
     private var centerButton: some View {
         Button(action: onToggle) {
             ZStack {
-                Circle().fill(ChalNaColor.coral).frame(width: 56, height: 56)
-                ChalNaIcon(isPlaying ? .pause : .play, size: 18)
-                    .foregroundColor(ChalNaColor.ink)
+                Circle().fill(ChalNaColor.coral).frame(width: 48, height: 48)
+                ChalNaIcon(isPlaying ? .pause : .play, size: 16)
+                    .foregroundColor(.white)
                     .offset(x: isPlaying ? 0 : 2)
             }
-            .shadow(color: ChalNaColor.coral.opacity(0.6), radius: 16, x: 0, y: 8)
+            .shadow(color: ChalNaColor.coral.opacity(0.6), radius: 10, x: 0, y: 5)
         }
         .buttonStyle(.plain)
-        .chalNaHitTarget(minSize: 56)
-        .accessibilityLabel(isPlaying ? "일시정지" : "재생")
+        .chalNaHitTarget(minSize: 48)
+        .accessibilityLabel(isPlaying ? LocalizedStringKey("일시정지") : LocalizedStringKey("재생"))
         .accessibilityHint("현재 클립 재생 상태를 전환합니다.")
     }
 }

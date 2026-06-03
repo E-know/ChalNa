@@ -32,7 +32,9 @@
       "Read(//private/tmp/**)",
       "Bash(curl -s -o figma_portfolio.png \"https://www.figma.com/api/mcp/asset/399647c6-5715-4113-9912-a10b1432f6df\")",
       "mcp__claude_ai_Figma__get_design_context",
-      "mcp__claude_ai_Figma__get_variable_defs"
+      "mcp__claude_ai_Figma__get_variable_defs",
+      "Bash(grep -E \"\\\\.swift$\")",
+      "Bash(git ls-remote *)"
     ]
   }
 }
