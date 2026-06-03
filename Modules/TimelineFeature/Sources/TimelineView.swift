@@ -130,44 +130,17 @@ public struct TimelineView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack {
-            Button {
+        ChalNaNavigationHeader(
+            title: headerTitle,
+            subtitle: headerSubtitle
+        ) {
+            ChalNaHeaderBackButton {
                 store.send(.dismissTapped)
                 router.pop()
-            } label: {
-                HStack(spacing: 2) {
-                    ChalNaIcon(.chevronLeft, size: 14)
-                    Text("뒤로").font(ChalNaTypography.krBody(14, weight: .medium))
-                }
-                .foregroundColor(ChalNaColor.taupe)
             }
-            .buttonStyle(.chalNaHeaderAction)
-            .accessibilityLabel("뒤로")
-
-            Spacer()
-
-            VStack(spacing: 2) {
-                Text(headerTitle)
-                    .font(ChalNaTypography.krSemibold(15))
-                    .foregroundColor(ChalNaColor.ink)
-                    .lineLimit(1)
-                Text(headerSubtitle)
-                    .tagLabel(color: ChalNaColor.taupe)
-                    .lineLimit(1)
-            }
-
-            Spacer()
-
-            // 헤더 좌우 균형용 빈 영역 (뒤로 버튼과 같은 크기)
-            HStack(spacing: 2) {
-                ChalNaIcon(.chevronLeft, size: 14)
-                Text("뒤로").font(ChalNaTypography.krBody(14, weight: .medium))
-            }
-            .opacity(0)
-            .accessibilityHidden(true)
-            .allowsHitTesting(false)
+        } trailing: {
+            EmptyView()
         }
-        .frame(height: 44)
     }
 
     private var canSave: Bool { !store.clips.isEmpty }

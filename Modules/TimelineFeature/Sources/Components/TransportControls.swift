@@ -33,7 +33,7 @@ struct TransportControls: View {
             ZStack {
                 Circle().fill(ChalNaColor.coral).frame(width: 48, height: 48)
                 ChalNaIcon(isPlaying ? .pause : .play, size: 16)
-                    .foregroundColor(ChalNaColor.ink)
+                    .foregroundColor(.white)
                     .offset(x: isPlaying ? 0 : 2)
             }
             .shadow(color: ChalNaColor.coral.opacity(0.6), radius: 10, x: 0, y: 5)

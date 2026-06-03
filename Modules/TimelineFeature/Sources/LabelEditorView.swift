@@ -84,26 +84,14 @@ struct LabelEditorView: View {
     // MARK: - Top bar
 
     private var topBar: some View {
-        HStack {
-            Button(action: { onCancel() }) {
-                ChalNaIcon(.close, size: 20).foregroundColor(ChalNaColor.ink)
+        ChalNaNavigationHeader(titleKey: "라벨") {
+            ChalNaHeaderCloseButton(action: onCancel)
+        } trailing: {
+            ChalNaHeaderTextAction("저장") {
+                onCommit(committedLabel())
             }
-            .chalNaHitTarget()
-            .accessibilityLabel("취소")
-
-            Spacer()
-            Text("라벨")
-                .font(ChalNaTypography.krSemibold(15))
-                .foregroundColor(ChalNaColor.ink)
-            Spacer()
-
-            Button("저장") { onCommit(committedLabel()) }
-                .font(ChalNaTypography.krBody(15, weight: .semibold))
-                .foregroundColor(ChalNaColor.coral)
-                .chalNaHitTarget()
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .chalNaHeaderBar(scrollProgress: 1)
     }
 
     // MARK: - Canvas (사진 상단 고정 + 라벨 오버레이)

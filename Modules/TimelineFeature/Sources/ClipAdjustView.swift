@@ -34,6 +34,7 @@ public struct ClipAdjustView: View {
             Spacer(minLength: 0)
             canvas
             Spacer(minLength: 0)
+            adjustHint
             controls
         }
         .chalNaScreen()
@@ -45,27 +46,14 @@ public struct ClipAdjustView: View {
     }
 
     private var topBar: some View {
-        HStack {
-            Button { router.pop() } label: {
-                HStack(spacing: 2) {
-                    ChalNaIcon(.chevronLeft, size: 14)
-                    Text("뒤로").font(ChalNaTypography.krBody(14, weight: .medium))
-                }
-                .foregroundColor(ChalNaColor.taupe)
-            }
-            .buttonStyle(.chalNaHeaderAction)
-            Spacer()
-            Text("조정").font(ChalNaTypography.krSemibold(15)).foregroundColor(ChalNaColor.ink)
-            Spacer()
-            Button {
+        ChalNaNavigationHeader(titleKey: "조정") {
+            ChalNaHeaderBackButton { router.pop() }
+        } trailing: {
+            ChalNaHeaderTextAction("완료") {
                 store.send(.doneTapped)
                 router.pop()
-            } label: {
-                Text("완료").font(ChalNaTypography.krBody(14, weight: .semibold)).foregroundColor(ChalNaColor.coral)
             }
-            .buttonStyle(.chalNaHeaderAction)
         }
-        .padding(.horizontal, 16)
         .chalNaHeaderBar(scrollProgress: 1)
     }
 
@@ -124,16 +112,33 @@ public struct ClipAdjustView: View {
                     ChalNaIcon(.rotate, size: 16)
                     Text("회전")
                 }
+                .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.chalNaOutlined)
+            .buttonStyle(.chalNa(.standardOutlined, size: .lg, fillWidth: true))
+            .frame(maxWidth: .infinity)
 
             Button { reset() } label: {
-                Text("위치 초기화")
+                HStack(spacing: 6) {
+                    ChalNaIcon(.move, size: 16)
+                    Text("위치 초기화")
+                }
+                .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.chalNaOutlined)
+            .buttonStyle(.chalNa(.standardOutlined, size: .lg, fillWidth: true))
+            .frame(maxWidth: .infinity)
         }
         .padding(.horizontal, 16)
+        .padding(.top, 12)
         .padding(.bottom, 24)
+    }
+
+    private var adjustHint: some View {
+        Text("손가락으로 확대·이동하고, 회전으로 방향을 맞춰요.")
+            .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
+            .foregroundColor(ChalNaColor.taupe)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 24)
     }
 
     private func rotate() {
