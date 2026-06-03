@@ -4,6 +4,7 @@ import PhotosUI
 import AVFoundation
 import UIKit
 import UniformTypeIdentifiers
+import ImageIO
 
 /// PHPicker 결과에서 직접 추출한 미디어 한 건.
 ///
@@ -108,10 +109,17 @@ public enum PickedMediaLoader {
             return nil
         }
         let meta = await loadVideoMetadata(url: destURL)
+        // 영상 첫 프레임 추출이 실패해도 Live Photo 는 정지 이미지로 폴백해 썸네일을 보장한다.
+        let thumbnail: Data?
+        if let metaThumbnail = meta.thumbnail {
+            thumbnail = metaThumbnail
+        } else {
+            thumbnail = await stillImageJPEG(from: resources)
+        }
         return PickedMedia(
             id: id,
             kind: .livePhoto,
-            thumbnailData: meta.thumbnail,
+            thumbnailData: thumbnail,
             videoURL: destURL,
             capturedAt: meta.capturedAt,
             duration: meta.duration,
@@ -208,6 +216,39 @@ public enum PickedMediaLoader {
         } catch {
             return nil
         }
+    }
+
+    /// Live Photo 의 정지 이미지 리소스(`.photo`/`.fullSizePhoto`)에서 다운스케일 썸네일 JPEG 를 만든다.
+    /// 영상 첫 프레임 추출(`firstFrameJPEG`)이 실패한 경우의 폴백 — Live Photo 는 항상 썸네일을 갖게 된다.
+    private static func stillImageJPEG(from resources: [PHAssetResource]) async -> Data? {
+        let preferredTypes: [PHAssetResourceType] = [.photo, .fullSizePhoto]
+        guard let photoResource = preferredTypes
+            .lazy.compactMap({ type in resources.first(where: { $0.type == type }) })
+            .first
+        else { return nil }
+
+        let ext = (photoResource.originalFilename as NSString).pathExtension
+        let destURL = makeTempURL(extension: ext.isEmpty ? "heic" : ext)
+        defer { try? FileManager.default.removeItem(at: destURL) }
+        do {
+            try await writeResource(photoResource, to: destURL)
+        } catch {
+            return nil
+        }
+        return downscaledJPEG(fileURL: destURL, maxPixel: 620)
+    }
+
+    private static func downscaledJPEG(fileURL: URL, maxPixel: CGFloat) -> Data? {
+        guard let source = CGImageSourceCreateWithURL(fileURL as CFURL, nil) else { return nil }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixel
+        ]
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return nil
+        }
+        return UIImage(cgImage: cgImage).jpegData(compressionQuality: 0.75)
     }
 
     private static func creationDate(asset: AVURLAsset) async -> Date? {

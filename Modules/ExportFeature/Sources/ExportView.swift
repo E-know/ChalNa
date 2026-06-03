@@ -30,7 +30,7 @@ public struct ExportView: View {
             GeometryReader { proxy in
                 VStack(spacing: 0) {
                     cover(width: coverWidth(forAvailableHeight: proxy.size.height))
-                        .padding(.top, 16)
+                        .padding(.top, 28)
                         .padding(.horizontal, 32)
 
                     statusBlock
@@ -49,7 +49,7 @@ public struct ExportView: View {
         .chalNaScreen()
         .onAppear {
             guard store.phase == .idle else { return }
-            store.send(.startExport(clips: session.clips, rotations: session.rotations, clipLabels: session.labels))
+            store.send(.startExport(clips: session.clips, rotations: session.rotations, transforms: session.transforms, clipLabels: session.labels))
         }
         .onDisappear {
             UIApplication.shared.isIdleTimerDisabled = false
@@ -172,7 +172,7 @@ public struct ExportView: View {
         case .failed:           290
         }
         let envelope = max(available - reservedHeight, 200)
-        let widthFromHeight = (envelope - 60) * 16 / 9
+        let widthFromHeight = (envelope - 60) * 9 / 16
         return min(max(widthFromHeight, 240), 360)
     }
 
@@ -187,7 +187,7 @@ public struct ExportView: View {
                         store.send(.playerPresentedChanged(true))
                     } label: {
                         clip.thumbnailView()
-                            .frame(width: width, height: width * 9 / 16)
+                            .frame(width: width, height: width * 16 / 9)
                             .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous))
                             .overlay(
                                 RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
@@ -447,7 +447,7 @@ public struct ExportView: View {
     private var paperFailedCTAs: some View {
         VStack(spacing: 12) {
             Button {
-                store.send(.retryTapped(clips: session.clips, rotations: session.rotations, clipLabels: session.labels))
+                store.send(.retryTapped(clips: session.clips, rotations: session.rotations, transforms: session.transforms, clipLabels: session.labels))
             } label: {
                 HStack(spacing: 8) {
                     ChalNaIcon(.plus, size: 14)
@@ -468,7 +468,7 @@ public struct ExportView: View {
         GlassEffectContainer(spacing: 12) {
             VStack(spacing: 12) {
                 Button {
-                    store.send(.retryTapped(clips: session.clips, rotations: session.rotations, clipLabels: session.labels))
+                    store.send(.retryTapped(clips: session.clips, rotations: session.rotations, transforms: session.transforms, clipLabels: session.labels))
                 } label: {
                     HStack(spacing: 8) {
                         ChalNaIcon(.plus, size: 14)

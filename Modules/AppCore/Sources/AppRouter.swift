@@ -12,6 +12,7 @@ public enum Route: Hashable, Sendable {
     case labelSettings
     case labelPosition(LabelKind)
     case support
+    case clipAdjust(clipID: UUID)
     case language
 }
 

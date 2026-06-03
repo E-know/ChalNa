@@ -63,12 +63,12 @@ public struct ExportFeature {
     // MARK: - Action
 
     public enum Action {
-        case startExport(clips: [Clip], rotations: [Clip.ID: ClipRotation], clipLabels: [Clip.ID: ClipLabel])
+        case startExport(clips: [Clip], rotations: [Clip.ID: ClipRotation], transforms: [Clip.ID: ClipTransform], clipLabels: [Clip.ID: ClipLabel])
         case exportProgress(Double)
         case exportCompleted(URL)
         case exportFailed(String)
 
-        case retryTapped(clips: [Clip], rotations: [Clip.ID: ClipRotation], clipLabels: [Clip.ID: ClipLabel])
+        case retryTapped(clips: [Clip], rotations: [Clip.ID: ClipRotation], transforms: [Clip.ID: ClipTransform], clipLabels: [Clip.ID: ClipLabel])
 
         case saveToPhotoLibraryTapped
         case saveCompleted(PhotoSaveResult)
@@ -97,7 +97,7 @@ public struct ExportFeature {
     public var body: some ReducerOf<Self> {
         Reduce { state, action in
             switch action {
-            case let .startExport(clips, rotations, clipLabels):
+            case let .startExport(clips, rotations, transforms, clipLabels):
                 guard !clips.isEmpty else { return .none }
                 state.phase = .exporting
                 state.progress = 0
@@ -114,7 +114,7 @@ public struct ExportFeature {
                     dateOpacity: state.dateOpacity
                 )
                 return .run { send in
-                    for await event in compositionClient.export(clips, rotations, labelSettings, clipLabels) {
+                    for await event in compositionClient.export(clips, rotations, transforms, labelSettings, clipLabels) {
                         switch event {
                         case let .progress(p):
                             await send(.exportProgress(p))
@@ -151,8 +151,8 @@ public struct ExportFeature {
                 analyticsTracker.log(.exportFailed(reason: msg))
                 return .none
 
-            case let .retryTapped(clips, rotations, clipLabels):
-                return .send(.startExport(clips: clips, rotations: rotations, clipLabels: clipLabels))
+            case let .retryTapped(clips, rotations, transforms, clipLabels):
+                return .send(.startExport(clips: clips, rotations: rotations, transforms: transforms, clipLabels: clipLabels))
 
             case .saveToPhotoLibraryTapped:
                 guard let url = state.exportedURL,

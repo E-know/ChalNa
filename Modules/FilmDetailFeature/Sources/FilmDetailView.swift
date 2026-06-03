@@ -130,7 +130,7 @@ public struct FilmDetailView: View {
                 ThumbnailPreset.jejuOrange.view()
             }
         }
-        .aspectRatio(16.0 / 9.0, contentMode: .fit)
+        .aspectRatio(9.0 / 16.0, contentMode: .fit)
         .frame(maxWidth: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous))
         .overlay(
