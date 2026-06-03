@@ -39,19 +39,10 @@ public struct LabelPositionPickerView: View {
     // MARK: - Header
 
     private var header: some View {
-        ZStack {
-            Text("\(store.kind.title) 위치")
-                .font(ChalNaTypography.title(ChalNaTypography.Size.h2, weight: .semibold))
-                .foregroundColor(ChalNaColor.ink)
-            HStack {
-                Button { router.pop() } label: {
-                    ChalNaIcon(.chevronLeft, size: 22)
-                        .foregroundColor(ChalNaColor.ink)
-                }
-                .buttonStyle(.chalNaHeaderAction)
-                .accessibilityLabel("뒤로")
-                Spacer()
-            }
+        ChalNaNavigationHeader(title: "\(store.kind.title) 위치") {
+            ChalNaHeaderBackButton { router.pop() }
+        } trailing: {
+            EmptyView()
         }
     }
 

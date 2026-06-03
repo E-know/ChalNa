@@ -43,6 +43,8 @@ public enum ChalNaButtonSize {
 }
 
 public struct ChalNaButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
     public let variant: ChalNaButtonVariant
     public let size: ChalNaButtonSize
     public let fillWidth: Bool
@@ -57,14 +59,14 @@ public struct ChalNaButtonStyle: ButtonStyle {
         configuration.label
             .font(size.font)
             .tracking(ChalNaTypography.Tracking.titleKR)
-            .foregroundColor(foreground)
+            .foregroundColor(isEnabled ? foreground : disabledForeground)
             .frame(minHeight: size.height)
             .padding(.horizontal, size.horizontalPadding)
             .frame(maxWidth: fillWidth ? .infinity : nil)
             .background(backgroundShape)
             .overlay(borderShape)
             .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous))
-            .opacity(configuration.isPressed ? 0.78 : 1)
+            .opacity(configuration.isPressed && isEnabled ? 0.78 : 1)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 
@@ -78,34 +80,58 @@ public struct ChalNaButtonStyle: ButtonStyle {
         }
     }
 
+    private var disabledForeground: Color {
+        switch variant {
+        case .text:
+            return ChalNaColor.Gray.g400
+        default:
+            return ChalNaColor.Gray.g500
+        }
+    }
+
     @ViewBuilder
     private var backgroundShape: some View {
-        switch variant {
-        case .filled:
+        if !isEnabled, variant != .text {
             RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                .fill(ChalNaColor.coral)
-        case .standardFilled:
-            RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                .fill(ChalNaColor.ink)
-        case .outlined, .standardOutlined:
-            RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                .fill(Color.white)
-        case .text:
-            Color.clear
+                .fill(ChalNaColor.Gray.g100)
+        } else {
+            switch variant {
+            case .filled:
+                RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
+                    .fill(ChalNaColor.coral)
+            case .standardFilled:
+                RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
+                    .fill(ChalNaColor.ink)
+            case .outlined, .standardOutlined:
+                RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
+                    .fill(Color.white)
+            case .text:
+                Color.clear
+            }
         }
     }
 
     @ViewBuilder
     private var borderShape: some View {
-        switch variant {
-        case .outlined:
-            RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                .strokeBorder(ChalNaColor.coral, lineWidth: 1.2)
-        case .standardOutlined:
-            RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                .strokeBorder(ChalNaColor.Gray.g300, lineWidth: 1)
-        default:
-            Color.clear
+        if !isEnabled {
+            switch variant {
+            case .outlined, .standardOutlined:
+                RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
+                    .strokeBorder(ChalNaColor.Gray.g200, lineWidth: 1)
+            default:
+                Color.clear
+            }
+        } else {
+            switch variant {
+            case .outlined:
+                RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
+                    .strokeBorder(ChalNaColor.coral, lineWidth: 1.2)
+            case .standardOutlined:
+                RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
+                    .strokeBorder(ChalNaColor.Gray.g300, lineWidth: 1)
+            default:
+                Color.clear
+            }
         }
     }
 }

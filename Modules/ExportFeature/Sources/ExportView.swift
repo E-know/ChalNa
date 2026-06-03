@@ -152,6 +152,7 @@ public struct ExportView: View {
             Text(store.phase.tag)
                 .tagLabel(color: tagColor)
         }
+        .frame(height: 44)
         .frame(maxWidth: .infinity)
     }
 
@@ -316,11 +317,7 @@ public struct ExportView: View {
 
     @ViewBuilder
     private var completedCTAs: some View {
-        if #available(iOS 26.0, *) {
-            liquidGlassCompletedCTAs
-        } else {
-            paperCompletedCTAs
-        }
+        paperCompletedCTAs
     }
 
     private var paperCompletedCTAs: some View {
@@ -361,9 +358,14 @@ public struct ExportView: View {
                     .buttonStyle(.chalNaOutline)
                     .frame(maxWidth: .infinity)
 
-                Button("홈으로 →") {
+                Button {
                     store.send(.homeTapped)
                     router.popToRoot()
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("홈으로")
+                        ChalNaIcon(.chevronRight, size: 14)
+                    }
                 }
                 .buttonStyle(.chalNaText)
                 .frame(maxWidth: .infinity)
@@ -371,77 +373,9 @@ public struct ExportView: View {
         }
     }
 
-    @available(iOS 26.0, *)
-    private var liquidGlassCompletedCTAs: some View {
-        GlassEffectContainer(spacing: 12) {
-            VStack(spacing: 12) {
-                if let url = store.exportedURL {
-                    HStack(spacing: 12) {
-                        ShareLink(item: url) {
-                            HStack(spacing: 6) {
-                                ChalNaIcon(.share, size: 14)
-                                Text("공유하기")
-                            }
-                            .foregroundStyle(ChalNaColor.ink)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                        }
-                        .buttonStyle(.glass)
-                        .frame(maxWidth: .infinity)
-
-                        Button {
-                            store.send(.saveToPhotoLibraryTapped)
-                        } label: {
-                            HStack(spacing: 6) {
-                                if store.isSaving {
-                                    ProgressView().controlSize(.small).tint(ChalNaColor.ink)
-                                } else {
-                                    ChalNaIcon(.download, size: 14)
-                                }
-                                Text(store.isSaving ? LocalizedStringKey("저장 중…") : LocalizedStringKey("저장하기"))
-                            }
-                            .foregroundStyle(ChalNaColor.ink)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                        }
-                        .buttonStyle(.glassProminent)
-                        .tint(ChalNaColor.coral)
-                        .frame(maxWidth: .infinity)
-                        .disabled(store.isSaving)
-                    }
-                }
-
-                HStack(spacing: 12) {
-                    Button {
-                        startAnotherFilm()
-                    } label: {
-                        Text("다른 영상 만들기")
-                            .foregroundStyle(ChalNaColor.ink)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    }
-                    .buttonStyle(.glass)
-                    .frame(maxWidth: .infinity)
-
-                    Button {
-                        store.send(.homeTapped)
-                        router.popToRoot()
-                    } label: {
-                        Text("홈으로 →")
-                            .foregroundStyle(ChalNaColor.ink)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    }
-                    .buttonStyle(.glass)
-                    .frame(maxWidth: .infinity)
-                }
-            }
-        }
-    }
-
     @ViewBuilder
     private var failedCTAs: some View {
-        if #available(iOS 26.0, *) {
-            liquidGlassFailedCTAs
-        } else {
-            paperFailedCTAs
-        }
+        paperFailedCTAs
     }
 
     private var paperFailedCTAs: some View {
@@ -460,36 +394,6 @@ public struct ExportView: View {
             Button("편집으로 돌아가기") { router.pop() }
                 .buttonStyle(.chalNaOutline)
                 .frame(maxWidth: .infinity)
-        }
-    }
-
-    @available(iOS 26.0, *)
-    private var liquidGlassFailedCTAs: some View {
-        GlassEffectContainer(spacing: 12) {
-            VStack(spacing: 12) {
-                Button {
-                    store.send(.retryTapped(clips: session.clips, rotations: session.rotations, transforms: session.transforms, clipLabels: session.labels))
-                } label: {
-                    HStack(spacing: 8) {
-                        ChalNaIcon(.plus, size: 14)
-                        Text("다시 시도")
-                    }
-                    .foregroundStyle(ChalNaColor.ink)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.glassProminent)
-                .tint(ChalNaColor.coral)
-
-                Button {
-                    router.pop()
-                } label: {
-                    Text("편집으로 돌아가기")
-                        .foregroundStyle(ChalNaColor.ink)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.glass)
-                .frame(maxWidth: .infinity)
-            }
         }
     }
 

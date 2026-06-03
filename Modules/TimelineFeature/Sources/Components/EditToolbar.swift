@@ -17,11 +17,7 @@ struct EditToolbar: View {
 
     @ViewBuilder
     var body: some View {
-        if #available(iOS 26.0, *) {
-            liquidGlassToolbar
-        } else {
-            paperToolbar
-        }
+        paperToolbar
     }
 
     private var paperToolbar: some View {
@@ -33,33 +29,17 @@ struct EditToolbar: View {
         }
         .padding(.vertical, 12)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: ChalNaRadius.sheet, style: .continuous)
                 .fill(dimmed ? Color.white.opacity(0.7) : .white)
                 .chalNaShadow(ChalNaShadow.md)
         )
         .overlay(
             dimmed
-                ? RoundedRectangle(cornerRadius: 18, style: .continuous).fill(.ultraThinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                ? RoundedRectangle(cornerRadius: ChalNaRadius.sheet, style: .continuous).fill(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.sheet, style: .continuous))
                 : nil
         )
         .opacity(dimmed ? 0.85 : 1)
-        .allowsHitTesting(!dimmed)
-        .accessibilityHidden(dimmed)
-    }
-
-    @available(iOS 26.0, *)
-    private var liquidGlassToolbar: some View {
-        GlassEffectContainer(spacing: 8) {
-            HStack(spacing: 8) {
-                glassItem(icon: .move, label: "조정", action: onAdjust, dotIndicator: adjustActive)
-                glassItem(icon: .textLabel, label: "라벨", action: onLabel, dotIndicator: labelActive)
-                glassItem(icon: .trash, label: "삭제", action: onDelete, tone: .destructive)
-                glassItem(icon: .check, label: "저장", action: onSave, disabled: !canSave)
-            }
-            .padding(.vertical, 4)
-        }
-        .opacity(dimmed ? 0.82 : 1)
         .allowsHitTesting(!dimmed)
         .accessibilityHidden(dimmed)
     }
@@ -86,7 +66,7 @@ struct EditToolbar: View {
                 }
                 if !dimmed {
                     Text(label)
-                        .font(ChalNaTypography.krBody(10, weight: .medium))
+                        .font(ChalNaTypography.krBody(ChalNaTypography.Size.caption, weight: .medium))
                         .foregroundColor(tone.foregroundColor)
                 }
             }
@@ -100,43 +80,6 @@ struct EditToolbar: View {
         .accessibilityHint(tone.accessibilityHint)
     }
 
-    @available(iOS 26.0, *)
-    private func glassItem(
-        icon: ChalNaIconKind,
-        label: LocalizedStringKey,
-        action: @escaping () -> Void,
-        dotIndicator: Bool = false,
-        tone: ToolbarItemTone = .normal,
-        disabled: Bool = false
-    ) -> some View {
-        Button(action: action) {
-            VStack(spacing: 4) {
-                ZStack(alignment: .topTrailing) {
-                    ChalNaIcon(icon, size: 20)
-                        .foregroundColor(tone.foregroundColor)
-                    if dotIndicator {
-                        Circle()
-                            .fill(ChalNaColor.coral)
-                            .frame(width: 6, height: 6)
-                            .offset(x: 4, y: -2)
-                    }
-                }
-                if !dimmed {
-                    Text(label)
-                        .font(ChalNaTypography.krBody(10, weight: .medium))
-                        .foregroundColor(tone.foregroundColor)
-                }
-            }
-            .opacity(dimmed ? 0.45 : (disabled ? 0.4 : 1))
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: 52)
-        }
-        .buttonStyle(.glass)
-        .frame(maxWidth: .infinity)
-        .disabled(dimmed || disabled)
-        .accessibilityLabel(label)
-        .accessibilityHint(tone.accessibilityHint)
-    }
 }
 
 private enum ToolbarItemTone {
