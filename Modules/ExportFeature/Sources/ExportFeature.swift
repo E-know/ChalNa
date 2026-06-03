@@ -1,6 +1,7 @@
 import ComposableArchitecture
 import Foundation
 import Models
+import AppCore
 import CompositionService
 import PhotosService
 import AnalyticsService
@@ -89,6 +90,7 @@ public struct ExportFeature {
     @Dependency(\.compositionClient) var compositionClient
     @Dependency(\.photoLibraryClient) var photoLibraryClient
     @Dependency(\.analyticsTracker) var analyticsTracker
+    @Dependency(\.exportQuotaClient) var exportQuotaClient
 
     private enum CancelID { case exportStream }
 
@@ -99,6 +101,18 @@ public struct ExportFeature {
             switch action {
             case let .startExport(clips, rotations, transforms, clipLabels):
                 guard !clips.isEmpty else { return .none }
+                switch exportQuotaClient.reserveExport() {
+                case .allowed:
+                    break
+                case let .blocked(reason):
+                    state.phase = .failed
+                    state.progress = 0
+                    state.errorMessage = reason.message
+                    state.exportedURL = nil
+                    state.didAddToLibrary = false
+                    analyticsTracker.log(.exportFailed(reason: "quota_\(reason)"))
+                    return .none
+                }
                 state.phase = .exporting
                 state.progress = 0
                 state.errorMessage = nil

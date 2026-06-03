@@ -169,6 +169,16 @@ let project = Project(
             ]
         ),
         Module.unitTests(
+            for: "ExportFeature",
+            dependencies: [
+                .target(name: "AppCore"),
+                .target(name: "Models"),
+                .target(name: "CompositionService"),
+                .target(name: "PhotosService"),
+                .external(name: "ComposableArchitecture"),
+            ]
+        ),
+        Module.unitTests(
             for: "CompositionService",
             dependencies: [.target(name: "Models")]
         ),
@@ -199,6 +209,7 @@ let project = Project(
         Module.unitTests(
             for: "SettingsFeature",
             dependencies: [
+                .target(name: "AppCore"),
                 .target(name: "Models"),
                 .external(name: "ComposableArchitecture"),
             ]

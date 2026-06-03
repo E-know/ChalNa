@@ -7,7 +7,7 @@ public enum LabelLayout {
     /// 시각 라벨 글자 크기 = min(width,height) × 이 값.
     public static let timeFontFraction: CGFloat = 0.18
     /// 날짜 라벨 글자 크기 = min(width,height) × 이 값.
-    public static let dateFontFraction: CGFloat = 0.035
+    public static let dateFontFraction: CGFloat = 0.032
     /// 캔버스 가장자리 안전 여백 = renderSize × 이 값.
     public static let paddingFraction: CGFloat = 0.04
     /// 시각/날짜 세로 스택 간격 = min(width,height) × 이 값.
