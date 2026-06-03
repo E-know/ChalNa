@@ -66,19 +66,10 @@ public struct LanguageView: View {
     }
 
     private var header: some View {
-        ZStack {
-            Text("언어")
-                .font(ChalNaTypography.title(ChalNaTypography.Size.h2, weight: .semibold))
-                .foregroundColor(ChalNaColor.ink)
-            HStack {
-                Button { router.pop() } label: {
-                    ChalNaIcon(.chevronLeft, size: 22)
-                        .foregroundColor(ChalNaColor.ink)
-                }
-                .buttonStyle(.chalNaHeaderAction)
-                .accessibilityLabel("뒤로")
-                Spacer()
-            }
+        ChalNaNavigationHeader(titleKey: "언어") {
+            ChalNaHeaderBackButton { router.pop() }
+        } trailing: {
+            EmptyView()
         }
     }
 }

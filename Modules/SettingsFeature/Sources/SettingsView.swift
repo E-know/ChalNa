@@ -52,19 +52,10 @@ public struct SettingsView: View {
     }
 
     private var header: some View {
-        ZStack {
-            Text("설정")
-                .font(ChalNaTypography.title(ChalNaTypography.Size.h2, weight: .semibold))
-                .foregroundColor(ChalNaColor.ink)
-            HStack {
-                Button { router.pop() } label: {
-                    ChalNaIcon(.chevronLeft, size: 22)
-                        .foregroundColor(ChalNaColor.ink)
-                }
-                .buttonStyle(.chalNaHeaderAction)
-                .accessibilityLabel("뒤로")
-                Spacer()
-            }
+        ChalNaNavigationHeader(titleKey: "설정") {
+            ChalNaHeaderBackButton { router.pop() }
+        } trailing: {
+            EmptyView()
         }
     }
 
