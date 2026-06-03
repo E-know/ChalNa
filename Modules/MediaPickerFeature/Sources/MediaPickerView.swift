@@ -34,46 +34,44 @@ public struct MediaPickerView: View {
                 .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
                 .zIndex(1)
 
-            ZStack(alignment: .bottom) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
-                        intro
-                            .padding(.horizontal, 24)
-                            .padding(.top, 24)
-                            .trackScrollOffset(in: "media-picker-scroll")
-                            .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    intro
+                        .padding(.horizontal, 24)
+                        .padding(.top, 24)
+                        .trackScrollOffset(in: "media-picker-scroll")
+                        .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
 
-                        titleField
-                            .padding(.horizontal, 24)
+                    titleField
+                        .padding(.horizontal, 24)
 
-                        pickerLauncher
-                            .padding(.horizontal, 24)
-                            .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
+                    pickerLauncher
+                        .padding(.horizontal, 24)
+                        .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
 
-                        selectionGrid
-                            .padding(.horizontal, 24)
-                            .padding(.top, 12)
-                            .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
-                    }
-                    .padding(.bottom, 96)
+                    selectionGrid
+                        .padding(.horizontal, 24)
+                        .padding(.top, 12)
+                        .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
                 }
-                .coordinateSpace(name: "media-picker-scroll")
-                .scrollDismissesKeyboard(.interactively)
-                .background(
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .onTapGesture { dismissTitleKeyboard() }
-                )
-                .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
-                    store.send(
-                        .scrollProgressChanged(offset / 8),
-                        animation: .easeInOut(duration: 0.15)
-                    )
-                }
-
-                bottomActionArea
-                    .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
+                .padding(.bottom, 24)
             }
+            .coordinateSpace(name: "media-picker-scroll")
+            .scrollDismissesKeyboard(.interactively)
+            .background(
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { dismissTitleKeyboard() }
+            )
+            .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
+                store.send(
+                    .scrollProgressChanged(offset / 8),
+                    animation: .easeInOut(duration: 0.15)
+                )
+            }
+
+            bottomActionArea
+                .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
         }
         .chalNaScreen()
         .alert(
@@ -188,41 +186,18 @@ public struct MediaPickerView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack {
-            Button {
+        ChalNaNavigationHeader(
+            titleKey: "미디어 선택",
+            subtitleKey: "LIVE · VIDEO",
+            subtitleColor: ChalNaColor.coral
+        ) {
+            ChalNaHeaderBackButton {
                 dismissTitleKeyboard()
                 store.send(.dismissTapped)
                 router.pop()
-            } label: {
-                HStack(spacing: 2) {
-                    ChalNaIcon(.chevronLeft, size: 14)
-                    Text("뒤로").font(ChalNaTypography.krBody(14, weight: .medium))
-                }
-                .foregroundColor(ChalNaColor.taupe)
             }
-            .buttonStyle(.chalNaHeaderAction)
-            .accessibilityLabel("뒤로")
-
-            Spacer()
-
-            VStack(spacing: 2) {
-                Text("미디어 선택")
-                    .font(ChalNaTypography.krSemibold(15))
-                    .foregroundColor(ChalNaColor.ink)
-                Text("LIVE · VIDEO")
-                    .tagLabel(color: ChalNaColor.coral)
-            }
-
-            Spacer()
-
-            // 헤더 좌우 균형용 빈 영역 (뒤로 버튼과 같은 크기)
-            HStack(spacing: 2) {
-                ChalNaIcon(.chevronLeft, size: 14)
-                Text("뒤로").font(ChalNaTypography.krBody(14, weight: .medium))
-            }
-            .opacity(0)
-            .accessibilityHidden(true)
-            .allowsHitTesting(false)
+        } trailing: {
+            EmptyView()
         }
     }
 
@@ -585,47 +560,20 @@ public struct MediaPickerView: View {
             .padding(.top, 8)
             .padding(.bottom, 16)
             .fixedSize(horizontal: false, vertical: true)
+            .background(
+                ChalNaColor.white
+                    .ignoresSafeArea(edges: .bottom)
+            )
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(ChalNaColor.Gray.g200)
+                    .frame(height: 1)
+            }
     }
 
     @ViewBuilder
     private var bottomBar: some View {
-        if #available(iOS 26.0, *) {
-            liquidGlassBottomBar
-        } else {
-            chalNaBottomBar
-        }
-    }
-
-    @available(iOS 26.0, *)
-    private var liquidGlassBottomBar: some View {
-        GlassEffectContainer(spacing: 8) {
-            HStack(spacing: 8) {
-                Button {
-                    dismissTitleKeyboard()
-                    store.send(.dismissTapped)
-                    router.pop()
-                } label: {
-                    Text("취소")
-                        .foregroundStyle(ChalNaColor.ink)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.glass)
-                .frame(maxWidth: .infinity)
-
-                Button {
-                    store.send(.primaryActionTapped)
-                } label: {
-                    confirmBottomLabel
-                        .foregroundStyle(ChalNaColor.ink)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.glassProminent)
-                .tint(ChalNaColor.coral)
-                .frame(maxWidth: .infinity)
-                .disabled(!canUsePrimaryAction || store.isResolving)
-                .opacity(canUsePrimaryAction ? 1 : 0.5)
-            }
-        }
+        chalNaBottomBar
     }
 
     private var chalNaBottomBar: some View {
@@ -648,7 +596,6 @@ public struct MediaPickerView: View {
             .buttonStyle(.chalNaCoral)
             .frame(maxWidth: .infinity)
             .disabled(!canUsePrimaryAction || store.isResolving)
-            .opacity(canUsePrimaryAction ? 1 : 0.5)
         }
     }
 
