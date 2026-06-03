@@ -51,6 +51,16 @@ public struct SupportView: View {
         } message: { info in
             Text(info.message)
         }
+        .sheet(
+            isPresented: Binding(
+                get: { store.isRedeemPresented },
+                set: { store.send(.redeemPresentedChanged($0)) }
+            )
+        ) {
+            redeemCodeSheet
+                .presentationDetents([.height(280)])
+                .presentationDragIndicator(.visible)
+        }
     }
 
     // MARK: - Header
@@ -154,6 +164,35 @@ public struct SupportView: View {
 
     private var isSendDisabled: Bool {
         store.isSending || store.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var redeemCodeSheet: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("리딤 코드")
+                .font(ChalNaTypography.title(ChalNaTypography.Size.h2, weight: .semibold))
+                .foregroundColor(ChalNaColor.ink)
+
+            Text("코드를 입력하면 2026년까지 영상 생성 제한이 해제돼요.")
+                .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
+                .foregroundColor(ChalNaColor.taupe)
+
+            ChalNaTextField(
+                placeholder: "tobyisinho",
+                errorText: store.redeemError,
+                text: $store.redeemCode.sending(\.redeemCodeChanged)
+            )
+
+            Button {
+                store.send(.redeemSubmitted)
+            } label: {
+                Text("적용")
+            }
+            .buttonStyle(.chalNa(.filled, size: .lg, fillWidth: true))
+            .disabled(store.redeemCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(ChalNaColor.white)
     }
 }
 
