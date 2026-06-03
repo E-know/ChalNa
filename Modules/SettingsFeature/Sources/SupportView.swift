@@ -168,7 +168,7 @@ public struct SupportView: View {
                 .foregroundColor(ChalNaColor.taupe)
 
             ChalNaTextField(
-                placeholder: "tobyisinho",
+                placeholder: "Redeem Code",
                 errorText: store.redeemError,
                 text: $store.redeemCode.sending(\.redeemCodeChanged)
             )
