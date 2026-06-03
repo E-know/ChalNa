@@ -52,7 +52,7 @@ struct MediaPreviewSheet: View {
             }
 
             if let duration = media.duration, duration > 0 {
-                Text(String(format: "%.1f초", duration))
+                Text(String(format: String(localized: "%.1f초"), duration))
                     .font(ChalNaTypography.monoFallback(13, weight: .medium))
                     .foregroundColor(ChalNaColor.taupe)
             }
@@ -87,7 +87,7 @@ struct MediaPreviewSheet: View {
             controller.toggle()
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(controller.isPlaying ? "재생 중. 탭하면 멈춰요" : "일시정지. 탭하면 재생돼요")
+        .accessibilityLabel(controller.isPlaying ? LocalizedStringKey("재생 중. 탭하면 멈춰요") : LocalizedStringKey("일시정지. 탭하면 재생돼요"))
     }
 
     private var pausedOverlay: some View {
@@ -124,7 +124,7 @@ struct MediaPreviewSheet: View {
     }
 
     private var hint: some View {
-        Text(media.videoURL != nil ? "영상을 탭하면 재생/일시정지돼요." : "원본 영상이 없는 미디어예요.")
+        Text(media.videoURL != nil ? LocalizedStringKey("영상을 탭하면 재생/일시정지돼요.") : LocalizedStringKey("원본 영상이 없는 미디어예요."))
             .font(ChalNaTypography.krBody(12))
             .foregroundColor(ChalNaColor.taupe)
     }

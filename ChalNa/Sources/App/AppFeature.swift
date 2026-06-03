@@ -39,6 +39,7 @@ public struct AppFeature {
         case routerPushedLabelPosition(kind: LabelKind)
         case routerPushedSupport
         case routerPushedClipAdjust(clipID: UUID)
+        case routerPushedLanguage
     }
 
     @Reducer
@@ -52,6 +53,7 @@ public struct AppFeature {
         case labelPosition(LabelPositionFeature)
         case support(SupportFeature)
         case clipAdjust(ClipAdjustFeature)
+        case language(LanguageFeature)
     }
 
     @Dependency(\.analyticsTracker) var analyticsTracker
@@ -113,6 +115,10 @@ public struct AppFeature {
 
             case let .routerPushedClipAdjust(clipID):
                 state.path.append(.clipAdjust(ClipAdjustFeature.State(clipID: clipID)))
+                return .none
+
+            case .routerPushedLanguage:
+                state.path.append(.language(LanguageFeature.State()))
                 return .none
 
             case .home, .path:

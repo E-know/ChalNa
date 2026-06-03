@@ -172,7 +172,7 @@ public struct TimelineView: View {
 
     private var canSave: Bool { !store.clips.isEmpty }
 
-    private var headerTitle: String { "편집" }
+    private var headerTitle: String { String(localized: "편집") }
 
     private var headerSubtitle: String { store.title }
 

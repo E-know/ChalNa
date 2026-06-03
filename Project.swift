@@ -130,6 +130,8 @@ let project = Project(
                     "UIAppFonts": [
                         "KERISKEDU_Line.otf",
                     ],
+                    "CFBundleDevelopmentRegion": "ko",
+                    "CFBundleLocalizations": ["ko", "en", "ja"],
                 ]
             ),
             buildableFolders: [

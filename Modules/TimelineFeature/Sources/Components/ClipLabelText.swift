@@ -13,7 +13,7 @@ struct ClipLabelText: View {
     let fontPx: CGFloat
     var placeholder: Bool = false
 
-    private var displayString: String { placeholder ? "자막 입력" : label.text }
+    private var displayString: String { placeholder ? String(localized: "자막 입력") : label.text }
 
     /// 합성 measureCustomText 와 동일한 UIFont(시스템 light) 로 측정한 텍스트 크기.
     private var measuredSize: CGSize {

@@ -57,6 +57,7 @@ public struct LabelSettingsView: View {
                     )
                     .padding(.horizontal, 24)
                 }
+                .padding(.top, 16)
                 .padding(.bottom, 64)
             }
         }

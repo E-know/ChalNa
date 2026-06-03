@@ -10,20 +10,20 @@ public enum SampleData {
 
         return [
             // 9/14 · 제주
-            Clip(kind: .live,  capturedAt: y2025, duration: 3.0, preset: .jejuSea,    locationNote: "협재 해변"),
-            Clip(kind: .video, capturedAt: y2025.addingTimeInterval(300),  duration: 3.0, preset: .jejuOrange, locationNote: "중문 노을"),
-            Clip(kind: .live,  capturedAt: y2025.addingTimeInterval(1800), duration: 3.0, preset: .hallasan,   locationNote: "한라산 입구"),
+            Clip(kind: .live,  capturedAt: y2025, duration: 3.0, preset: .jejuSea,    locationNote: String(localized: "협재 해변")),
+            Clip(kind: .video, capturedAt: y2025.addingTimeInterval(300),  duration: 3.0, preset: .jejuOrange, locationNote: String(localized: "중문 노을")),
+            Clip(kind: .live,  capturedAt: y2025.addingTimeInterval(1800), duration: 3.0, preset: .hallasan,   locationNote: String(localized: "한라산 입구")),
 
             // 9/15
-            Clip(kind: .live,  capturedAt: day2, duration: 3.0, preset: .seoulSun,    locationNote: "소길리 · 오후 4시"),
-            Clip(kind: .video, capturedAt: day2.addingTimeInterval(600),  duration: 3.0, preset: .field,      locationNote: "풀밭"),
-            Clip(kind: .video, capturedAt: day2.addingTimeInterval(1800), duration: 3.0, preset: .forest,     locationNote: "숲길"),
-            Clip(kind: .live,  capturedAt: day2.addingTimeInterval(3600), duration: 3.0, preset: .sunset,     locationNote: "저녁 노을"),
-            Clip(kind: .video, capturedAt: day2.addingTimeInterval(5400), duration: 3.0, preset: .cafe,       locationNote: "카페"),
+            Clip(kind: .live,  capturedAt: day2, duration: 3.0, preset: .seoulSun,    locationNote: String(localized: "소길리 · 오후 4시")),
+            Clip(kind: .video, capturedAt: day2.addingTimeInterval(600),  duration: 3.0, preset: .field,      locationNote: String(localized: "풀밭")),
+            Clip(kind: .video, capturedAt: day2.addingTimeInterval(1800), duration: 3.0, preset: .forest,     locationNote: String(localized: "숲길")),
+            Clip(kind: .live,  capturedAt: day2.addingTimeInterval(3600), duration: 3.0, preset: .sunset,     locationNote: String(localized: "저녁 노을")),
+            Clip(kind: .video, capturedAt: day2.addingTimeInterval(5400), duration: 3.0, preset: .cafe,       locationNote: String(localized: "카페")),
         ]
     }()
 
-    public static let filmTitle = "찰나의 순간 엮는 중"
+    public static let filmTitle = String(localized: "찰나의 순간 엮는 중")
     public static let filmTotalDuration: TimeInterval = 84  // 01:24
 }
 

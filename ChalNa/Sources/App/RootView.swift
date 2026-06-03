@@ -18,6 +18,7 @@ public struct RootView: View {
     }
     @State private var router = AppRouter()
     @State private var session = EditSession()
+    @State private var languageStore = AppLanguageStore()
 
     public init() {}
 
@@ -34,6 +35,8 @@ public struct RootView: View {
         }
         .environment(router)
         .environment(session)
+        .environment(languageStore)
+        .environment(\.locale, languageStore.locale)
         .onAppear { wireRouterHandlers() }
     }
 
@@ -49,6 +52,7 @@ public struct RootView: View {
         case let .labelPosition(s): LabelPositionPickerView(store: s)
         case let .support(s):       SupportView(store: s)
         case let .clipAdjust(s):    ClipAdjustView(store: s)
+        case let .language(s):      LanguageView(store: s)
         }
     }
 
@@ -73,6 +77,8 @@ public struct RootView: View {
                 store.send(.routerPushedSupport)
             case let .clipAdjust(clipID):
                 store.send(.routerPushedClipAdjust(clipID: clipID))
+            case .language:
+                store.send(.routerPushedLanguage)
             }
         }
         router.popHandler = { [store] in store.send(.routerPopped) }

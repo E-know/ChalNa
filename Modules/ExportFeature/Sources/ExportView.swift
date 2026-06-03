@@ -9,6 +9,7 @@ import SwiftData
 import Photos
 import AVKit
 import AVFoundation
+import UIKit
 
 /// Timeline에서 "저장"을 누르면 진입. AVFoundationCompositionService 를 구동해 mp4 를 만든다.
 public struct ExportView: View {
@@ -51,7 +52,12 @@ public struct ExportView: View {
             store.send(.startExport(clips: session.clips, rotations: session.rotations, transforms: session.transforms, clipLabels: session.labels))
         }
         .onDisappear {
+            UIApplication.shared.isIdleTimerDisabled = false
             store.send(.dismissTapped)
+        }
+        // 영상 합성 중에는 화면 자동 잠금(idle timer)을 막아 작업이 중단되지 않게 한다.
+        .onChange(of: store.phase) { _, newPhase in
+            UIApplication.shared.isIdleTimerDisabled = (newPhase == .exporting)
         }
         .onChange(of: store.exportedURL) { _, newURL in
             if let newURL, !store.didAddToLibrary {
@@ -195,7 +201,7 @@ public struct ExportView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(!canPlay)
-                    .accessibilityLabel(canPlay ? "완성된 영상 재생" : "")
+                    .accessibilityLabel(canPlay ? LocalizedStringKey("완성된 영상 재생") : "")
                     .accessibilityAddTraits(canPlay ? .isButton : [])
 
                     if store.phase == .done {
@@ -261,7 +267,7 @@ public struct ExportView: View {
             .frame(height: 6)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("내보내기 진행률")
-            .accessibilityValue("\(Int(store.progress * 100))퍼센트")
+            .accessibilityValue(String(localized: "\(Int(store.progress * 100))퍼센트"))
 
             Text(statusLine)
                 .font(ChalNaTypography.krBody(13))
@@ -271,20 +277,20 @@ public struct ExportView: View {
 
     private var statusLabelLeft: String {
         switch store.phase {
-        case .idle, .exporting: return "EXPORT · IN PROGRESS"
-        case .done:             return "EXPORT · COMPLETE"
-        case .failed:           return "EXPORT · FAILED"
+        case .idle, .exporting: return String(localized: "EXPORT · IN PROGRESS")
+        case .done:             return String(localized: "EXPORT · COMPLETE")
+        case .failed:           return String(localized: "EXPORT · FAILED")
         }
     }
 
     private var statusLine: String {
         switch store.phase {
         case .idle, .exporting:
-            return "Vlog를 엮는 중… Live Photo의 영상 부분을 자동으로 추출해 이어 붙여요."
+            return String(localized: "Vlog를 엮는 중… Live Photo의 영상 부분을 자동으로 추출해 이어 붙여요.")
         case .done:
-            return "필름이 완성되었어요. 공유하거나 사진 보관함에 저장할 수 있어요."
+            return String(localized: "필름이 완성되었어요. 공유하거나 사진 보관함에 저장할 수 있어요.")
         case .failed:
-            return store.errorMessage ?? "저장 중 문제가 발생했어요."
+            return store.errorMessage ?? String(localized: "저장 중 문제가 발생했어요.")
         }
     }
 
@@ -340,7 +346,7 @@ public struct ExportView: View {
                             } else {
                                 ChalNaIcon(.download, size: 14)
                             }
-                            Text(store.isSaving ? "저장 중…" : "저장하기")
+                            Text(store.isSaving ? LocalizedStringKey("저장 중…") : LocalizedStringKey("저장하기"))
                         }
                         .frame(maxWidth: .infinity)
                     }
@@ -391,7 +397,7 @@ public struct ExportView: View {
                                 } else {
                                     ChalNaIcon(.download, size: 14)
                                 }
-                                Text(store.isSaving ? "저장 중…" : "저장하기")
+                                Text(store.isSaving ? LocalizedStringKey("저장 중…") : LocalizedStringKey("저장하기"))
                             }
                             .foregroundStyle(ChalNaColor.ink)
                             .frame(maxWidth: .infinity, minHeight: 44)

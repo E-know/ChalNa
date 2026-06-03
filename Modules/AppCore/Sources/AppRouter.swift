@@ -13,6 +13,7 @@ public enum Route: Hashable, Sendable {
     case labelPosition(LabelKind)
     case support
     case clipAdjust(clipID: UUID)
+    case language
 }
 
 /// AppFeature(TCA) 의 path 와 연결되는 thin wrapper.
