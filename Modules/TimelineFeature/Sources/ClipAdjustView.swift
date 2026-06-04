@@ -54,6 +54,8 @@ public struct ClipAdjustView: View {
                 router.pop()
             }
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .chalNaHeaderBar(scrollProgress: 1)
     }
 

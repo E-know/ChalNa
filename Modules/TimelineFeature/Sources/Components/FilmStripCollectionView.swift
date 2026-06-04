@@ -134,11 +134,10 @@ final class FilmStripVC: UIViewController,
             ? (isPlaying ? .playing : .selected)
             : (isPlaying ? .dimmed : .normal)
         let flatIndex = clips.firstIndex(where: { $0.id == clipID }) ?? 0
-        let cardRotation = Self.rotationDegrees(forIndex: flatIndex)
 
         cell.contentConfiguration = UIHostingConfiguration {
             VStack(spacing: 4) {
-                ClipThumbCard(state: visualState, rotationDegrees: cardRotation) {
+                ClipThumbCard(state: visualState) {
                     ZStack {
                         RotatableContent(rotation: userRotation) {
                             clip.thumbnailView()
@@ -373,12 +372,6 @@ final class FilmStripVC: UIViewController,
     func collectionView(_ collectionView: UICollectionView,
                         dropSessionDidUpdate session: UIDropSession,
                         withDestinationIndexPath destinationIndexPath: IndexPath?) -> UICollectionViewDropProposal {
-        // Day sprocket 위로의 drop은 막음 — clip 사이 갭으로만 insert.
-        if let dst = destinationIndexPath,
-           let item = dataSource.itemIdentifier(for: dst),
-           case .daySprocket = item {
-            return UICollectionViewDropProposal(operation: .move, intent: .insertAtDestinationIndexPath)
-        }
         return UICollectionViewDropProposal(operation: .move, intent: .insertAtDestinationIndexPath)
     }
 
@@ -488,12 +481,4 @@ final class FilmStripVC: UIViewController,
         return true
     }
 
-    /// 폴라로이드 셀의 살짝 회전 — 인덱스 기반 결정적 회전(0/1/2 사이 반복).
-    private static func rotationDegrees(forIndex i: Int) -> Double {
-        switch i % 3 {
-        case 0: return -1
-        case 1: return 1
-        default: return 0.3
-        }
-    }
 }

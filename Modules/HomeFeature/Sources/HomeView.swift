@@ -21,6 +21,8 @@ public struct HomeView: View {
     public var body: some View {
         VStack(spacing: 0) {
             header
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
                 .chalNaHeaderBar(scrollProgress: store.scrollProgress)
                 .zIndex(1)
 

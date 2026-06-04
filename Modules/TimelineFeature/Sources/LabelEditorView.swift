@@ -91,6 +91,8 @@ struct LabelEditorView: View {
                 onCommit(committedLabel())
             }
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .chalNaHeaderBar(scrollProgress: 1)
     }
 

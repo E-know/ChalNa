@@ -1,55 +1,59 @@
 import Foundation
 import Testing
+import ComposableArchitecture
 import Models
 import CompositionService
 @testable import TimelineFeature
 
+@MainActor
 struct TimelinePlaybackTests {
 
-    @Test func testSelectClip_UpdatesCurrentIndexAndPlayhead() {
+    @Test func testSelectClip_UpdatesCurrentIndexAndPlayhead() async {
         let clips = SampleData.jejuTimeline
-        let model = TimelineModel(
-            title: "Test Film",
-            clips: clips,
-            currentIndex: 0,
-            state: .idle
-        )
+        let store = TestStore(
+            initialState: TimelineFeature.State(title: "Test Film", clips: clips)
+        ) {
+            TimelineFeature()
+        }
+        store.exhaustivity = .off
 
-        model.select(clipAt: 3)
+        await store.send(.clipTapped(index: 3))
 
         let expectedPlayhead = clips.prefix(3).reduce(0) { $0 + $1.duration }
-        #expect(model.currentIndex == 3, "Selected clip index should become currentIndex")
-        #expect(model.currentClip?.id == clips[3].id, "Current clip should match the selected clip")
-        #expect(model.playheadSeconds == expectedPlayhead, "Playhead should jump to the selected clip start")
+        #expect(store.state.currentIndex == 3, "Selected clip index should become currentIndex")
+        #expect(store.state.currentClip?.id == clips[3].id, "Current clip should match the selected clip")
+        #expect(store.state.playheadSeconds == expectedPlayhead, "Playhead should jump to the selected clip start")
     }
 
-    /// Test A: Verify that currentIndex auto-advances during simulated playback
-    @Test func testAdvancePlayheadSimulated_UpdatesCurrentIndex() {
-        let model = TimelineModel(
-            title: "Test Film",
-            clips: SampleData.jejuTimeline,
-            currentIndex: 0,
-            state: .idle
-        )
+    @Test func testCurrentClipEnded_AdvancesCurrentIndex() async {
+        let clips = SampleData.jejuTimeline
+        let store = TestStore(
+            initialState: TimelineFeature.State(title: "Test Film", clips: clips)
+        ) {
+            TimelineFeature()
+        }
+        store.exhaustivity = .off
 
-        #expect(model.clips.count == 8)
-        #expect(model.currentIndex == 0, "Should start at clip 0")
-        #expect(model.playheadSeconds == 0, "Should start at 0 seconds")
+        #expect(store.state.clips.count == 8)
+        #expect(store.state.currentIndex == 0, "Should start at clip 0")
+        #expect(store.state.playheadSeconds == 0, "Should start at 0 seconds")
 
-        model.togglePlay()
-        #expect(model.isPlaying, "Model should be in playing state")
+        await store.send(.togglePlay)
+        #expect(store.state.isPlaying, "Timeline should be in playing state")
 
-        model.advancePlayhead(by: 3.25)
+        await store.send(.currentClipEnded)
 
-        #expect(model.currentIndex == 1, "Should advance to clip 1 after ~3 seconds")
-        #expect(model.playheadSeconds > 3.0, "Playhead should be past 3 seconds")
+        #expect(store.state.currentIndex == 1, "Should advance to clip 1 when current clip ends")
+        #expect(store.state.playheadSeconds == clips[0].duration, "Playhead should jump to the next clip start")
 
-        model.advancePlayhead(by: 3.25)
+        await store.send(.currentClipEnded)
 
-        #expect(model.currentIndex == 2, "Should advance to clip 2 after ~6 seconds")
-        #expect(model.playheadSeconds > 6.0, "Playhead should be past 6 seconds")
+        let secondClipStart = clips.prefix(2).reduce(0) { $0 + $1.duration }
+        #expect(store.state.currentIndex == 2, "Should advance to clip 2 after another clip end")
+        #expect(store.state.playheadSeconds == secondClipStart, "Playhead should track cumulative clip starts")
 
-        model.togglePlay()
+        await store.send(.togglePlay)
+        #expect(!store.state.isPlaying, "Timeline should return to idle")
     }
 
     /// Test B: Verify export service responds appropriately when no video clips are available

@@ -11,22 +11,18 @@ public enum ClipThumbState: Hashable, Sendable {
 }
 
 /// 타임라인/그리드의 평면 클립 카드. 다나와 톤(평면 4px 라운딩 + 단색 테두리).
-/// 기존 호출 호환을 위해 `rotationDegrees` 시그니처는 유지하되 내부에서 무시한다.
 public struct ClipThumbCard<Content: View>: View {
 
     public var state: ClipThumbState
-    public var rotationDegrees: Double
     public var size: CGSize
     public var content: () -> Content
 
     public init(
         state: ClipThumbState = .normal,
-        rotationDegrees: Double = 0,
         size: CGSize = CGSize(width: 40, height: 52),
         @ViewBuilder content: @escaping () -> Content
     ) {
         self.state = state
-        self.rotationDegrees = rotationDegrees
         self.size = size
         self.content = content
     }

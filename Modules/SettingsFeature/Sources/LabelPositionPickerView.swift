@@ -17,6 +17,8 @@ public struct LabelPositionPickerView: View {
     public var body: some View {
         VStack(spacing: 0) {
             header
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
                 .chalNaHeaderBar(scrollProgress: 1)
                 .zIndex(1)
 
