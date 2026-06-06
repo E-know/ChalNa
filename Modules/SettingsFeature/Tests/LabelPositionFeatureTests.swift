@@ -6,8 +6,8 @@ import Models
 @MainActor
 struct LabelPositionFeatureTests {
     @Test func selectingPositionUpdatesTimeShared() async {
-        let store = TestStore(initialState: LabelPositionFeature.State(kind: .time)) {
-            LabelPositionFeature()
+        let store = TestStore(initialState: LabelPositionSettingsFeature.State(kind: .time)) {
+            LabelPositionSettingsFeature()
         }
         store.exhaustivity = .off
         await store.send(.positionSelected(.topRight))
@@ -16,8 +16,8 @@ struct LabelPositionFeatureTests {
     }
 
     @Test func selectingPositionUpdatesDateShared() async {
-        let store = TestStore(initialState: LabelPositionFeature.State(kind: .date)) {
-            LabelPositionFeature()
+        let store = TestStore(initialState: LabelPositionSettingsFeature.State(kind: .date)) {
+            LabelPositionSettingsFeature()
         }
         store.exhaustivity = .off
         await store.send(.positionSelected(.topLeft))

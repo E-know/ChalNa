@@ -6,9 +6,9 @@ import DesignSystem
 
 public struct LabelPositionSettingsView: View {
     @Environment(AppRouter.self) private var router
-    let store: StoreOf<LabelPositionFeature>
+    let store: StoreOf<LabelPositionSettingsFeature>
 
-    public init(store: StoreOf<LabelPositionFeature>) {
+    public init(store: StoreOf<LabelPositionSettingsFeature>) {
         self.store = store
     }
 
@@ -52,7 +52,6 @@ public struct LabelPositionSettingsView: View {
         }
         .aspectRatio(9.0 / 16.0, contentMode: .fit)
         .frame(maxWidth: 220)
-        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder
@@ -89,17 +88,14 @@ public struct LabelPositionSettingsView: View {
                 let isSelected = store.selected == pos
                 Button { store.send(.positionSelected(pos)) } label: {
                     Text(pos.koreanName)
-                        .font(ChalNaTypography.krBody(ChalNaTypography.Size.small, weight: isSelected ? .semibold : .regular))
+                        .font(.system(size: 14, weight: isSelected ? .semibold : .regular))
                         .foregroundColor(isSelected ? ChalNaColor.Purple.p600 : ChalNaColor.Gray.g900)
                         .frame(maxWidth: .infinity, minHeight: 56)
                         .background(
                             RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
                                 .fill(isSelected ? ChalNaColor.Purple.p100.opacity(0.5) : Color.white)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
                                 .strokeBorder(isSelected ? ChalNaColor.Purple.p600 : ChalNaColor.Gray.g200,
-                                              lineWidth: isSelected ? 1.5 : 1)
+                                              lineWidth: isSelected ? 0 : 10)
                         )
                 }
                 .buttonStyle(.plain)
@@ -110,7 +106,7 @@ public struct LabelPositionSettingsView: View {
 
 #Preview {
     LabelPositionSettingsView(
-        store: Store(initialState: LabelPositionFeature.State(kind: .time)) { LabelPositionFeature() }
+        store: Store(initialState: LabelPositionSettingsFeature.State(kind: .time)) { LabelPositionSettingsFeature() }
     )
     .environment(AppRouter())
 }
