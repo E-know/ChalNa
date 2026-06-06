@@ -1,7 +1,6 @@
 import SwiftUI
 
 public extension View {
-    /// 화면 최상단 커스텀 네비게이션 바에 입히는 다나와 표준 패턴.
     /// 본문이 스크롤되어 올라온 정도(`scrollProgress` 0→1)에 따라
     /// 흰 배경 + 하단 1px Gray-200 hairline + 미세 shadow 가 등장한다.
     /// 화면별 여백은 호출하는 View 에서 직접 지정한다.
@@ -21,7 +20,7 @@ private struct ChalNaHeaderBarModifier: ViewModifier {
         content
             .frame(maxWidth: .infinity)
             .background(
-                ChalNaColor.white
+                Color.white
                     .opacity(progress)
                     .ignoresSafeArea(edges: .top)
             )

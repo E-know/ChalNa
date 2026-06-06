@@ -50,7 +50,7 @@ public struct AppFeature {
         case filmDetail(FilmDetailFeature)
         case settings(SettingsFeature)
         case labelSettings(LabelSettingsFeature)
-        case labelPosition(LabelPositionFeature)
+        case labelPosition(LabelPositionSettingsFeature)
         case support(SupportFeature)
         case clipAdjust(ClipAdjustFeature)
         case language(LanguageFeature)
@@ -106,7 +106,7 @@ public struct AppFeature {
                 return .none
 
             case let .routerPushedLabelPosition(kind):
-                state.path.append(.labelPosition(LabelPositionFeature.State(kind: kind)))
+                state.path.append(.labelPosition(LabelPositionSettingsFeature.State(kind: kind)))
                 return .none
 
             case .routerPushedSupport:

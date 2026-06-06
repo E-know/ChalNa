@@ -58,7 +58,7 @@ public struct HomeView: View {
         HStack(alignment: .center) {
             Text(verbatim: "ChalNa")
                 .font(ChalNaTypography.title(ChalNaTypography.Size.h1))
-                .foregroundColor(ChalNaColor.ink)
+                .foregroundColor(ChalNaColor.Gray.g900)
             Spacer()
             Button {
                 store.send(.settingsButtonTapped)
@@ -66,7 +66,7 @@ public struct HomeView: View {
             } label: {
                 Image(systemName: "gearshape")
                     .font(ChalNaTypography.krBody(20))
-                    .foregroundColor(ChalNaColor.ink)
+                    .foregroundColor(ChalNaColor.Gray.g900)
             }
             .buttonStyle(.chalNaHeaderAction)
             .accessibilityLabel("설정")
@@ -79,21 +79,21 @@ public struct HomeView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("오늘 찰나의 순간들")
                 .font(ChalNaTypography.title(ChalNaTypography.Size.h1, weight: .bold))
-                .foregroundColor(ChalNaColor.ink)
+                .foregroundColor(ChalNaColor.Gray.g900)
             Text("Live Photo와 짧은 영상을 촬영일 순서로 이어붙여\n한 편의 필름처럼 기록해요.")
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
                 .lineSpacing(4)
             // 비한국어 UI 에서만 앱 이름 '찰나(ChalNa)' 뜻풀이를 옅은 surface 박스로 구분해 덧붙인다.
             if !languageStore.isKoreanUI {
                 Text("'찰나'는 아주 짧은 순간이라는 뜻이에요.")
                     .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
-                    .foregroundColor(ChalNaColor.taupe)
+                    .foregroundColor(ChalNaColor.Gray.g500)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .background(
                         RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                            .fill(ChalNaColor.ivory)
+                            .fill(ChalNaColor.Gray.g50)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
@@ -128,11 +128,11 @@ public struct HomeView: View {
             HStack(alignment: .firstTextBaseline) {
                 Text("최근 필름")
                     .font(ChalNaTypography.title(ChalNaTypography.Size.h2, weight: .semibold))
-                    .foregroundColor(ChalNaColor.ink)
+                    .foregroundColor(ChalNaColor.Gray.g900)
                 Spacer()
                 Text("\(films.count)편")
                     .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
-                    .foregroundColor(ChalNaColor.taupe)
+                    .foregroundColor(ChalNaColor.Gray.g500)
             }
             .padding(.horizontal, 24)
 
@@ -159,16 +159,16 @@ public struct HomeView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("아직 만든 필름이 없어요.")
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.body, weight: .medium))
-                .foregroundColor(ChalNaColor.ink)
+                .foregroundColor(ChalNaColor.Gray.g900)
             Text("첫 Vlog를 시작해보세요.")
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.body2))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                .fill(ChalNaColor.ivory)
+                .fill(ChalNaColor.Gray.g50)
         )
     }
 }
@@ -191,11 +191,11 @@ private struct FilmRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(film.title)
                     .font(ChalNaTypography.krBody(ChalNaTypography.Size.body, weight: .semibold))
-                    .foregroundColor(ChalNaColor.ink)
+                    .foregroundColor(ChalNaColor.Gray.g900)
                     .lineLimit(1)
                 Text(film.metaLabel)
                     .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
-                    .foregroundColor(ChalNaColor.taupe)
+                    .foregroundColor(ChalNaColor.Gray.g500)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)

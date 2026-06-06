@@ -133,7 +133,7 @@ public struct TimelineView: View {
     // MARK: - Header
 
     private var header: some View {
-        ChalNaNavigationHeader(
+        ChalNaNavigationBar(
             title: headerTitle,
             subtitle: headerSubtitle
         ) {
@@ -175,7 +175,7 @@ public struct TimelineView: View {
     }
 
     private var labelLeftColor: Color {
-        store.isPlaying ? ChalNaColor.coral : ChalNaColor.taupe
+        store.isPlaying ? ChalNaColor.Purple.p600 : ChalNaColor.Gray.g500
     }
 
     @ViewBuilder
@@ -183,10 +183,10 @@ public struct TimelineView: View {
         if store.isPlaying {
             Text("\(store.playheadLabel) / \(store.totalClockLabel)").tagLabel()
         } else {
-            (Text("총 ").tagLabel(color: ChalNaColor.taupe)
+            (Text("총 ").tagLabel(color: ChalNaColor.Gray.g500)
              + Text(store.totalDurationLabel)
                 .font(ChalNaTypography.krBody(13, weight: .medium))
-                .foregroundColor(ChalNaColor.ink))
+                .foregroundColor(ChalNaColor.Gray.g900))
         }
     }
 
@@ -197,7 +197,7 @@ public struct TimelineView: View {
         if !store.isPlaying {
             Text("클립을 탭해 편집 · 길게 눌러서 끌어 이동")
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
                 .frame(maxWidth: .infinity, alignment: .center)
         }
     }

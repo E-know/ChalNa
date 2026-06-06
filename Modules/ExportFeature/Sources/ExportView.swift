@@ -75,7 +75,7 @@ public struct ExportView: View {
                     .foregroundColor(.white)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
-                    .background(Capsule().fill(ChalNaColor.ink.opacity(0.9)))
+                    .background(Capsule().fill(ChalNaColor.Gray.g900.opacity(0.9)))
                     .padding(.bottom, 64)
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
                     .task(id: toast) {
@@ -151,7 +151,7 @@ public struct ExportView: View {
         VStack(spacing: 2) {
             Text(store.phase.title)
                 .font(ChalNaTypography.krSemibold(15))
-                .foregroundColor(ChalNaColor.ink)
+                .foregroundColor(ChalNaColor.Gray.g900)
             Text(store.phase.tag)
                 .tagLabel(color: tagColor)
         }
@@ -161,9 +161,9 @@ public struct ExportView: View {
 
     private var tagColor: Color {
         switch store.phase {
-        case .idle, .exporting: return ChalNaColor.coral
-        case .done:             return ChalNaColor.sage
-        case .failed:           return ChalNaColor.taupe
+        case .idle, .exporting: return ChalNaColor.Purple.p600
+        case .done:             return ChalNaColor.info
+        case .failed:           return ChalNaColor.Gray.g500
         }
     }
 
@@ -218,11 +218,11 @@ public struct ExportView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(session.title.isEmpty ? SampleData.filmTitle : session.title)
                         .font(ChalNaTypography.title(ChalNaTypography.Size.h2, weight: .semibold))
-                        .foregroundColor(ChalNaColor.ink)
+                        .foregroundColor(ChalNaColor.Gray.g900)
                         .lineLimit(1)
                     Text(metaLine)
                         .font(ChalNaTypography.monoFallback(ChalNaTypography.Size.caption))
-                        .foregroundColor(ChalNaColor.taupe)
+                        .foregroundColor(ChalNaColor.Gray.g500)
                 }
             }
             .frame(width: width)
@@ -230,7 +230,7 @@ public struct ExportView: View {
         } else {
             Text("내보낼 클립이 없어요")
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.body, weight: .semibold))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
         }
     }
 
@@ -254,17 +254,17 @@ public struct ExportView: View {
                 if store.phase != .failed {
                     Text("\(Int(store.progress * 100))%")
                         .font(ChalNaTypography.monoFallback(12, weight: .semibold))
-                        .foregroundColor(ChalNaColor.ink)
+                        .foregroundColor(ChalNaColor.Gray.g900)
                 }
             }
 
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(ChalNaColor.ivory)
+                        .fill(ChalNaColor.Gray.g50)
                         .frame(height: 6)
                     Capsule()
-                        .fill(store.phase == .failed ? ChalNaColor.taupe : ChalNaColor.coral)
+                        .fill(store.phase == .failed ? ChalNaColor.Gray.g500 : ChalNaColor.Purple.p600)
                         .frame(width: max(0, proxy.size.width * store.progress), height: 6)
                 }
             }
@@ -275,7 +275,7 @@ public struct ExportView: View {
 
             Text(statusLine)
                 .font(ChalNaTypography.krBody(13))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
         }
     }
 
@@ -305,10 +305,10 @@ public struct ExportView: View {
         switch store.phase {
         case .idle, .exporting:
             HStack(spacing: 8) {
-                ChalNaIcon(.film, size: 14).foregroundColor(ChalNaColor.taupe)
+                ChalNaIcon(.film, size: 14).foregroundColor(ChalNaColor.Gray.g500)
                 Text("잠깐만 기다려주세요")
                     .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
-                    .foregroundColor(ChalNaColor.taupe)
+                    .foregroundColor(ChalNaColor.Gray.g500)
             }
             .frame(maxWidth: .infinity, alignment: .center)
         case .done:
@@ -342,7 +342,7 @@ public struct ExportView: View {
                     } label: {
                         HStack(spacing: 6) {
                             if store.isSaving {
-                                ProgressView().controlSize(.small).tint(ChalNaColor.ink)
+                                ProgressView().controlSize(.small).tint(ChalNaColor.Gray.g900)
                             } else {
                                 ChalNaIcon(.download, size: 14)
                             }
@@ -420,7 +420,7 @@ public struct ExportView: View {
                 )
                 .overlay(
                     ChalNaIcon(.play, size: 28)
-                        .foregroundColor(ChalNaColor.ink)
+                        .foregroundColor(ChalNaColor.Gray.g900)
                         .offset(x: 2)
                 )
                 .shadow(color: Color.black.opacity(0.18), radius: 8, x: 0, y: 4)

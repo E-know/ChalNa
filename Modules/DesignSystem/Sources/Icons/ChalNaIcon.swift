@@ -285,14 +285,14 @@ private struct LucideShape: Shape {
         ForEach(ChalNaIconKind.allCases, id: \.self) { kind in
             VStack(spacing: 8) {
                 ChalNaIcon(kind, size: 28)
-                    .foregroundColor(ChalNaColor.ink)
+                    .foregroundColor(ChalNaColor.Gray.g900)
                 Text(kind.rawValue)
                     .font(ChalNaTypography.monoFallback(10, weight: .medium))
                     .tracking(1)
-                    .foregroundColor(ChalNaColor.taupe)
+                    .foregroundColor(ChalNaColor.Gray.g500)
             }
         }
     }
     .padding(32)
-    .background(ChalNaColor.white)
+    .background(Color.white)
 }

@@ -20,7 +20,7 @@ struct MediaPreviewSheet: View {
 
     var body: some View {
         ZStack {
-            ChalNaColor.white.ignoresSafeArea()
+            Color.white.ignoresSafeArea()
 
             VStack(alignment: .leading, spacing: 16) {
                 metaRow
@@ -54,7 +54,7 @@ struct MediaPreviewSheet: View {
             if let duration = media.duration, duration > 0 {
                 Text(String(format: String(localized: "%.1f초"), duration))
                     .font(ChalNaTypography.monoFallback(13, weight: .medium))
-                    .foregroundColor(ChalNaColor.taupe)
+                    .foregroundColor(ChalNaColor.Gray.g500)
             }
 
             Spacer()
@@ -65,7 +65,7 @@ struct MediaPreviewSheet: View {
 
     private var stage: some View {
         ZStack {
-            ChalNaColor.ink
+            ChalNaColor.Gray.g900
 
             if media.videoURL != nil {
                 PreviewPlayerLayerView(player: controller.player)
@@ -94,7 +94,7 @@ struct MediaPreviewSheet: View {
         Circle()
             .fill(Color.white.opacity(0.92))
             .frame(width: 64, height: 64)
-            .overlay(ChalNaIcon(.play, size: 26).foregroundColor(ChalNaColor.ink).offset(x: 2))
+            .overlay(ChalNaIcon(.play, size: 26).foregroundColor(ChalNaColor.Gray.g900).offset(x: 2))
     }
 
     private var failureContent: some View {
@@ -110,7 +110,7 @@ struct MediaPreviewSheet: View {
     private var loadingContent: some View {
         ZStack {
             thumbnailImage
-            ProgressView().tint(ChalNaColor.coral)
+            ProgressView().tint(ChalNaColor.Purple.p600)
         }
     }
 
@@ -119,14 +119,14 @@ struct MediaPreviewSheet: View {
         if let data = media.thumbnail, let ui = UIImage(data: data) {
             Image(uiImage: ui).resizable().scaledToFit()
         } else {
-            ChalNaColor.ivory.opacity(0.2)
+            ChalNaColor.Gray.g50.opacity(0.2)
         }
     }
 
     private var hint: some View {
         Text(media.videoURL != nil ? LocalizedStringKey("영상을 탭하면 재생/일시정지돼요.") : LocalizedStringKey("원본 영상이 없는 미디어예요."))
             .font(ChalNaTypography.krBody(12))
-            .foregroundColor(ChalNaColor.taupe)
+            .foregroundColor(ChalNaColor.Gray.g500)
     }
 
     // MARK: - Derived

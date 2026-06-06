@@ -15,11 +15,13 @@ public struct LanguageView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            header
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .chalNaHeaderBar(scrollProgress: 1)
-                .zIndex(1)
+            ChalNaNavigationBar(titleKey: "언어") {
+                ChalNaHeaderBackButton { router.pop() }
+            } trailing: {
+                EmptyView()
+            }
+            .chalNaHeaderBar(scrollProgress: 1)
+            .zIndex(1)
 
             ScrollView {
                 VStack(spacing: 0) {
@@ -33,16 +35,13 @@ public struct LanguageView: View {
                 .background(
                     RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
                         .fill(Color.white)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                        .strokeBorder(ChalNaColor.Gray.g100, lineWidth: 1)
+                        .stroke(ChalNaColor.Gray.g100, lineWidth: 1)
                 )
                 .padding(.horizontal, 24)
                 .padding(.top, 16)
             }
         }
-        .chalNaScreen()
+        .background(Color.white.ignoresSafeArea())
     }
 
     private func languageRow(_ lang: AppLanguage) -> some View {
@@ -53,11 +52,14 @@ public struct LanguageView: View {
                 // displayName 은 이미 해석된 String → verbatim 표시(system 만 String(localized:)).
                 Text(lang.displayName)
                     .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
-                    .foregroundColor(ChalNaColor.ink)
+                    .foregroundColor(ChalNaColor.Gray.g900)
                 Spacer()
                 if lang == languageStore.language {
-                    ChalNaIcon(.check, size: 20)
-                        .foregroundColor(ChalNaColor.coral)
+                    Image(systemName: "checkmark")
+                        .resizable()
+                        .scaledToFit()
+                        .foregroundStyle(ChalNaColor.Purple.p600)
+                        .frame(height: 14)
                 }
             }
             .padding(.horizontal, 16)
@@ -66,12 +68,12 @@ public struct LanguageView: View {
         }
         .buttonStyle(.plain)
     }
+}
 
-    private var header: some View {
-        ChalNaNavigationHeader(titleKey: "언어") {
-            ChalNaHeaderBackButton { router.pop() }
-        } trailing: {
-            EmptyView()
-        }
-    }
+#Preview {
+    LanguageView(store: Store(initialState: LanguageFeature.State(), reducer: {
+        LanguageFeature()
+    }))
+    .environment(AppRouter())
+    .environment(AppLanguageStore())
 }

@@ -33,13 +33,13 @@ public struct ChalNaBottomSheet<Content: View>: View {
             if let title {
                 Text(title)
                     .font(ChalNaTypography.title(ChalNaTypography.Size.h1))
-                    .foregroundColor(ChalNaColor.ink)
+                    .foregroundColor(ChalNaColor.Gray.g900)
             }
 
             if let subtitle {
                 Text(subtitle)
                     .font(ChalNaTypography.krBody(ChalNaTypography.Size.body2))
-                    .foregroundColor(ChalNaColor.taupe)
+                    .foregroundColor(ChalNaColor.Gray.g500)
             }
 
             content()
@@ -72,5 +72,5 @@ public struct ChalNaBottomSheet<Content: View>: View {
         }
     }
     .padding(24)
-    .background(ChalNaColor.ivory)
+    .background(ChalNaColor.Gray.g50)
 }

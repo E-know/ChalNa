@@ -3,7 +3,7 @@ import Models
 import AnalyticsService
 
 @Reducer
-public struct LabelPositionFeature {
+public struct LabelPositionSettingsFeature {
     public init() {}
 
     @ObservableState
@@ -30,16 +30,16 @@ public struct LabelPositionFeature {
     public var body: some ReducerOf<Self> {
         Reduce { state, action in
             switch action {
-            case .onAppear:
-                return .none
+                case .onAppear:
+                    return .none
 
-            case let .positionSelected(position):
-                switch state.kind {
-                case .time: state.$timePosition.withLock { $0 = position }
-                case .date: state.$datePosition.withLock { $0 = position }
-                }
-                analyticsTracker.log(.labelPositionChanged(kind: state.kind.rawValue, position: position.rawValue))
-                return .none
+                case let .positionSelected(position):
+                    switch state.kind {
+                        case .time: state.$timePosition.withLock { $0 = position }
+                        case .date: state.$datePosition.withLock { $0 = position }
+                    }
+                    analyticsTracker.log(.labelPositionChanged(kind: state.kind.rawValue, position: position.rawValue))
+                    return .none
             }
         }
     }

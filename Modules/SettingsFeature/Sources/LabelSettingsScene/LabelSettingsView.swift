@@ -14,11 +14,13 @@ public struct LabelSettingsView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            header
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .chalNaHeaderBar(scrollProgress: 1)
-                .zIndex(1)
+            ChalNaNavigationBar(titleKey: "라벨") {
+                ChalNaHeaderBackButton { router.pop() }
+            } trailing: {
+                EmptyView()
+            }
+            .chalNaHeaderBar(scrollProgress: 1)
+            .zIndex(1)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
@@ -66,16 +68,6 @@ public struct LabelSettingsView: View {
         .chalNaScreen()
     }
 
-    // MARK: - Header
-
-    private var header: some View {
-        ChalNaNavigationHeader(titleKey: "라벨") {
-            ChalNaHeaderBackButton { router.pop() }
-        } trailing: {
-            EmptyView()
-        }
-    }
-
     // MARK: - Rows
 
     @ViewBuilder
@@ -93,15 +85,15 @@ public struct LabelSettingsView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(kind.title)
                     .font(ChalNaTypography.krBody(ChalNaTypography.Size.body, weight: .semibold))
-                    .foregroundColor(ChalNaColor.ink)
+                    .foregroundColor(ChalNaColor.Gray.g900)
                 Text(kind.subtitle)
                     .font(ChalNaTypography.monoFallback(ChalNaTypography.Size.caption))
-                    .foregroundColor(ChalNaColor.taupe)
+                    .foregroundColor(ChalNaColor.Gray.g500)
             }
             Spacer()
             Toggle("", isOn: Binding(get: { isOn }, set: onToggle))
                 .labelsHidden()
-                .tint(ChalNaColor.coral)
+                .tint(ChalNaColor.Purple.p600)
         }
         .padding(.horizontal, 16)
         .frame(minHeight: 56)
@@ -111,11 +103,11 @@ public struct LabelSettingsView: View {
             HStack(spacing: 12) {
                 Text("위치")
                     .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
-                    .foregroundColor(isOn ? ChalNaColor.ink : ChalNaColor.Gray.g300)
+                    .foregroundColor(isOn ? ChalNaColor.Gray.g900 : ChalNaColor.Gray.g300)
                 Spacer()
                 Text(position.koreanName)
                     .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
-                    .foregroundColor(isOn ? ChalNaColor.taupe : ChalNaColor.Gray.g300)
+                    .foregroundColor(isOn ? ChalNaColor.Gray.g500 : ChalNaColor.Gray.g300)
                 ChalNaIcon(.chevronRight, size: 16)
                     .foregroundColor(isOn ? ChalNaColor.Gray.g400 : ChalNaColor.Gray.g300)
             }
@@ -125,17 +117,17 @@ public struct LabelSettingsView: View {
         }
         .buttonStyle(.plain)
         .disabled(!isOn)
-
+        
         // 투명도 행 (OFF 면 비활성)
         HStack(spacing: 12) {
             Text("투명도")
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
-                .foregroundColor(isOn ? ChalNaColor.ink : ChalNaColor.Gray.g300)
+                .foregroundColor(isOn ? ChalNaColor.Gray.g900 : ChalNaColor.Gray.g300)
             Slider(value: Binding(get: { opacity }, set: onOpacityChange), in: 0...1, step: 0.05)
-                .tint(ChalNaColor.coral)
+                .tint(ChalNaColor.Purple.p600)
             Text("\(Int((opacity * 100).rounded()))%")
                 .font(ChalNaTypography.monoFallback(ChalNaTypography.Size.caption))
-                .foregroundColor(isOn ? ChalNaColor.taupe : ChalNaColor.Gray.g300)
+                .foregroundColor(isOn ? ChalNaColor.Gray.g500 : ChalNaColor.Gray.g300)
                 .frame(width: 44, alignment: .trailing)
         }
         .padding(.horizontal, 16)

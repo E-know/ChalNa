@@ -4,11 +4,11 @@ import AppCore
 import Models
 import DesignSystem
 
-public struct LabelPositionPickerView: View {
+public struct LabelPositionSettingsView: View {
     @Environment(AppRouter.self) private var router
-    let store: StoreOf<LabelPositionFeature>
+    let store: StoreOf<LabelPositionSettingsFeature>
 
-    public init(store: StoreOf<LabelPositionFeature>) {
+    public init(store: StoreOf<LabelPositionSettingsFeature>) {
         self.store = store
     }
 
@@ -16,11 +16,13 @@ public struct LabelPositionPickerView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            header
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .chalNaHeaderBar(scrollProgress: 1)
-                .zIndex(1)
+            ChalNaNavigationBar(title: "\(store.kind.title) 위치") {
+                ChalNaHeaderBackButton { router.pop() }
+            } trailing: {
+                EmptyView()
+            }
+            .chalNaHeaderBar(scrollProgress: 1)
+            .zIndex(1)
 
             ScrollView {
                 VStack(spacing: 24) {
@@ -38,16 +40,6 @@ public struct LabelPositionPickerView: View {
         .onAppear { store.send(.onAppear) }
     }
 
-    // MARK: - Header
-
-    private var header: some View {
-        ChalNaNavigationHeader(title: "\(store.kind.title) 위치") {
-            ChalNaHeaderBackButton { router.pop() }
-        } trailing: {
-            EmptyView()
-        }
-    }
-
     // MARK: - Mini preview (9:16 중립 회색 캔버스)
 
     private var preview: some View {
@@ -60,7 +52,6 @@ public struct LabelPositionPickerView: View {
         }
         .aspectRatio(9.0 / 16.0, contentMode: .fit)
         .frame(maxWidth: 220)
-        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder
@@ -79,12 +70,12 @@ public struct LabelPositionPickerView: View {
     /// LabelPosition → SwiftUI(상단 원점) Alignment.
     private func alignment(for p: LabelPosition) -> Alignment {
         let h: HorizontalAlignment = p.horizontalAnchor == 0 ? .leading
-            : (p.horizontalAnchor == 1 ? .trailing : .center)
+        : (p.horizontalAnchor == 1 ? .trailing : .center)
         let v: VerticalAlignment
         switch p {
-        case .topLeft, .topCenter, .topRight:          v = .top
-        case .centerLeft, .center, .centerRight:       v = .center
-        case .bottomLeft, .bottomCenter, .bottomRight: v = .bottom
+            case .topLeft, .topCenter, .topRight:          v = .top
+            case .centerLeft, .center, .centerRight:       v = .center
+            case .bottomLeft, .bottomCenter, .bottomRight: v = .bottom
         }
         return Alignment(horizontal: h, vertical: v)
     }
@@ -97,17 +88,14 @@ public struct LabelPositionPickerView: View {
                 let isSelected = store.selected == pos
                 Button { store.send(.positionSelected(pos)) } label: {
                     Text(pos.koreanName)
-                        .font(ChalNaTypography.krBody(ChalNaTypography.Size.small, weight: isSelected ? .semibold : .regular))
-                        .foregroundColor(isSelected ? ChalNaColor.coral : ChalNaColor.ink)
+                        .font(.system(size: 14, weight: isSelected ? .semibold : .regular))
+                        .foregroundColor(isSelected ? ChalNaColor.Purple.p600 : ChalNaColor.Gray.g900)
                         .frame(maxWidth: .infinity, minHeight: 56)
                         .background(
                             RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
                                 .fill(isSelected ? ChalNaColor.Purple.p100.opacity(0.5) : Color.white)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                                .strokeBorder(isSelected ? ChalNaColor.coral : ChalNaColor.Gray.g200,
-                                              lineWidth: isSelected ? 1.5 : 1)
+                                .strokeBorder(isSelected ? ChalNaColor.Purple.p600 : ChalNaColor.Gray.g200,
+                                              lineWidth: isSelected ? 0 : 10)
                         )
                 }
                 .buttonStyle(.plain)
@@ -117,8 +105,8 @@ public struct LabelPositionPickerView: View {
 }
 
 #Preview {
-    LabelPositionPickerView(
-        store: Store(initialState: LabelPositionFeature.State(kind: .time)) { LabelPositionFeature() }
+    LabelPositionSettingsView(
+        store: Store(initialState: LabelPositionSettingsFeature.State(kind: .time)) { LabelPositionSettingsFeature() }
     )
     .environment(AppRouter())
 }

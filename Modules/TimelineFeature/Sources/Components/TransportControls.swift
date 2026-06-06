@@ -19,8 +19,8 @@ struct TransportControls: View {
     private func sideButton(icon: ChalNaIconKind, label: LocalizedStringKey, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             ZStack {
-                Circle().fill(ChalNaColor.ivory).frame(width: 36, height: 36)
-                ChalNaIcon(icon, size: 13).foregroundColor(ChalNaColor.ink)
+                Circle().fill(ChalNaColor.Gray.g50).frame(width: 36, height: 36)
+                ChalNaIcon(icon, size: 13).foregroundColor(ChalNaColor.Gray.g900)
             }
         }
         .buttonStyle(.plain)
@@ -31,12 +31,12 @@ struct TransportControls: View {
     private var centerButton: some View {
         Button(action: onToggle) {
             ZStack {
-                Circle().fill(ChalNaColor.coral).frame(width: 48, height: 48)
+                Circle().fill(ChalNaColor.Purple.p600).frame(width: 48, height: 48)
                 ChalNaIcon(isPlaying ? .pause : .play, size: 16)
                     .foregroundColor(.white)
                     .offset(x: isPlaying ? 0 : 2)
             }
-            .shadow(color: ChalNaColor.coral.opacity(0.6), radius: 10, x: 0, y: 5)
+            .shadow(color: ChalNaColor.Purple.p600.opacity(0.6), radius: 10, x: 0, y: 5)
         }
         .buttonStyle(.plain)
         .chalNaHitTarget(minSize: 48)

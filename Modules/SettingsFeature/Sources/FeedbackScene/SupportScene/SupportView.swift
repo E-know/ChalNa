@@ -28,7 +28,7 @@ public struct SupportView: View {
                     editor
                     Text("모든 제보는 익명으로 전송돼요.")
                         .font(ChalNaTypography.krBody(ChalNaTypography.Size.caption))
-                        .foregroundColor(ChalNaColor.taupe)
+                        .foregroundColor(ChalNaColor.Gray.g500)
                     sendButton
                 }
                 .padding(.horizontal, 24)
@@ -68,7 +68,7 @@ public struct SupportView: View {
     // MARK: - Header
 
     private var header: some View {
-        ChalNaNavigationHeader(titleKey: "문의·신고") {
+        ChalNaNavigationBar(titleKey: "문의·신고") {
             ChalNaHeaderBackButton { router.pop() }
         } trailing: {
             EmptyView()
@@ -96,12 +96,12 @@ public struct SupportView: View {
         let isSelected = store.category == category
         return Text(category.koreanName)
             .font(ChalNaTypography.krBody(ChalNaTypography.Size.small, weight: .semibold))
-            .foregroundColor(isSelected ? ChalNaColor.white : ChalNaColor.taupe)
+            .foregroundColor(isSelected ? Color.white : ChalNaColor.Gray.g500)
             .padding(.horizontal, 18)
             .padding(.vertical, 10)
             .background(
                 Capsule(style: .continuous)
-                    .fill(isSelected ? ChalNaColor.ink : ChalNaColor.white)
+                    .fill(isSelected ? ChalNaColor.Gray.g900 : Color.white)
             )
             .overlay(
                 Capsule(style: .continuous)
@@ -116,7 +116,7 @@ public struct SupportView: View {
             if store.text.isEmpty {
                 Text(placeholder)
                     .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
-                    .foregroundColor(ChalNaColor.taupe)
+                    .foregroundColor(ChalNaColor.Gray.g500)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 16)
                     .allowsHitTesting(false)
@@ -124,14 +124,14 @@ public struct SupportView: View {
             TextEditor(text: $store.text.sending(\.textChanged))
                 .scrollContentBackground(.hidden)
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
-                .foregroundColor(ChalNaColor.ink)
+                .foregroundColor(ChalNaColor.Gray.g900)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .frame(minHeight: 180)
         }
         .background(
             RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                .fill(ChalNaColor.white)
+                .fill(Color.white)
         )
         .overlay(
             RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
@@ -146,7 +146,7 @@ public struct SupportView: View {
             store.send(.sendTapped)
         } label: {
             if store.isSending {
-                ProgressView().tint(ChalNaColor.white)
+                ProgressView().tint(Color.white)
             } else {
                 Text("전송")
             }
@@ -163,11 +163,11 @@ public struct SupportView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("리딤 코드")
                 .font(ChalNaTypography.title(ChalNaTypography.Size.h2, weight: .semibold))
-                .foregroundColor(ChalNaColor.ink)
+                .foregroundColor(ChalNaColor.Gray.g900)
 
             Text("코드를 입력하면 2026년까지 영상 생성 제한이 해제돼요.")
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
 
             ChalNaTextField(
                 placeholder: "Redeem Code",
@@ -185,7 +185,7 @@ public struct SupportView: View {
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(ChalNaColor.white)
+        .background(Color.white)
     }
 }
 
