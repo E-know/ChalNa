@@ -81,7 +81,7 @@ public struct ChalNaHeaderBackButton: View {
             Image(systemName: "chevron.left")
                 .resizable()
                 .scaledToFit()
-                .frame(height: 22)
+                .frame(height: 10)
                 .foregroundStyle(ChalNaColor.Gray.g900)
         }
         .buttonStyle(.chalNaHeaderAction)
@@ -101,7 +101,7 @@ public struct ChalNaHeaderCloseButton: View {
             Image(systemName: "xmark")
                 .resizable()
                 .scaledToFit()
-                .frame(height: 22)
+                .frame(height: 33)
                 .foregroundStyle(ChalNaColor.Gray.g900)
         }
         .buttonStyle(.chalNaHeaderAction)
