@@ -14,11 +14,23 @@ public struct SettingsView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            header
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .chalNaHeaderBar(scrollProgress: 1)
-                .zIndex(1)
+            ChalNaNavigationBar(titleKey: "설정") {
+                ChalNaHeaderBackButton { router.pop() }
+            } trailing: {
+                EmptyView()
+            }
+            .frame(maxWidth: .infinity)
+            .background(
+                Color.white
+                    .ignoresSafeArea(edges: .top)
+            )
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(ChalNaColor.Gray.g200)
+                    .frame(height: 1)
+            }
+            .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 1)
+            .zIndex(1)
 
             ScrollView {
                 VStack(spacing: 0) {
@@ -26,39 +38,34 @@ public struct SettingsView: View {
                         store.send(.labelMenuTapped)
                         router.push(.labelSettings)
                     }
+
                     Divider().overlay(ChalNaColor.Gray.g100)
+
                     menuRow(title: "언어", subtitle: "앱 표시 언어를 선택하세요") {
                         router.push(.language)
                     }
+
                     Divider().overlay(ChalNaColor.Gray.g100)
+
                     menuRow(title: "문의·신고", subtitle: "불편한 점이나 제안을 보내주세요") {
                         store.send(.supportMenuTapped)
                         router.push(.support)
                     }
-                    // 향후 다른 설정 메뉴 행은 여기에 Divider + menuRow 로 추가
                 }
                 .background(
-                    RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
                         .fill(Color.white)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
                         .strokeBorder(ChalNaColor.Gray.g100, lineWidth: 1)
                 )
                 .padding(.horizontal, 24)
                 .padding(.top, 16)
             }
         }
-        .chalNaScreen()
+        .background(Color.white.ignoresSafeArea())
         .onAppear { store.send(.onAppear) }
-    }
-
-    private var header: some View {
-        ChalNaNavigationHeader(titleKey: "설정") {
-            ChalNaHeaderBackButton { router.pop() }
-        } trailing: {
-            EmptyView()
-        }
     }
 
     @ViewBuilder
@@ -67,15 +74,19 @@ public struct SettingsView: View {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(ChalNaTypography.krBody(ChalNaTypography.Size.body, weight: .semibold))
-                        .foregroundColor(ChalNaColor.ink)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(ChalNaColor.Gray.g900)
+
                     Text(subtitle)
-                        .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
-                        .foregroundColor(ChalNaColor.taupe)
+                        .font(.system(size: 14))
+                        .foregroundColor(ChalNaColor.Gray.g500)
                 }
+
                 Spacer()
-                ChalNaIcon(.chevronRight, size: 16)
-                    .foregroundColor(ChalNaColor.Gray.g400)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(ChalNaColor.Gray.g400)
             }
             .padding(16)
             .frame(minHeight: 60)

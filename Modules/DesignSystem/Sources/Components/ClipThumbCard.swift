@@ -30,10 +30,10 @@ public struct ClipThumbCard<Content: View>: View {
     public var body: some View {
         if case .ghost = state {
             RoundedRectangle(cornerRadius: ChalNaRadius.film, style: .continuous)
-                .strokeBorder(ChalNaColor.coral.opacity(0.6), style: .init(lineWidth: 2, dash: [4, 3]))
+                .strokeBorder(ChalNaColor.Purple.p600.opacity(0.6), style: .init(lineWidth: 2, dash: [4, 3]))
                 .background(
                     RoundedRectangle(cornerRadius: ChalNaRadius.film, style: .continuous)
-                        .fill(ChalNaColor.coral.opacity(0.08))
+                        .fill(ChalNaColor.Purple.p600.opacity(0.08))
                 )
                 .frame(width: size.width + 4, height: size.height + 6)
         } else {
@@ -57,7 +57,7 @@ public struct ClipThumbCard<Content: View>: View {
         switch state {
         case .selected, .playing:
             RoundedRectangle(cornerRadius: ChalNaRadius.film, style: .continuous)
-                .strokeBorder(ChalNaColor.coral, lineWidth: 2)
+                .strokeBorder(ChalNaColor.Purple.p600, lineWidth: 2)
         default:
             EmptyView()
         }
@@ -85,7 +85,7 @@ public struct ClipThumbCard<Content: View>: View {
     private var shadowColor: Color {
         switch state {
         case .lifted:  return Color.black.opacity(0.30)
-        case .playing: return ChalNaColor.coral.opacity(0.4)
+        case .playing: return ChalNaColor.Purple.p600.opacity(0.4)
         default:       return Color.black.opacity(0.10)
         }
     }
@@ -123,5 +123,5 @@ public struct ClipThumbCard<Content: View>: View {
         }
     }
     .padding(32)
-    .background(ChalNaColor.ivory)
+    .background(ChalNaColor.Gray.g50)
 }

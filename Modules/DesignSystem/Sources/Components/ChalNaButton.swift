@@ -74,9 +74,9 @@ public struct ChalNaButtonStyle: ButtonStyle {
         switch variant {
         case .filled:            return .white
         case .standardFilled:    return .white
-        case .outlined:          return ChalNaColor.coral
-        case .standardOutlined:  return ChalNaColor.ink
-        case .text:              return ChalNaColor.coral
+        case .outlined:          return ChalNaColor.Purple.p600
+        case .standardOutlined:  return ChalNaColor.Gray.g900
+        case .text:              return ChalNaColor.Purple.p600
         }
     }
 
@@ -98,10 +98,10 @@ public struct ChalNaButtonStyle: ButtonStyle {
             switch variant {
             case .filled:
                 RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                    .fill(ChalNaColor.coral)
+                    .fill(ChalNaColor.Purple.p600)
             case .standardFilled:
                 RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                    .fill(ChalNaColor.ink)
+                    .fill(ChalNaColor.Gray.g900)
             case .outlined, .standardOutlined:
                 RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
                     .fill(Color.white)
@@ -125,7 +125,7 @@ public struct ChalNaButtonStyle: ButtonStyle {
             switch variant {
             case .outlined:
                 RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                    .strokeBorder(ChalNaColor.coral, lineWidth: 1.2)
+                    .strokeBorder(ChalNaColor.Purple.p600, lineWidth: 1.2)
             case .standardOutlined:
                 RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
                     .strokeBorder(ChalNaColor.Gray.g300, lineWidth: 1)
@@ -159,5 +159,5 @@ public extension ButtonStyle where Self == ChalNaButtonStyle {
         Button("텍스트 버튼") {}.buttonStyle(.chalNaText)
     }
     .padding(24)
-    .background(ChalNaColor.white)
+    .background(Color.white)
 }

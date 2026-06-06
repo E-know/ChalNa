@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Custom navigation header used when the system navigation bar is hidden.
 /// Keeps left/right action slots symmetric so title placement does not depend on hidden spacer views.
-public struct ChalNaNavigationHeader<Leading: View, Trailing: View>: View {
+public struct ChalNaNavigationBar<Leading: View, Trailing: View>: View {
     private let titleText: Text
     private let subtitleText: Text?
     private let subtitleColor: Color
@@ -12,7 +12,7 @@ public struct ChalNaNavigationHeader<Leading: View, Trailing: View>: View {
     public init(
         titleKey: LocalizedStringKey,
         subtitleKey: LocalizedStringKey? = nil,
-        subtitleColor: Color = ChalNaColor.taupe,
+        subtitleColor: Color = ChalNaColor.Gray.g500,
         @ViewBuilder leading: () -> Leading,
         @ViewBuilder trailing: () -> Trailing
     ) {
@@ -26,7 +26,7 @@ public struct ChalNaNavigationHeader<Leading: View, Trailing: View>: View {
     public init(
         title: String,
         subtitle: String? = nil,
-        subtitleColor: Color = ChalNaColor.taupe,
+        subtitleColor: Color = ChalNaColor.Gray.g500,
         @ViewBuilder leading: () -> Leading,
         @ViewBuilder trailing: () -> Trailing
     ) {
@@ -41,27 +41,30 @@ public struct ChalNaNavigationHeader<Leading: View, Trailing: View>: View {
         ZStack {
             HStack(spacing: 0) {
                 leading
-                    .frame(minWidth: 44, alignment: .leading)
-                Spacer(minLength: 0)
+                    .frame(maxHeight: 44, alignment: .leading)
+
+                Spacer()
+
                 trailing
-                    .frame(minWidth: 44, alignment: .trailing)
+                    .frame(maxHeight: 44, alignment: .trailing)
             }
 
             VStack(spacing: 2) {
                 titleText
-                    .font(ChalNaTypography.krSemibold(15))
-                    .foregroundColor(ChalNaColor.ink)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(ChalNaColor.Gray.g900)
                     .lineLimit(1)
 
                 if let subtitleText {
                     subtitleText
-                        .tagLabel(color: subtitleColor)
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                        .foregroundStyle(subtitleColor)
                         .lineLimit(1)
                 }
             }
-            .padding(.horizontal, 72)
-            .frame(maxWidth: .infinity)
+            .frame(maxHeight: 44)
         }
+        .frame(maxWidth: .infinity)
         .frame(height: 44)
     }
 }
@@ -75,8 +78,11 @@ public struct ChalNaHeaderBackButton: View {
 
     public var body: some View {
         Button(action: action) {
-            ChalNaIcon(.chevronLeft, size: 22)
-                .foregroundColor(ChalNaColor.ink)
+            Image(systemName: "chevron.left")
+                .resizable()
+                .scaledToFit()
+                .frame(height: 22)
+                .foregroundStyle(ChalNaColor.Gray.g900)
         }
         .buttonStyle(.chalNaHeaderAction)
         .accessibilityLabel("뒤로")
@@ -92,8 +98,11 @@ public struct ChalNaHeaderCloseButton: View {
 
     public var body: some View {
         Button(action: action) {
-            ChalNaIcon(.close, size: 20)
-                .foregroundColor(ChalNaColor.ink)
+            Image(systemName: "xmark")
+                .resizable()
+                .scaledToFit()
+                .frame(height: 22)
+                .foregroundStyle(ChalNaColor.Gray.g900)
         }
         .buttonStyle(.chalNaHeaderAction)
         .accessibilityLabel("취소")
@@ -112,8 +121,8 @@ public struct ChalNaHeaderTextAction: View {
     public var body: some View {
         Button(action: action) {
             Text(titleKey)
-                .font(ChalNaTypography.krBody(14, weight: .semibold))
-                .foregroundColor(ChalNaColor.coral)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(ChalNaColor.Purple.p600)
         }
         .buttonStyle(.chalNaHeaderAction)
     }

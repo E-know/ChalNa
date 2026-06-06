@@ -45,7 +45,7 @@ public struct ChalNaChip: View {
             case .live:     return ChalNaColor.Chip.liveBackground
             case .video:    return ChalNaColor.Chip.videoBackground
             case .film:     return ChalNaColor.Chip.filmBackground
-            case .selected: return ChalNaColor.ink
+            case .selected: return ChalNaColor.Gray.g900
             case .dashed:   return Color.white
             case .custom(let bg, _, _): return bg
         }
@@ -57,7 +57,7 @@ public struct ChalNaChip: View {
             case .video:    return ChalNaColor.Chip.videoForeground
             case .film:     return ChalNaColor.Chip.filmForeground
             case .selected: return .white
-            case .dashed:   return ChalNaColor.taupe
+            case .dashed:   return ChalNaColor.Gray.g500
             case .custom(_, let fg, _): return fg
         }
     }
@@ -104,5 +104,5 @@ public struct ChalNaChip: View {
         ChalNaChip("+ 날짜", variant: .dashed)
     }
     .padding(32)
-    .background(ChalNaColor.white)
+    .background(Color.white)
 }

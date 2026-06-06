@@ -3,7 +3,7 @@ import Models
 import AnalyticsService
 
 @Reducer
-public struct LabelPositionFeature {
+public struct LabelPositionSettingsFeature {
     public init() {}
 
     @ObservableState

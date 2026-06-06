@@ -18,7 +18,7 @@ public struct DesignSystemShowcaseView: View {
             .padding(.horizontal, 24)
             .padding(.vertical, 32)
         }
-        .background(ChalNaColor.white.ignoresSafeArea())
+        .background(Color.white.ignoresSafeArea())
     }
 
     // MARK: - Header
@@ -27,10 +27,10 @@ public struct DesignSystemShowcaseView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("ChalNa")
                 .font(ChalNaTypography.title(ChalNaTypography.Size.h1))
-                .foregroundColor(ChalNaColor.ink)
+                .foregroundColor(ChalNaColor.Gray.g900)
             Text("Danawa DDS Mobile v2.0 — Design System")
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.body2))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
         }
     }
 
@@ -40,17 +40,17 @@ public struct DesignSystemShowcaseView: View {
         sectionShell(title: "Color") {
             VStack(alignment: .leading, spacing: 16) {
                 colorRow("Brand", swatches: [
-                    ("Primary", ChalNaColor.coral, "#8B38E5"),
-                    ("White",   ChalNaColor.white, "#FFFFFF"),
-                    ("Ivory",   ChalNaColor.ivory, "#F8F8F8"),
-                    ("Ink",     ChalNaColor.ink,   "#1A1A1A"),
-                    ("Taupe",   ChalNaColor.taupe, "#919191"),
+                    ("Primary", ChalNaColor.Purple.p600, "#8B38E5"),
+                    ("White",   Color.white, "#FFFFFF"),
+                    ("Ivory",   ChalNaColor.Gray.g50, "#F8F8F8"),
+                    ("Ink",     ChalNaColor.Gray.g900,   "#1A1A1A"),
+                    ("Taupe",   ChalNaColor.Gray.g500, "#919191"),
                 ])
                 colorRow("Status", swatches: [
                     ("Success", ChalNaColor.success, "#06B87F"),
                     ("Danger",  ChalNaColor.danger,  "#E53B38"),
                     ("Info",    ChalNaColor.info,    "#02B8D3"),
-                    ("Link",    ChalNaColor.denim,   "#2070EB"),
+                    ("Link",    ChalNaColor.Blue.b500,   "#2070EB"),
                 ])
                 colorScale("Purple", scale: [
                     ("100", ChalNaColor.Purple.p100), ("300", ChalNaColor.Purple.p300),
@@ -70,7 +70,7 @@ public struct DesignSystemShowcaseView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(label)
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.small, weight: .semibold))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
             HStack(spacing: 12) {
                 ForEach(Array(swatches.enumerated()), id: \.offset) { _, s in
                     VStack(alignment: .leading, spacing: 4) {
@@ -83,10 +83,10 @@ public struct DesignSystemShowcaseView: View {
                             )
                         Text(s.0)
                             .font(ChalNaTypography.krBody(ChalNaTypography.Size.caption, weight: .medium))
-                            .foregroundColor(ChalNaColor.ink)
+                            .foregroundColor(ChalNaColor.Gray.g900)
                         Text(s.2)
                             .font(ChalNaTypography.monoFallback(ChalNaTypography.Size.caption))
-                            .foregroundColor(ChalNaColor.taupe)
+                            .foregroundColor(ChalNaColor.Gray.g500)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -98,7 +98,7 @@ public struct DesignSystemShowcaseView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(label)
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.small, weight: .semibold))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
             HStack(spacing: 6) {
                 ForEach(Array(scale.enumerated()), id: \.offset) { _, s in
                     VStack(spacing: 4) {
@@ -107,7 +107,7 @@ public struct DesignSystemShowcaseView: View {
                             .frame(height: 40)
                         Text(s.0)
                             .font(ChalNaTypography.monoFallback(ChalNaTypography.Size.caption))
-                            .foregroundColor(ChalNaColor.taupe)
+                            .foregroundColor(ChalNaColor.Gray.g500)
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -137,11 +137,11 @@ public struct DesignSystemShowcaseView: View {
         HStack(alignment: .firstTextBaseline, spacing: 16) {
             Text(label)
                 .font(ChalNaTypography.monoFallback(ChalNaTypography.Size.caption))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
                 .frame(width: 110, alignment: .leading)
             Text("매일의 순간을 기록하다 · ChalNa")
                 .font(font)
-                .foregroundColor(ChalNaColor.ink)
+                .foregroundColor(ChalNaColor.Gray.g900)
         }
     }
 
@@ -169,7 +169,7 @@ public struct DesignSystemShowcaseView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(ChalNaTypography.monoFallback(ChalNaTypography.Size.caption))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
             Button("샘플 라벨") {}.buttonStyle(.chalNa(variant, size: size, fillWidth: true))
         }
     }
@@ -214,7 +214,7 @@ public struct DesignSystemShowcaseView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Radius (4pt 단위)")
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.small, weight: .semibold))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
             HStack(spacing: 12) {
                 radiusSwatch("film 4", radius: ChalNaRadius.film)
                 radiusSwatch("button 4", radius: ChalNaRadius.button)
@@ -230,12 +230,12 @@ public struct DesignSystemShowcaseView: View {
                 .fill(ChalNaColor.Purple.p100)
                 .overlay(
                     RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .strokeBorder(ChalNaColor.coral, lineWidth: 1)
+                        .strokeBorder(ChalNaColor.Purple.p600, lineWidth: 1)
                 )
                 .frame(height: 56)
             Text(label)
                 .font(ChalNaTypography.monoFallback(ChalNaTypography.Size.caption))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
         }
         .frame(maxWidth: .infinity)
     }
@@ -244,7 +244,7 @@ public struct DesignSystemShowcaseView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Shadow (#000000 20% blur 6 표준)")
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.small, weight: .semibold))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
             HStack(spacing: 16) {
                 shadowSwatch("sm", layers: ChalNaShadow.sm)
                 shadowSwatch("md", layers: ChalNaShadow.md)
@@ -261,7 +261,7 @@ public struct DesignSystemShowcaseView: View {
                 .chalNaShadow(layers)
             Text(label)
                 .font(ChalNaTypography.monoFallback(ChalNaTypography.Size.caption))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
         }
     }
 
@@ -269,7 +269,7 @@ public struct DesignSystemShowcaseView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Spacing (4pt base)")
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.small, weight: .semibold))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
             HStack(alignment: .bottom, spacing: 6) {
                 spacingBar("xxs", 4)
                 spacingBar("xs", 8)
@@ -285,11 +285,11 @@ public struct DesignSystemShowcaseView: View {
     private func spacingBar(_ label: String, _ value: CGFloat) -> some View {
         VStack(spacing: 4) {
             Rectangle()
-                .fill(ChalNaColor.coral)
+                .fill(ChalNaColor.Purple.p600)
                 .frame(width: 24, height: value)
             Text(label)
                 .font(ChalNaTypography.monoFallback(ChalNaTypography.Size.caption))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
         }
         .frame(width: 36)
     }
@@ -301,7 +301,7 @@ public struct DesignSystemShowcaseView: View {
             HStack(alignment: .firstTextBaseline) {
                 Text(title)
                     .font(ChalNaTypography.title(ChalNaTypography.Size.big, weight: .bold))
-                    .foregroundColor(ChalNaColor.ink)
+                    .foregroundColor(ChalNaColor.Gray.g900)
                 Spacer()
                 Rectangle()
                     .fill(ChalNaColor.Gray.g200)

@@ -145,7 +145,7 @@ public enum ChalNaTypography {
 // MARK: - View helpers for tag labels
 
 public extension Text {
-    func tagLabel(color: Color = ChalNaColor.taupe) -> Text {
+    func tagLabel(color: Color = ChalNaColor.Gray.g500) -> Text {
         self.font(ChalNaTypography.monoFallback(ChalNaTypography.Size.tag, weight: .medium))
             .tracking(ChalNaTypography.Tracking.tagLabel)
             .foregroundColor(color)
