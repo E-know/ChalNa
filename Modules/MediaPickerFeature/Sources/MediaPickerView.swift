@@ -138,7 +138,7 @@ public struct MediaPickerView: View {
 
     private var pickedMediaLoadingOverlay: some View {
         ZStack {
-            ChalNaColor.ink.opacity(0.32)
+            ChalNaColor.Gray.g900.opacity(0.32)
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
                 .onTapGesture { } // 하단 화면 탭 차단
@@ -146,19 +146,19 @@ public struct MediaPickerView: View {
             VStack(spacing: 16) {
                 ProgressView()
                     .controlSize(.large)
-                    .tint(ChalNaColor.coral)
+                    .tint(ChalNaColor.Purple.p600)
 
                 VStack(spacing: 6) {
                     Text("사진을 불러오는 중")
                         .font(ChalNaTypography.krSemibold(15))
-                        .foregroundColor(ChalNaColor.ink)
+                        .foregroundColor(ChalNaColor.Gray.g900)
 
                     if let progress = store.preparingPickedMediaProgress, progress.total > 0 {
                         // total 자릿수에 맞춰 done 을 0 패딩 (예: 총 12개 → "05 / 12", 총 9개 → "5 / 9")
                         let doneText = String(format: "%0\(String(progress.total).count)d", progress.done)
                         Text("\(doneText) / \(progress.total)")
                             .font(ChalNaTypography.monoFallback(22, weight: .bold))
-                            .foregroundColor(ChalNaColor.coral)
+                            .foregroundColor(ChalNaColor.Purple.p600)
                             .monospacedDigit()
                             .contentTransition(.numericText(value: Double(progress.done)))
                             .animation(.easeOut(duration: 0.2), value: progress.done)
@@ -167,7 +167,7 @@ public struct MediaPickerView: View {
 
                     Text("Live Photo와 영상을 정성껏 추출하고 있어요")
                         .font(ChalNaTypography.krBody(12))
-                        .foregroundColor(ChalNaColor.taupe)
+                        .foregroundColor(ChalNaColor.Gray.g500)
                         .multilineTextAlignment(.center)
                 }
             }
@@ -176,7 +176,7 @@ public struct MediaPickerView: View {
             .frame(minWidth: 220)
             .background(
                 RoundedRectangle(cornerRadius: ChalNaRadius.sheet, style: .continuous)
-                    .fill(ChalNaColor.white)
+                    .fill(Color.white)
             )
             .chalNaShadow(ChalNaShadow.lg)
             .padding(.horizontal, 48)
@@ -189,10 +189,10 @@ public struct MediaPickerView: View {
     // MARK: - Header
 
     private var header: some View {
-        ChalNaNavigationHeader(
+        ChalNaNavigationBar(
             titleKey: "미디어 선택",
             subtitleKey: "LIVE · VIDEO",
-            subtitleColor: ChalNaColor.coral
+            subtitleColor: ChalNaColor.Purple.p600
         ) {
             ChalNaHeaderBackButton {
                 dismissTitleKeyboard()
@@ -210,11 +210,11 @@ public struct MediaPickerView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("PICK · YOUR CHALNA").tagLabel()
             introHeadline
-                .foregroundColor(ChalNaColor.ink)
+                .foregroundColor(ChalNaColor.Gray.g900)
                 .lineSpacing(2)
             Text("Live Photo와 짧은 영상을 불러올 수 있어요.\nLive Photo는 내부의 영상 부분을 사용합니다.")
                 .font(ChalNaTypography.krBody(13))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
                 .padding(.top, 4)
         }
     }
@@ -241,11 +241,11 @@ public struct MediaPickerView: View {
                 text: $store.titleInput.sending(\.titleChanged),
                 prompt: Text("예: 제주도, 우리의 봄")
                     .font(ChalNaTypography.krBody(15))
-                    .foregroundColor(ChalNaColor.taupe.opacity(0.6))
+                    .foregroundColor(ChalNaColor.Gray.g500.opacity(0.6))
             )
             .textFieldStyle(.plain)
             .font(ChalNaTypography.krBody(16, weight: .medium))
-            .foregroundColor(ChalNaColor.ink)
+            .foregroundColor(ChalNaColor.Gray.g900)
             .submitLabel(.done)
             .onSubmit { isTitleFocused = false }
             .autocorrectionDisabled(true)
@@ -263,15 +263,15 @@ public struct MediaPickerView: View {
                 RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
                     .strokeBorder(
                         isTitleFocused
-                            ? ChalNaColor.coral.opacity(0.55)
-                            : ChalNaColor.taupe.opacity(0.18),
+                            ? ChalNaColor.Purple.p600.opacity(0.55)
+                            : ChalNaColor.Gray.g500.opacity(0.18),
                         lineWidth: 1
                     )
             )
 
             Text("비워두면 나중에 자동으로 채워져요.")
                 .font(ChalNaTypography.krBody(12))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
         }
     }
 
@@ -291,17 +291,17 @@ public struct MediaPickerView: View {
             store.send(.photoLauncherTapped)
         } label: {
             HStack(spacing: 12) {
-                ChalNaIcon(.plus, size: 18).foregroundColor(ChalNaColor.coral)
+                ChalNaIcon(.plus, size: 18).foregroundColor(ChalNaColor.Purple.p600)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(photoLauncherTitle)
                         .font(ChalNaTypography.krSemibold(15))
-                        .foregroundColor(ChalNaColor.ink)
+                        .foregroundColor(ChalNaColor.Gray.g900)
                     Text(photoLauncherSubtitle)
                         .font(ChalNaTypography.krBody(12))
-                        .foregroundColor(ChalNaColor.taupe)
+                        .foregroundColor(ChalNaColor.Gray.g500)
                 }
                 Spacer()
-                ChalNaIcon(.chevronRight, size: 14).foregroundColor(ChalNaColor.taupe)
+                ChalNaIcon(.chevronRight, size: 14).foregroundColor(ChalNaColor.Gray.g500)
             }
             .padding(16)
             .background(
@@ -310,7 +310,7 @@ public struct MediaPickerView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                    .strokeBorder(ChalNaColor.coral.opacity(0.5),
+                    .strokeBorder(ChalNaColor.Purple.p600.opacity(0.5),
                                   style: .init(lineWidth: 1.2,
                                                dash: store.selectedAssetIDs.isEmpty ? [5, 3] : []))
             )
@@ -323,16 +323,16 @@ public struct MediaPickerView: View {
     private var devLauncher: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
-                ChalNaIcon(.film, size: 18).foregroundColor(ChalNaColor.coral)
+                ChalNaIcon(.film, size: 18).foregroundColor(ChalNaColor.Purple.p600)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Dev 미디어 소스")
                         .font(ChalNaTypography.krSemibold(15))
-                        .foregroundColor(ChalNaColor.ink)
+                        .foregroundColor(ChalNaColor.Gray.g900)
                     Text(store.selectedDevAssetIDs.isEmpty
                          ? LocalizedStringKey("번들 fixture로 실제 export까지 확인")
                          : LocalizedStringKey("\(store.selectedDevAssetIDs.count)개 fixture 선택됨"))
                         .font(ChalNaTypography.krBody(12))
-                        .foregroundColor(ChalNaColor.taupe)
+                        .foregroundColor(ChalNaColor.Gray.g500)
                 }
                 Spacer()
                 ChalNaChip("DEV", variant: .dashed)
@@ -344,13 +344,13 @@ public struct MediaPickerView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                    .strokeBorder(ChalNaColor.coral.opacity(0.45), lineWidth: 1.2)
+                    .strokeBorder(ChalNaColor.Purple.p600.opacity(0.45), lineWidth: 1.2)
             )
 
             if let devErrorMessage = store.devErrorMessage {
                 Text(devErrorMessage)
                     .font(ChalNaTypography.krBody(12))
-                    .foregroundColor(ChalNaColor.coral)
+                    .foregroundColor(ChalNaColor.Purple.p600)
             }
         }
     }
@@ -382,7 +382,7 @@ public struct MediaPickerView: View {
             if let statusMessage = photoStatusMessage {
                 HStack(spacing: 8) {
                     if isPreparingMedia || store.isPhotoLibraryLoading {
-                        ProgressView().controlSize(.small).tint(ChalNaColor.coral)
+                        ProgressView().controlSize(.small).tint(ChalNaColor.Purple.p600)
                     } else {
                         ChalNaIcon(.download, size: 12)
                     }
@@ -394,14 +394,14 @@ public struct MediaPickerView: View {
                 .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                        .fill(ChalNaColor.ivory.opacity(0.75))
+                        .fill(ChalNaColor.Gray.g50.opacity(0.75))
                 )
             }
 
             if selectedAssets.isEmpty {
                 Text(photoEmptyMessage)
                     .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
-                    .foregroundColor(ChalNaColor.taupe)
+                    .foregroundColor(ChalNaColor.Gray.g500)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 24)
             } else {
@@ -467,7 +467,7 @@ public struct MediaPickerView: View {
             if store.devAssets.isEmpty {
                 Text("Dev 미디어를 준비하고 있어요")
                     .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
-                    .foregroundColor(ChalNaColor.taupe)
+                    .foregroundColor(ChalNaColor.Gray.g500)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 24)
             } else {
@@ -501,19 +501,19 @@ public struct MediaPickerView: View {
                 Image(uiImage: ui).resizable().scaledToFill()
             } else if state.thumbnailFailed {
                 ZStack {
-                    ChalNaColor.ivory
-                    ChalNaIcon(.close, size: 14).foregroundColor(ChalNaColor.taupe)
+                    ChalNaColor.Gray.g50
+                    ChalNaIcon(.close, size: 14).foregroundColor(ChalNaColor.Gray.g500)
                 }
             } else {
-                ChalNaColor.ivory
-                ProgressView().tint(ChalNaColor.coral)
+                ChalNaColor.Gray.g50
+                ProgressView().tint(ChalNaColor.Purple.p600)
             }
 
             if state.kind == .video {
                 Circle()
                     .fill(Color.white.opacity(0.92))
                     .frame(width: 22, height: 22)
-                    .overlay(ChalNaIcon(.play, size: 9).foregroundColor(ChalNaColor.ink).offset(x: 1))
+                    .overlay(ChalNaIcon(.play, size: 9).foregroundColor(ChalNaColor.Gray.g900).offset(x: 1))
             }
 
             if state.videoFailed && state.thumbnail != nil {
@@ -521,7 +521,7 @@ public struct MediaPickerView: View {
                     .font(ChalNaTypography.monoFallback(8, weight: .bold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 5).padding(.vertical, 2)
-                    .background(Capsule().fill(ChalNaColor.taupe.opacity(0.9)))
+                    .background(Capsule().fill(ChalNaColor.Gray.g500.opacity(0.9)))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                     .padding(4)
             }
@@ -546,7 +546,7 @@ public struct MediaPickerView: View {
             ChalNaIcon(.close, size: 10)
                 .foregroundColor(.white)
                 .frame(width: 22, height: 22)
-                .background(Circle().fill(ChalNaColor.coral))
+                .background(Circle().fill(ChalNaColor.Purple.p600))
                 .frame(width: 40, height: 40, alignment: .topTrailing)
                 .contentShape(Rectangle())
         }
@@ -564,7 +564,7 @@ public struct MediaPickerView: View {
             .padding(.bottom, 16)
             .fixedSize(horizontal: false, vertical: true)
             .background(
-                ChalNaColor.white
+                Color.white
                     .ignoresSafeArea(edges: .bottom)
             )
             .overlay(alignment: .top) {
@@ -605,7 +605,7 @@ public struct MediaPickerView: View {
     private var confirmBottomLabel: some View {
         HStack(spacing: 6) {
             if store.isResolving || isPreparingMedia {
-                ProgressView().controlSize(.small).tint(ChalNaColor.ink)
+                ProgressView().controlSize(.small).tint(ChalNaColor.Gray.g900)
             } else {
                 ChalNaIcon(.check, size: 14)
             }
@@ -676,9 +676,9 @@ public struct MediaPickerView: View {
 
     private var photoStatusColor: Color {
         if hasUnavailableMedia || store.photoAuthorizationStatus == .denied || store.photoAuthorizationStatus == .restricted {
-            return ChalNaColor.coral
+            return ChalNaColor.Purple.p600
         }
-        return ChalNaColor.taupe
+        return ChalNaColor.Gray.g500
     }
 
     private var confirmButtonTitle: String {
@@ -864,7 +864,7 @@ private struct DevMediaAssetCard: View {
                 ZStack {
                     asset.preset.view()
                     LinearGradient(
-                        colors: [.clear, ChalNaColor.ink.opacity(0.5)],
+                        colors: [.clear, ChalNaColor.Gray.g900.opacity(0.5)],
                         startPoint: .center,
                         endPoint: .bottom
                     )
@@ -877,7 +877,7 @@ private struct DevMediaAssetCard: View {
                             .frame(width: 24, height: 24)
                             .overlay(
                                 ChalNaIcon(.play, size: 10)
-                                    .foregroundColor(ChalNaColor.ink)
+                                    .foregroundColor(ChalNaColor.Gray.g900)
                                     .offset(x: 1)
                             )
                     }
@@ -888,11 +888,11 @@ private struct DevMediaAssetCard: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(asset.title)
                     .font(ChalNaTypography.krSemibold(13))
-                    .foregroundColor(ChalNaColor.ink)
+                    .foregroundColor(ChalNaColor.Gray.g900)
                     .lineLimit(1)
                 Text(asset.locationNote ?? String(format: "%.1fs", asset.duration))
                     .font(ChalNaTypography.krBody(11))
-                    .foregroundColor(ChalNaColor.taupe)
+                    .foregroundColor(ChalNaColor.Gray.g500)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -904,7 +904,7 @@ private struct DevMediaAssetCard: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                .strokeBorder(isSelected ? ChalNaColor.coral : ChalNaColor.taupe.opacity(0.16), lineWidth: 1)
+                .strokeBorder(isSelected ? ChalNaColor.Purple.p600 : ChalNaColor.Gray.g500.opacity(0.16), lineWidth: 1)
         )
     }
 

@@ -46,7 +46,7 @@ public struct ClipAdjustView: View {
     }
 
     private var topBar: some View {
-        ChalNaNavigationHeader(titleKey: "조정") {
+        ChalNaNavigationBar(titleKey: "조정") {
             ChalNaHeaderBackButton { router.pop() }
         } trailing: {
             ChalNaHeaderTextAction("완료") {
@@ -137,7 +137,7 @@ public struct ClipAdjustView: View {
     private var adjustHint: some View {
         Text("손가락으로 확대·이동하고, 회전으로 방향을 맞춰요.")
             .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
-            .foregroundColor(ChalNaColor.taupe)
+            .foregroundColor(ChalNaColor.Gray.g500)
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 24)

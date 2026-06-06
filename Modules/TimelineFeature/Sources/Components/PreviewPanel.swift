@@ -71,7 +71,7 @@ struct PreviewPanel: View {
                 .frame(width: rrect.width * factor, height: rrect.height * factor)
                 .position(x: rrect.midX * factor, y: rrect.midY * factor)
             } else {
-                ChalNaColor.ivory
+                ChalNaColor.Gray.g50
             }
         }
         .frame(width: box.width, height: box.height)
@@ -126,13 +126,13 @@ struct PreviewPanel: View {
     @ViewBuilder
     private var topRightClipIndex: some View {
         if #available(iOS 26.0, *) {
-            Text(topRightIndexAttributed(foreground: ChalNaColor.ink, tail: ChalNaColor.taupe))
+            Text(topRightIndexAttributed(foreground: ChalNaColor.Gray.g900, tail: ChalNaColor.Gray.g500))
                 .font(ChalNaTypography.monoFallback(10, weight: .semibold))
-                .foregroundColor(ChalNaColor.ink)
+                .foregroundColor(ChalNaColor.Gray.g900)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
                 .glassEffect(
-                    .regular.tint(ChalNaColor.ivory.opacity(0.32)),
+                    .regular.tint(ChalNaColor.Gray.g50.opacity(0.32)),
                     in: Capsule(style: .continuous)
                 )
                 .padding(12)
@@ -200,16 +200,16 @@ private struct ScrubBar: View {
 
     private var paperBody: some View {
         scrubContent(
-            textColor: ChalNaColor.ink,
-            secondaryTextColor: ChalNaColor.taupe,
-            trackColor: ChalNaColor.ink.opacity(0.16),
-            knobColor: ChalNaColor.ivory
+            textColor: ChalNaColor.Gray.g900,
+            secondaryTextColor: ChalNaColor.Gray.g500,
+            trackColor: ChalNaColor.Gray.g900.opacity(0.16),
+            knobColor: ChalNaColor.Gray.g50
         )
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                .fill(ChalNaColor.ivory.opacity(0.92))
+                .fill(ChalNaColor.Gray.g50.opacity(0.92))
                 .chalNaShadow(ChalNaShadow.sm)
         )
     }
@@ -217,15 +217,15 @@ private struct ScrubBar: View {
     @available(iOS 26.0, *)
     private var liquidGlassBody: some View {
         scrubContent(
-            textColor: ChalNaColor.ink,
-            secondaryTextColor: ChalNaColor.taupe,
-            trackColor: ChalNaColor.ink.opacity(0.18),
-            knobColor: ChalNaColor.ivory
+            textColor: ChalNaColor.Gray.g900,
+            secondaryTextColor: ChalNaColor.Gray.g500,
+            trackColor: ChalNaColor.Gray.g900.opacity(0.18),
+            knobColor: ChalNaColor.Gray.g50
         )
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .glassEffect(
-            .regular.tint(ChalNaColor.ivory.opacity(0.3)),
+            .regular.tint(ChalNaColor.Gray.g50.opacity(0.3)),
             in: RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
         )
     }
@@ -247,13 +247,13 @@ private struct ScrubBar: View {
                         .fill(trackColor)
                         .frame(height: 3)
                     Capsule()
-                        .fill(ChalNaColor.coral)
+                        .fill(ChalNaColor.Purple.p600)
                         .frame(width: max(0, proxy.size.width * progress), height: 3)
                     Circle()
                         .fill(knobColor)
                         .frame(width: 12, height: 12)
-                        .overlay(Circle().stroke(ChalNaColor.coral, lineWidth: 2))
-                        .overlay(Circle().stroke(ChalNaColor.coral.opacity(0.3), lineWidth: 3).padding(-2))
+                        .overlay(Circle().stroke(ChalNaColor.Purple.p600, lineWidth: 2))
+                        .overlay(Circle().stroke(ChalNaColor.Purple.p600.opacity(0.3), lineWidth: 3).padding(-2))
                         .offset(x: max(0, proxy.size.width * progress) - 6)
                 }
                 .frame(height: 12)

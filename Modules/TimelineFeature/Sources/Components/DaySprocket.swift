@@ -11,7 +11,7 @@ struct DaySprocket: View {
         VStack(spacing: 6) {
             Text(label)
                 .font(ChalNaTypography.handFallback(13))
-                .foregroundColor(highlighted ? ChalNaColor.coral : ChalNaColor.white)
+                .foregroundColor(highlighted ? ChalNaColor.Purple.p600 : Color.white)
             SprocketLine()
                 .frame(width: 2, height: 64)
         }
@@ -27,7 +27,7 @@ private struct SprocketLine: View {
             VStack(spacing: 3) {
                 ForEach(0..<count, id: \.self) { _ in
                     Circle()
-                        .fill(ChalNaColor.white)
+                        .fill(Color.white)
                         .frame(width: 2.2, height: 2.2)
                 }
             }

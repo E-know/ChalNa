@@ -59,7 +59,7 @@ struct EditToolbar: View {
                         .foregroundColor(tone.foregroundColor)
                     if dotIndicator {
                         Circle()
-                            .fill(ChalNaColor.coral)
+                            .fill(ChalNaColor.Purple.p600)
                             .frame(width: 6, height: 6)
                             .offset(x: 4, y: -2)
                     }
@@ -88,8 +88,8 @@ private enum ToolbarItemTone {
 
     var foregroundColor: Color {
         switch self {
-        case .normal:      return ChalNaColor.ink
-        case .destructive: return ChalNaColor.coral
+        case .normal:      return ChalNaColor.Gray.g900
+        case .destructive: return ChalNaColor.Purple.p600
         }
     }
 

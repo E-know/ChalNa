@@ -84,7 +84,7 @@ struct LabelEditorView: View {
     // MARK: - Top bar
 
     private var topBar: some View {
-        ChalNaNavigationHeader(titleKey: "라벨") {
+        ChalNaNavigationBar(titleKey: "라벨") {
             ChalNaHeaderCloseButton(action: onCancel)
         } trailing: {
             ChalNaHeaderTextAction("저장") {
@@ -185,7 +185,7 @@ struct LabelEditorView: View {
             .font(ChalNaTypography.krBody(fontPx, weight: .light))
             .tracking(ClipLabel.BoxStyle.letterSpacing(for: fontPx))
             .foregroundColor(.black)
-            .tint(ChalNaColor.coral)
+            .tint(ChalNaColor.Purple.p600)
             .multilineTextAlignment(.leading)
             .lineLimit(1)
             .frame(width: textWidth + 4, alignment: .leading)   // +4: 커서 표시 여유
@@ -209,7 +209,7 @@ struct LabelEditorView: View {
 
     private var selectionFrame: some View {
         Rectangle()
-            .strokeBorder(ChalNaColor.coral, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+            .strokeBorder(ChalNaColor.Purple.p600, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
             .padding(-3)
             .opacity(phase == .adjusting ? 1 : 0)
     }
@@ -217,12 +217,12 @@ struct LabelEditorView: View {
     @ViewBuilder
     private func alignmentGuides(box: CGSize) -> some View {
         if showVGuide {
-            Rectangle().fill(ChalNaColor.coral.opacity(0.7))
+            Rectangle().fill(ChalNaColor.Purple.p600.opacity(0.7))
                 .frame(width: 1, height: box.height)
                 .offset(x: box.width / 2 - 0.5, y: 0)
         }
         if showHGuide {
-            Rectangle().fill(ChalNaColor.coral.opacity(0.7))
+            Rectangle().fill(ChalNaColor.Purple.p600.opacity(0.7))
                 .frame(width: box.width, height: 1)
                 .offset(x: 0, y: box.height / 2 - 0.5)
         }
@@ -234,7 +234,7 @@ struct LabelEditorView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("크기")
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.small, weight: .medium))
-                .foregroundColor(ChalNaColor.ink)
+                .foregroundColor(ChalNaColor.Gray.g900)
             Slider(
                 value: $label.sizeFraction,
                 in: ClipLabel.minSizeFraction...ClipLabel.maxSizeFraction,
@@ -243,7 +243,7 @@ struct LabelEditorView: View {
                     if !editing { renderedSizeFraction = label.clampedSizeFraction }
                 }
             )
-            .tint(ChalNaColor.coral)
+            .tint(ChalNaColor.Purple.p600)
         }
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)

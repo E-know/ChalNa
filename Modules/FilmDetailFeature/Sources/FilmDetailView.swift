@@ -45,7 +45,7 @@ public struct FilmDetailView: View {
     // MARK: - Header
 
     private var header: some View {
-        ChalNaNavigationHeader(titleKey: "필름 정보") {
+        ChalNaNavigationBar(titleKey: "필름 정보") {
             ChalNaHeaderBackButton { router.pop() }
         } trailing: {
             EmptyView()
@@ -150,9 +150,9 @@ public struct FilmDetailView: View {
 
             // 파일이 사라진 필름은 포스터를 어둡게 덮어 재생 불가 상태를 즉시 알린다.
             if !isPlayable {
-                ChalNaColor.ink.opacity(0.45)
+                ChalNaColor.Gray.g900.opacity(0.45)
                 ChalNaIcon(.film, size: 40)
-                    .foregroundColor(ChalNaColor.white.opacity(0.85))
+                    .foregroundColor(Color.white.opacity(0.85))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -166,12 +166,12 @@ public struct FilmDetailView: View {
     private func durationBadge(for film: Film) -> some View {
         Text(Self.durationLabel(film.totalDurationSeconds))
             .font(ChalNaTypography.mono(12, weight: .semibold))
-            .foregroundColor(ChalNaColor.white)
+            .foregroundColor(Color.white)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(
                 Capsule(style: .continuous)
-                    .fill(ChalNaColor.ink.opacity(0.85))
+                    .fill(ChalNaColor.Gray.g900.opacity(0.85))
             )
             .accessibilityLabel("총 길이 \(Self.durationLabel(film.totalDurationSeconds))")
     }
@@ -182,12 +182,12 @@ public struct FilmDetailView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(film.title)
                 .font(ChalNaTypography.title(ChalNaTypography.Size.h1, weight: .bold))
-                .foregroundColor(ChalNaColor.ink)
+                .foregroundColor(ChalNaColor.Gray.g900)
                 .lineLimit(3)
 
             Text(film.createdAt, format: .dateTime.year().month().day().weekday())
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
                 .lineLimit(2)
         }
     }
@@ -212,16 +212,16 @@ public struct FilmDetailView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
             Text(value)
                 .font(ChalNaTypography.title(ChalNaTypography.Size.h2, weight: .bold))
-                .foregroundColor(ChalNaColor.ink)
+                .foregroundColor(ChalNaColor.Gray.g900)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                .fill(ChalNaColor.white)
+                .fill(Color.white)
         )
         .overlay(
             RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
@@ -234,14 +234,14 @@ public struct FilmDetailView: View {
     private var missingFileNotice: some View {
         HStack(alignment: .top, spacing: 12) {
             ChalNaIcon(.film, size: 20)
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
             VStack(alignment: .leading, spacing: 4) {
                 Text("영상 파일을 찾을 수 없어요")
                     .font(ChalNaTypography.krBody(ChalNaTypography.Size.body, weight: .semibold))
-                    .foregroundColor(ChalNaColor.ink)
+                    .foregroundColor(ChalNaColor.Gray.g900)
                 Text("앱을 다시 설치하셨거나 파일이 삭제되었어요. 재생과 공유는 불가능하고, 라이브러리에서 항목을 정리할 수 있어요.")
                     .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
-                    .foregroundColor(ChalNaColor.taupe)
+                    .foregroundColor(ChalNaColor.Gray.g500)
                     .lineSpacing(2)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -249,7 +249,7 @@ public struct FilmDetailView: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                .fill(ChalNaColor.ivory)
+                .fill(ChalNaColor.Gray.g50)
         )
     }
 
@@ -308,10 +308,10 @@ public struct FilmDetailView: View {
             Spacer()
             Text("필름을 찾을 수 없어요")
                 .font(ChalNaTypography.title(ChalNaTypography.Size.h2, weight: .semibold))
-                .foregroundColor(ChalNaColor.ink)
+                .foregroundColor(ChalNaColor.Gray.g900)
             Text("이미 삭제되었거나 다른 기기에서 동기화 중일 수 있어요.")
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
-                .foregroundColor(ChalNaColor.taupe)
+                .foregroundColor(ChalNaColor.Gray.g500)
                 .multilineTextAlignment(.center)
             Button("홈으로") { router.pop() }
                 .buttonStyle(.chalNa(.outlined, size: .md))
