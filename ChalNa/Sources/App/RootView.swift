@@ -49,7 +49,7 @@ public struct RootView: View {
         case let .filmDetail(s):  FilmDetailView(store: s)
         case let .settings(s):      SettingsView(store: s)
         case let .labelSettings(s): LabelSettingsView(store: s)
-        case let .labelPosition(s): LabelPositionPickerView(store: s)
+        case let .labelPosition(s): LabelPositionSettingsView(store: s)
         case let .support(s):       SupportView(store: s)
         case let .clipAdjust(s):    ClipAdjustView(store: s)
         case let .language(s):      LanguageView(store: s)

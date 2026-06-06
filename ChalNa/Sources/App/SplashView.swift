@@ -26,7 +26,7 @@ struct SplashView: View {
                     Text("ChalNa")
                         .font(.custom(Self.kerisFontName, size: 24))
                 }
-                .foregroundStyle(ChalNaColor.white)
+                .foregroundStyle(Color.white)
             }
             // Reduce Motion 시 확대 생략(페이드만)
             .scaleEffect(scale)
