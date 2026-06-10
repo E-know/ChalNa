@@ -80,7 +80,7 @@ public enum ChalNaTypography {
     }
     #endif
 
-    // MARK: - Legacy stubs (ChalNa 무드 제거: Fraunces/Caveat/BradleyHand 의존 삭제, Pretendard 로 매핑)
+    // MARK: - Legacy stubs (ChalNa 무드 제거: Fraunces/Caveat/BradleyHand 의존 삭제, 시스템 폰트 krBody 로 매핑)
     // Phase 2~5 에서 호출처 정리될 때까지 빌드 호환용으로 둔다.
 
     public static func displayEN(_ size: CGFloat, italic: Bool = false, weight: Font.Weight = .regular) -> Font {
