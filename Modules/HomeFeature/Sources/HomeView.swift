@@ -21,12 +21,10 @@ public struct HomeView: View {
     public var body: some View {
         VStack(spacing: 0) {
             header
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .chalNaHeaderBar(scrollProgress: store.scrollProgress)
                 .zIndex(1)
 
             ScrollView {
+
                 VStack(alignment: .leading, spacing: 32) {
                     hero
                         .padding(.horizontal, 24)
@@ -55,22 +53,34 @@ public struct HomeView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .center) {
-            Text(verbatim: "ChalNa")
-                .font(ChalNaTypography.title(ChalNaTypography.Size.h1))
-                .foregroundColor(ChalNaColor.Gray.g900)
-            Spacer()
-            Button {
-                store.send(.settingsButtonTapped)
-                router.push(.settings)
-            } label: {
-                Image(systemName: "gearshape")
-                    .font(ChalNaTypography.krBody(20))
+        VStack(spacing: 0) {
+            HStack(alignment: .center) {
+                Text(verbatim: "ChalNa")
+                    .font(.system(size: 24, weight: .bold))
                     .foregroundColor(ChalNaColor.Gray.g900)
+                Spacer()
+                Button {
+                    store.send(.settingsButtonTapped)
+                    router.push(.settings)
+                } label: {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 20))
+                        .foregroundColor(ChalNaColor.Gray.g900)
+                }
+                .buttonStyle(.chalNaHeaderAction)
+                .accessibilityLabel("설정")
             }
-            .buttonStyle(.chalNaHeaderAction)
-            .accessibilityLabel("설정")
+            .padding(.horizontal)
+//            .padding(.vertical, 6)
+
+            Spacer()
+
+            Divider()
+                .overlay(ChalNaColor.Purple.p400)
         }
+        .background(Color.white)
+        .padding(.bottom, 4)
+        .frame(maxHeight: 44)
     }
 
     // MARK: - Hero
@@ -78,16 +88,16 @@ public struct HomeView: View {
     private var hero: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("오늘 찰나의 순간들")
-                .font(ChalNaTypography.title(ChalNaTypography.Size.h1, weight: .bold))
+                .font(.system(size: 24, weight: .bold))
                 .foregroundColor(ChalNaColor.Gray.g900)
             Text("Live Photo와 짧은 영상을 촬영일 순서로 이어붙여\n한 편의 필름처럼 기록해요.")
-                .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
+                .font(.system(size: 16))
                 .foregroundColor(ChalNaColor.Gray.g500)
                 .lineSpacing(4)
             // 비한국어 UI 에서만 앱 이름 '찰나(ChalNa)' 뜻풀이를 옅은 surface 박스로 구분해 덧붙인다.
             if !languageStore.isKoreanUI {
                 Text("'찰나'는 아주 짧은 순간이라는 뜻이에요.")
-                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
+                    .font(.system(size: 14))
                     .foregroundColor(ChalNaColor.Gray.g500)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
@@ -113,7 +123,9 @@ public struct HomeView: View {
             router.push(.mediaPicker)
         } label: {
             HStack(spacing: 8) {
-                ChalNaIcon(.plus, size: 16)
+                Image(systemName: "plus")
+                    .frame(maxHeight: 8)
+
                 Text("새 Vlog 만들기")
             }
         }
@@ -127,11 +139,11 @@ public struct HomeView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .firstTextBaseline) {
                 Text("최근 필름")
-                    .font(ChalNaTypography.title(ChalNaTypography.Size.h2, weight: .semibold))
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(ChalNaColor.Gray.g900)
                 Spacer()
                 Text("\(films.count)편")
-                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
+                    .font(.system(size: 14))
                     .foregroundColor(ChalNaColor.Gray.g500)
             }
             .padding(.horizontal, 24)
@@ -158,10 +170,10 @@ public struct HomeView: View {
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("아직 만든 필름이 없어요.")
-                .font(ChalNaTypography.krBody(ChalNaTypography.Size.body, weight: .medium))
+                .font(.system(size: 16, weight: .medium))
                 .foregroundColor(ChalNaColor.Gray.g900)
             Text("첫 Vlog를 시작해보세요.")
-                .font(ChalNaTypography.krBody(ChalNaTypography.Size.body2))
+                .font(.system(size: 15))
                 .foregroundColor(ChalNaColor.Gray.g500)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -190,11 +202,11 @@ private struct FilmRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(film.title)
-                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.body, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(ChalNaColor.Gray.g900)
                     .lineLimit(1)
                 Text(film.metaLabel)
-                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
+                    .font(.system(size: 14))
                     .foregroundColor(ChalNaColor.Gray.g500)
                     .lineLimit(1)
             }
