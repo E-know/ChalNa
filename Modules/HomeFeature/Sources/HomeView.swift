@@ -24,25 +24,16 @@ public struct HomeView: View {
                 .zIndex(1)
 
             ScrollView {
-
                 VStack(alignment: .leading, spacing: 32) {
                     hero
                         .padding(.horizontal, 24)
                         .padding(.top, 16)
-                        .trackScrollOffset(in: "home-scroll")
 
                     primaryAction
                         .padding(.horizontal, 24)
 
                     recentFilmsSection
                         .padding(.bottom, 64)
-                }
-            }
-            .coordinateSpace(name: "home-scroll")
-            .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
-                let p = offset / 8
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    store.send(.scrollProgressChanged(p))
                 }
             }
         }
@@ -70,17 +61,16 @@ public struct HomeView: View {
                 .buttonStyle(.chalNaHeaderAction)
                 .accessibilityLabel("설정")
             }
-            .padding(.horizontal)
-//            .padding(.vertical, 6)
+            .padding(.horizontal, 16)
 
             Spacer()
 
             Divider()
                 .overlay(ChalNaColor.Purple.p400)
         }
+        .frame(height: 40)
         .background(Color.white)
         .padding(.bottom, 4)
-        .frame(maxHeight: 44)
     }
 
     // MARK: - Hero
@@ -124,8 +114,6 @@ public struct HomeView: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "plus")
-                    .frame(maxHeight: 8)
-
                 Text("새 Vlog 만들기")
             }
         }

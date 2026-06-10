@@ -11,17 +11,13 @@ public struct HomeFeature {
 
     @ObservableState
     public struct State: Equatable {
-        public var scrollProgress: Double = 0
-        public init(scrollProgress: Double = 0) {
-            self.scrollProgress = scrollProgress
-        }
+        public init() {}
     }
 
     public enum Action {
         case onAppear
         case newVlogButtonTapped
         case settingsButtonTapped
-        case scrollProgressChanged(Double)
     }
 
     @Dependency(\.analyticsTracker) var analyticsTracker
@@ -40,12 +36,6 @@ public struct HomeFeature {
 
             case .settingsButtonTapped:
                 // 향후 설정 화면 진입.
-                return .none
-
-            case let .scrollProgressChanged(progress):
-                let clamped = max(0, min(1, progress))
-                guard abs(clamped - state.scrollProgress) > 0.01 else { return .none }
-                state.scrollProgress = clamped
                 return .none
             }
         }
