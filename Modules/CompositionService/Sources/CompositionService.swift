@@ -65,27 +65,37 @@ public extension CompositionServicing {
 public actor AVFoundationCompositionService: CompositionServicing {
     public init() {}
 
+    /// 외부에서 부르는 유일한 진입점. actor 메서드인데 `nonisolated` — actor 잠금을
+    /// 기다리지 않고 즉시 실행된다. "이벤트가 흘러나올 통로(AsyncStream)"만 곧바로 만들어
+    /// 돌려주고, 실제 무거운 작업은 그 안쪽 Task에서 비동기로 시작한다.
     public nonisolated func export(
-        clips: [Clip],
-        rotations: [Clip.ID: ClipRotation],
-        transforms: [Clip.ID: ClipTransform],
-        labelSettings: LabelSettings,
-        clipLabels: [Clip.ID: ClipLabel]
-    ) -> AsyncStream<ExportEvent> {
+        clips: [Clip],                          // 이어붙일 클립들(이미 촬영순 정렬)
+        rotations: [Clip.ID: ClipRotation],     // 클립별 사용자 회전(없으면 0°)
+        transforms: [Clip.ID: ClipTransform],   // 클립별 확대·이동(없으면 .fit)
+        labelSettings: LabelSettings,           // 시간·날짜 라벨 on/off·위치·투명도
+        clipLabels: [Clip.ID: ClipLabel]        // 클립별 사용자 자막
+    ) -> AsyncStream<ExportEvent> {             // 반환값 = 이벤트가 흘러나오는 통로
         AsyncStream { continuation in
-            let task = Task { [weak self] in
+            // continuation = 이 통로에 이벤트를 밀어 넣는 손잡이.
+            let task = Task { [weak self] in    // 실제 작업은 백그라운드 Task에서.
                 guard let self else {
                     continuation.finish()
                     return
                 }
+                // 여기서부터 actor 격리 안. run()이 전 과정을 진행하며
+                // continuation으로 .progress / .completed / .failed 를 흘려보낸다.
                 await self.run(clips: clips, rotations: rotations, transforms: transforms, labelSettings: labelSettings, clipLabels: clipLabels, continuation: continuation)
             }
+            // 구독자가 통로를 버리면(화면 이탈 등) 굽기 Task도 취소된다.
+            // 안 보이는 영상을 계속 굽느라 배터리·발열을 낭비하지 않기 위함.
             continuation.onTermination = { _ in task.cancel() }
         }
     }
 
     // MARK: - Pipeline
 
+    /// 전체 파이프라인을 지휘하는 곳. 재료 준비 → 세션 준비 → 진행률 폴링 →
+    /// 굽기 → 이벤트 발행 → 에러 처리까지 한 흐름으로 진행한다.
     private func run(
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation],
@@ -95,50 +105,54 @@ public actor AVFoundationCompositionService: CompositionServicing {
         continuation: AsyncStream<ExportEvent>.Continuation
     ) async {
         do {
+            // [1·2·3단계] 트랙 잇기 + 클립별 변환·라벨 instruction 만들기.
             let built = try await buildComposition(clips: clips, rotations: rotations, transforms: transforms, labelSettings: labelSettings, clipLabels: clipLabels)
             guard built.hasContent else {
-                throw ExportError.noVideoClips
+                throw ExportError.noVideoClips   // 한 장도 못 붙였으면 중단.
             }
 
-            let outputURL = Self.makeOutputURL()
-            try? FileManager.default.removeItem(at: outputURL)
+            let outputURL = Self.makeOutputURL()                // 임시폴더/chalNa-<UUID>.mp4
+            try? FileManager.default.removeItem(at: outputURL)  // 남은 동명 파일 정리.
 
+            // [5단계] 굽는 기계 준비 — 최고 화질 프리셋.
             guard let session = AVAssetExportSession(
                 asset: built.composition,
                 presetName: AVAssetExportPresetHighestQuality
             ) else {
                 throw ExportError.sessionSetupFailed
             }
-            session.shouldOptimizeForNetworkUse = true
-            session.videoComposition = built.videoComposition
+            session.shouldOptimizeForNetworkUse = true          // 재생 시작 빠르게(moov atom 앞으로).
+            session.videoComposition = built.videoComposition   // 우리 플레이팅 방법(커스텀 컴포지터)을 등록.
 
-            // 진행률 관찰은 별도 Task로 동시 진행.
+            // 진행률 관찰은 별도 Task로 동시 진행 — 0.15초마다 session.progress 를 폴링.
             let progressTask = Task { [session] in
                 while !Task.isCancelled {
                     let progress = Double(session.progress)
                     if progress.isFinite {
+                        // 0.99로 캡 — "다 됐다"고 먼저 말해놓고 파일이 아직 없는 상태를 막는다.
                         continuation.yield(.progress(min(max(progress, 0), 0.99)))
                     }
-                    try? await Task.sleep(nanoseconds: 150_000_000)
+                    try? await Task.sleep(nanoseconds: 150_000_000)   // 150ms
                 }
             }
 
             do {
-                try await session.export(to: outputURL, as: .mp4)
+                try await session.export(to: outputURL, as: .mp4)     // iOS 18 async 굽기.
                 progressTask.cancel()
             } catch {
                 progressTask.cancel()
                 throw ExportError.exportFailed(error.localizedDescription)
             }
 
-            continuation.yield(.progress(1.0))
-            continuation.yield(.completed(outputURL))
+            continuation.yield(.progress(1.0))          // 진짜 끝났을 때만 100%.
+            continuation.yield(.completed(outputURL))   // 완성 파일 위치 전달.
         } catch let err as ExportError {
+            // 도메인 에러든 그 외 에러든, 사용자에겐 한국어 메시지 하나(.failed)로만 수렴시킨다.
             continuation.yield(.failed(err.errorDescription ?? String(localized: "알 수 없는 오류")))
         } catch {
             continuation.yield(.failed(error.localizedDescription))
         }
-        continuation.finish()
+        continuation.finish()   // 성공이든 실패든 마지막엔 반드시 통로를 닫는다.
     }
 
     // MARK: - Build
@@ -149,6 +163,8 @@ public actor AVFoundationCompositionService: CompositionServicing {
         let hasContent: Bool
     }
 
+    /// [1·2·3단계] 클립을 한 트랙에 시간순으로 이어 붙이며(1단계), 클립마다 배치 변환
+    /// 2개(2단계)와 라벨 도장(3단계)을 준비하고, 우리만의 VideoComposition을 조립한다.
     private func buildComposition(
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation],
@@ -156,6 +172,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
         labelSettings: LabelSettings,
         clipLabels: [Clip.ID: ClipLabel]
     ) async throws -> BuiltComposition {
+        // [1단계] 빈 필름 릴 + 비디오 트랙 1줄.
         let composition = AVMutableComposition()
         guard let compVideoTrack = composition.addMutableTrack(
             withMediaType: .video,
@@ -163,37 +180,41 @@ public actor AVFoundationCompositionService: CompositionServicing {
         ) else {
             throw ExportError.trackCreationFailed
         }
-        var compAudioTrack: AVMutableCompositionTrack?
+        var compAudioTrack: AVMutableCompositionTrack?   // 오디오는 첫 소리를 만날 때 lazy 생성.
 
         // 1) 출력 캔버스는 항상 outputSize(9:16, 1080×1920) 고정.
         //    비율이 다른 클립은 `transform()`이 aspectFit + 가운데 정렬해 letterbox/pillarbox 처리.
         let renderSize = await Self.resolveRenderSize(clips: clips, rotations: rotations)
 
         // 2) 시간순으로 트랙을 채우면서 클립별 layerInstruction 누적.
+        //    cursor = "지금까지 채운 시간"(빨래집게). 클립 하나 붙일 때마다 그 길이만큼 전진.
         var cursor = CMTime.zero
         var layerInstructions: [(timeRange: CMTimeRange, transform: CGAffineTransform, backgroundTransform: CGAffineTransform, capturedAt: Date, clipID: Clip.ID, placedRect: CGRect, thumbnailData: Data?)] = []
 
         for clip in clips {
-            guard let videoURL = clip.videoURL else { continue }
+            guard let videoURL = clip.videoURL else { continue }   // 영상 없는 클립은 스킵.
             let asset = AVURLAsset(url: videoURL)
             let videoTracks = (try? await asset.loadTracks(withMediaType: .video)) ?? []
             guard let assetVideoTrack = videoTracks.first else { continue }
 
+            // 사용 길이 = min( max(원하는 길이, 0.5초), 원본 길이 ). 길이 0/비정상 클립은 스킵.
             let assetDuration = (try? await asset.load(.duration)) ?? .zero
             let assetSeconds = CMTimeGetSeconds(assetDuration)
             guard assetSeconds.isFinite, assetSeconds > 0 else { continue }
 
             let desiredSeconds = max(clip.duration, 0.5)
-            let requestedDuration = CMTime(seconds: desiredSeconds, preferredTimescale: 600)
+            let requestedDuration = CMTime(seconds: desiredSeconds, preferredTimescale: 600)  // 600 = 비디오 표준 타임스케일.
             let clipDuration = CMTimeMinimum(requestedDuration, assetDuration)
             let timeRange = CMTimeRange(start: .zero, duration: clipDuration)
 
+            // 비디오를 cursor 위치에 이어 붙이기(삽입 실패하면 그 클립만 건너뛴다 — 관대한 스킵).
             do {
                 try compVideoTrack.insertTimeRange(timeRange, of: assetVideoTrack, at: cursor)
             } catch {
                 continue
             }
 
+            // 소리가 있으면 같은 위치에 오디오도 붙여 싱크 유지(오디오 트랙은 첫 소리 때 한 번만 생성).
             if let assetAudioTrack = (try? await asset.loadTracks(withMediaType: .audio))?.first {
                 if compAudioTrack == nil {
                     compAudioTrack = composition.addMutableTrack(
@@ -204,11 +225,13 @@ public actor AVFoundationCompositionService: CompositionServicing {
                 try? compAudioTrack?.insertTimeRange(timeRange, of: assetAudioTrack, at: cursor)
             }
 
-            // 트랙 메타: preferredTransform과 naturalSize.
+            // [2단계] 트랙 메타로 이 클립의 배치 변환 2개를 계산.
+            // preferredTransform = 카메라가 남긴 "누운 영상 세우기" 회전 메모. 모든 크기 계산의 기준.
             let preferredTransform = (try? await assetVideoTrack.load(.preferredTransform)) ?? .identity
             let naturalSize = (try? await assetVideoTrack.load(.naturalSize)) ?? renderSize
             let userRotation = rotations[clip.id] ?? .r0
 
+            // 전경: aspectFit(다 보이게) + 사용자 확대·이동.
             let transform = Self.transform(
                 naturalSize: naturalSize,
                 preferredTransform: preferredTransform,
@@ -217,6 +240,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
                 framing: transforms[clip.id] ?? .fit
             )
 
+            // 배경: aspectFill(꽉 채우게) + 중앙 고정. 여백을 메울 블러 소스로 쓰인다.
             let backgroundTransform = Self.fillTransform(
                 naturalSize: naturalSize,
                 preferredTransform: preferredTransform,
@@ -224,6 +248,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
                 renderSize: renderSize
             )
 
+            // 라벨(특히 사용자 자막)의 위치 기준이 될, 전경이 차지하는 사각형(줌 미반영).
             let placedRange = CMTimeRange(start: cursor, duration: clipDuration)
             let pRect = Self.placedRect(
                 naturalSize: naturalSize,
@@ -231,22 +256,24 @@ public actor AVFoundationCompositionService: CompositionServicing {
                 rotation: userRotation,
                 renderSize: renderSize
             )
+            // 한 클립 구간의 합성 재료를 모아둔다(컴포지터가 나중에 읽음).
             layerInstructions.append((placedRange, transform, backgroundTransform, clip.capturedAt, clip.id, pRect, clip.thumbnailData))
 
-            cursor = CMTimeAdd(cursor, clipDuration)
+            cursor = CMTimeAdd(cursor, clipDuration)   // 집게를 오른쪽으로 전진.
         }
 
-        let hasContent = cursor > .zero
+        let hasContent = cursor > .zero   // 한 장이라도 붙었나? 아니면 run()이 noVideoClips 로 중단.
 
-        // 3) AVMutableVideoComposition 구성. 여백(letterbox)을 클립의 블러 필로 채우기 위해
+        // 3) [3·4단계] AVMutableVideoComposition 구성. 여백(letterbox)을 클립의 블러 필로 채우기 위해
         //    커스텀 컴포지터(`ChalNaVideoCompositor`)와 클립별 `ChalNaCompositionInstruction` 을 쓴다.
         let videoComposition = AVMutableVideoComposition()
         videoComposition.renderSize = renderSize
-        videoComposition.frameDuration = CMTime(value: 1, timescale: 30)
-        videoComposition.customVideoCompositorClass = ChalNaVideoCompositor.self
-        let blurRadius = min(renderSize.width, renderSize.height) * 0.04
+        videoComposition.frameDuration = CMTime(value: 1, timescale: 30)          // 출력 30fps (바로 이 한 줄).
+        videoComposition.customVideoCompositorClass = ChalNaVideoCompositor.self  // 우리 플레이팅 담당을 끼운다.
+        let blurRadius = min(renderSize.width, renderSize.height) * 0.04          // 배경 블러 세기 ≈ 43px.
         videoComposition.instructions = layerInstructions.map { entry in
             // 클립별 라벨(시간/날짜/커스텀)을 정적 CGImage 로 미리 렌더해 컴포지터가 전경 위에 합성.
+            // 라벨은 구간 내내 안 움직이므로 "도장"처럼 한 번만 그려 둔다(없으면 nil → 합성 스킵).
             var overlay: CGImage?
             #if canImport(UIKit)
             overlay = Self.renderLabelOverlayImage(
@@ -257,13 +284,14 @@ public actor AVFoundationCompositionService: CompositionServicing {
                 clipLabel: clipLabels[entry.clipID] ?? .default
             )
             #endif
+            // 한 클립 구간의 "합성 설명서"를 만들어 넘긴다(전경/배경 변환·블러·스크림·라벨).
             return ChalNaCompositionInstruction(
                 timeRange: entry.timeRange,
                 trackID: compVideoTrack.trackID,
                 foreground: entry.transform,
                 background: entry.backgroundTransform,
                 blurRadius: blurRadius,
-                scrimAlpha: 0.18,
+                scrimAlpha: 0.18,                     // 배경 위 검정막 18%.
                 overlayImage: overlay
             )
         }
@@ -590,19 +618,22 @@ public actor AVFoundationCompositionService: CompositionServicing {
         renderSize: CGSize,
         framing: ClipTransform
     ) -> CGAffineTransform {
+        // ① 회전 메모(preferredTransform)를 적용했을 때 영상이 실제로 보이는 사각형/크기.
         let displayRect = CGRect(origin: .zero, size: naturalSize).applying(preferredTransform)
         let displaySize = CGSize(width: abs(displayRect.width), height: abs(displayRect.height))
-        let postRotationSize: CGSize = rotation.swapsAxes
+        let postRotationSize: CGSize = rotation.swapsAxes   // 90·270°면 가로·세로 swap.
             ? CGSize(width: displaySize.height, height: displaySize.width)
             : displaySize
 
+        // ② preferredTransform이 원점을 음수로 밀었으면 (0,0)으로 당기는 보정.
         let normalizeAfterPreferred = CGAffineTransform(translationX: -displayRect.minX, y: -displayRect.minY)
 
+        // ③ 사용자가 누른 회전 + 회전 후 원점 정리.
         let rotationMatrix = rotation.transform
         let rotatedRect = CGRect(origin: .zero, size: displaySize).applying(rotationMatrix)
         let rotationNormalize = CGAffineTransform(translationX: -rotatedRect.minX, y: -rotatedRect.minY)
 
-        // fit 배율은 ClipFraming 과 공유. 사용자 배율(>=1)을 곱한다.
+        // ④ fit 배율은 ClipFraming 과 공유. 사용자 배율(>=1)을 곱한다. (fill 은 여기 min→max 만 다른 쌍둥이)
         let fitScale = ClipFraming.fitScale(display: displaySize, rotation: rotation, render: renderSize)
         let userScale = max(0.05, framing.scale)
         let totalScale = fitScale * userScale
@@ -610,15 +641,17 @@ public actor AVFoundationCompositionService: CompositionServicing {
         let scaledSize = CGSize(width: postRotationSize.width * totalScale,
                                 height: postRotationSize.height * totalScale)
         let scaleMatrix = CGAffineTransform(scaleX: totalScale, y: totalScale)
+        // ⑤ 캔버스 한가운데로.
         let centerTranslate = CGAffineTransform(translationX: (renderSize.width - scaledSize.width) / 2,
                                                 y: (renderSize.height - scaledSize.height) / 2)
 
-        // 사용자 이동(정규화 비율 → 픽셀). clamp 도 ClipFraming 공유.
+        // ⑥ 사용자 이동(정규화 비율 → 픽셀). 화면 밖으로 못 나가게 clamp 도 ClipFraming 공유.
         let clampedFrac = ClipFraming.clampedOffset(framing.offset, display: displaySize,
                                                     rotation: rotation, render: renderSize, scale: userScale)
         let offsetTranslate = CGAffineTransform(translationX: clampedFrac.x * renderSize.width,
                                                 y: clampedFrac.y * renderSize.height)
 
+        // 순서대로 곱한다 — 이 순서가 곧 의미(①보정 → ③회전 → ④배율 → ⑤중앙 → ⑥이동).
         return preferredTransform
             .concatenating(normalizeAfterPreferred)
             .concatenating(rotationMatrix)
