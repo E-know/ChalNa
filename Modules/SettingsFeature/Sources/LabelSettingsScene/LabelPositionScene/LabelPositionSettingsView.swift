@@ -1,11 +1,9 @@
 import SwiftUI
 import ComposableArchitecture
-import AppCore
 import Models
 import DesignSystem
 
 public struct LabelPositionSettingsView: View {
-    @Environment(AppRouter.self) private var router
     let store: StoreOf<LabelPositionSettingsFeature>
 
     public init(store: StoreOf<LabelPositionSettingsFeature>) {
@@ -17,7 +15,7 @@ public struct LabelPositionSettingsView: View {
     public var body: some View {
         VStack(spacing: 0) {
             ChalNaNavigationBar(title: "\(store.kind.title) 위치") {
-                ChalNaHeaderBackButton { router.pop() }
+                ChalNaHeaderBackButton { store.send(.backTapped) }
             } trailing: {
                 EmptyView()
             }
@@ -108,5 +106,4 @@ public struct LabelPositionSettingsView: View {
     LabelPositionSettingsView(
         store: Store(initialState: LabelPositionSettingsFeature.State(kind: .time)) { LabelPositionSettingsFeature() }
     )
-    .environment(AppRouter())
 }

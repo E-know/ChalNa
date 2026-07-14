@@ -7,10 +7,12 @@ import MediaPickerFeature
 import TimelineFeature
 import ExportFeature
 import FilmDetailFeature
-import Models
+import PhotosService
 import SettingsFeature
 
-/// 앱 루트 Reducer. Home 을 root 로 두고 mediaPicker / timeline / export 를 StackState 로 push.
+/// 앱 루트 Reducer. Home 을 root 로 두고 나머지 화면을 StackState 로 push.
+/// 화면 전환은 각 자식 Feature 의 `delegate` 액션을 여기서 path 조작으로 해석한다.
+/// pop 은 자식 리듀서의 `@Dependency(\.dismiss)` 가 처리하므로 여기엔 없다.
 @Reducer
 public struct AppFeature {
     public init() {}
@@ -26,20 +28,6 @@ public struct AppFeature {
     public enum Action {
         case home(HomeFeature.Action)
         case path(StackActionOf<Path>)
-
-        // AppRouter wrapper 가 트리거하는 navigation intent
-        case routerPushedMediaPicker(source: MediaPickerSource)
-        case routerPushedTimeline
-        case routerPushedExport
-        case routerPushedFilmDetail(filmID: UUID)
-        case routerPopped
-        case routerPoppedToRoot
-        case routerPushedSettings
-        case routerPushedLabelSettings
-        case routerPushedLabelPosition(kind: LabelKind)
-        case routerPushedSupport
-        case routerPushedClipAdjust(clipID: UUID)
-        case routerPushedLanguage
     }
 
     @Reducer
@@ -57,6 +45,7 @@ public struct AppFeature {
     }
 
     @Dependency(\.analyticsTracker) var analyticsTracker
+    @Dependency(\.editSession) var editSession
 
     public var body: some ReducerOf<Self> {
         Scope(state: \.home, action: \.home) {
@@ -65,60 +54,75 @@ public struct AppFeature {
 
         Reduce { state, action in
             switch action {
-            case let .routerPushedMediaPicker(source):
-                state.path.append(.mediaPicker(MediaPickerFeature.State(source: source)))
-                let tag: MediaPickerSourceTag = switch source {
-                case .photoLibrary: .photoLibrary
-                case .devFixtures:  .devFixtures
+            // MARK: Home delegate
+
+            case let .home(.delegate(delegateAction)):
+                switch delegateAction {
+                case .newVlogRequested:
+                    pushMediaPicker(state: &state)
+                case .settingsRequested:
+                    state.path.append(.settings(SettingsFeature.State()))
+                case let .filmDetailRequested(filmID):
+                    state.path.append(.filmDetail(FilmDetailFeature.State(filmID: filmID)))
+                    analyticsTracker.log(.filmDetailOpened(filmID: filmID))
                 }
-                analyticsTracker.log(.mediaPickerOpened(source: tag))
                 return .none
 
-            case .routerPushedTimeline:
-                state.path.append(.timeline(TimelineFeature.State()))
-                analyticsTracker.log(.timelineOpened)
+            // MARK: MediaPicker delegate
+
+            case let .path(.element(id: _, action: .mediaPicker(.delegate(delegateAction)))):
+                switch delegateAction {
+                case let .selectionConfirmed(clips, title):
+                    // push 전에 세션을 채워야 Timeline 이 onAppear 에서 동기화할 수 있다.
+                    editSession.replace(clips: clips, title: title)
+                    state.path.append(.timeline(TimelineFeature.State()))
+                    analyticsTracker.log(.timelineOpened)
+                }
                 return .none
 
-            case .routerPushedExport:
-                state.path.append(.export(ExportFeature.State()))
-                analyticsTracker.log(.exportScreenOpened)
+            // MARK: Timeline delegate
+
+            case let .path(.element(id: _, action: .timeline(.delegate(delegateAction)))):
+                switch delegateAction {
+                case .exportRequested:
+                    state.path.append(.export(ExportFeature.State()))
+                    analyticsTracker.log(.exportScreenOpened)
+                case let .clipAdjustRequested(clipID):
+                    state.path.append(.clipAdjust(ClipAdjustFeature.State(clipID: clipID)))
+                }
                 return .none
 
-            case let .routerPushedFilmDetail(filmID):
-                state.path.append(.filmDetail(FilmDetailFeature.State(filmID: filmID)))
-                analyticsTracker.log(.filmDetailOpened(filmID: filmID))
+            // MARK: Export delegate
+
+            case let .path(.element(id: _, action: .export(.delegate(delegateAction)))):
+                switch delegateAction {
+                case .homeRequested:
+                    state.path.removeAll()
+                case .newFilmRequested:
+                    editSession.clear()
+                    state.path.removeAll()
+                    pushMediaPicker(state: &state)
+                }
                 return .none
 
-            case .routerPopped:
-                _ = state.path.popLast()
+            // MARK: Settings delegate
+
+            case let .path(.element(id: _, action: .settings(.delegate(delegateAction)))):
+                switch delegateAction {
+                case .labelSettingsRequested:
+                    state.path.append(.labelSettings(LabelSettingsFeature.State()))
+                case .languageRequested:
+                    state.path.append(.language(LanguageFeature.State()))
+                case .supportRequested:
+                    state.path.append(.support(SupportFeature.State()))
+                }
                 return .none
 
-            case .routerPoppedToRoot:
-                state.path.removeAll()
-                return .none
-
-            case .routerPushedSettings:
-                state.path.append(.settings(SettingsFeature.State()))
-                return .none
-
-            case .routerPushedLabelSettings:
-                state.path.append(.labelSettings(LabelSettingsFeature.State()))
-                return .none
-
-            case let .routerPushedLabelPosition(kind):
-                state.path.append(.labelPosition(LabelPositionSettingsFeature.State(kind: kind)))
-                return .none
-
-            case .routerPushedSupport:
-                state.path.append(.support(SupportFeature.State()))
-                return .none
-
-            case let .routerPushedClipAdjust(clipID):
-                state.path.append(.clipAdjust(ClipAdjustFeature.State(clipID: clipID)))
-                return .none
-
-            case .routerPushedLanguage:
-                state.path.append(.language(LanguageFeature.State()))
+            case let .path(.element(id: _, action: .labelSettings(.delegate(delegateAction)))):
+                switch delegateAction {
+                case let .positionRequested(kind):
+                    state.path.append(.labelPosition(LabelPositionSettingsFeature.State(kind: kind)))
+                }
                 return .none
 
             case .home, .path:
@@ -126,5 +130,24 @@ public struct AppFeature {
             }
         }
         .forEach(\.path, action: \.path)
+    }
+
+    // MARK: - Helpers
+
+    private func pushMediaPicker(state: inout State) {
+        let source = mediaPickerSource
+        state.path.append(.mediaPicker(MediaPickerFeature.State(source: source)))
+        let tag: MediaPickerSourceTag = switch source {
+        case .photoLibrary: .photoLibrary
+        case .devFixtures:  .devFixtures
+        }
+        analyticsTracker.log(.mediaPickerOpened(source: tag))
+    }
+
+    private var mediaPickerSource: MediaPickerSource {
+        switch AppMode.current {
+        case .real:    .photoLibrary
+        case .devMock: .devFixtures(BundledDevMediaSource())
+        }
     }
 }

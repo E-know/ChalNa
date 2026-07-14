@@ -22,16 +22,21 @@ public struct LabelPositionSettingsFeature {
 
     public enum Action {
         case onAppear
+        case backTapped
         case positionSelected(LabelPosition)
     }
 
     @Dependency(\.analyticsTracker) var analyticsTracker
+    @Dependency(\.dismiss) var dismiss
 
     public var body: some ReducerOf<Self> {
         Reduce { state, action in
             switch action {
                 case .onAppear:
                     return .none
+
+                case .backTapped:
+                    return .run { _ in await dismiss() }
 
                 case let .positionSelected(position):
                     switch state.kind {

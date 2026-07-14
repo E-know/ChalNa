@@ -55,7 +55,7 @@ xcodebuild ... test \
 ### 패턴 — TCA + @Observable 하이브리드
 - 각 Feature 는 **TCA Reducer**(`XxxFeature.swift`) + **View**(`XxxView.swift`) 한 쌍.
 - 루트는 `AppFeature`(TCA `@Reducer`). `RootView`가 `Store(initialState: AppFeature.State()) { AppFeature() }`를 `@State`로 한 번 생성.
-- **네비게이션은 TCA `StackState` 기반**이지만, 화면 전환을 *트리거*하는 건 `AppRouter`(`@Observable`), 화면 간 **편집 상태 공유**는 `EditSession`(`@Observable`)이 담당한다 (아래 런타임 흐름 참고).
+- **네비게이션은 TCA `StackState` 기반**. push 는 자식 Feature 의 `delegate` 액션을 `AppFeature`가 path 조작으로 해석, pop 은 자식 리듀서의 `@Dependency(\.dismiss)`. 화면 간 **편집 상태 공유**는 `EditSession`(`@Observable`, `@Dependency(\.editSession)` 겸용)이 담당한다 (아래 런타임 흐름 참고).
 - ViewModel 류 단일 화면 상태는 TCA State 로 두되, 재생 컨트롤러처럼 명령형 상태는 `@Observable` 모델(예: `TimelineModel`, `ClipPlaybackController`)을 따로 둘 수 있다.
 
 ### 모듈 그래프 (Tuist 멀티 타겟, 의존 방향 위 → 아래)
@@ -67,7 +67,7 @@ xcodebuild ... test \
 Feature   HomeFeature · MediaPickerFeature · TimelineFeature · ExportFeature · FilmDetailFeature
 (모두 @Reducer)   │  (Feature끼리 직접 import 금지)
             │
-서비스/코어  AppCore(AppRouter·EditSession) · PhotosService · CompositionService · AnalyticsService
+서비스/코어  AppCore(EditSession) · PhotosService · CompositionService · AnalyticsService
             │
 모델/DS    Models ·····  DesignSystem (dynamic framework, 의존 없음 = 최하단)
             │
@@ -81,7 +81,7 @@ External(SPM): ComposableArchitecture(TCA) · FirebaseAnalytics
 - **Models → FileStorage** 만 의존. (과거의 DesignSystem 의존은 제거됨 — 색상 hex 헬퍼를 Models 자체 `ColorHex.swift`로 내재화)
 - **PhotosService / CompositionService → Models, TCA**. **AnalyticsService → TCA, FirebaseAnalytics** (Models 도 모름).
 - **AppCore → Models, TCA** (Feature 모름).
-- **Feature → AppCore + 필요한 서비스 + Models + DesignSystem + TCA**. Feature 끼리는 절대 직접 import 안 한다 — 화면 전환은 AppCore 의 `AppRouter`로.
+- **Feature → AppCore + 필요한 서비스 + Models + DesignSystem + TCA**. Feature 끼리는 절대 직접 import 안 한다 — 화면 전환은 자기 모듈의 `delegate` 액션으로 선언만 하고, 해석(매핑)은 앱 셸의 `AppFeature`가 한다.
 - 앱 타겟은 `OTHER_LDFLAGS = -ObjC` 를 강제한다 (Firebase ObjC 카테고리가 dead-code-strip 되어 `unrecognized selector` 나는 것 방지).
 - 새 모듈: `Tuist/ProjectDescriptionHelpers/Module.swift`의 `Module.framework(name:hasResources:isDynamic:dependencies:)` / `Module.unitTests(for:)` 헬퍼 사용 → `Project.swift`에 추가 → `tuist generate`.
 
@@ -89,11 +89,11 @@ External(SPM): ComposableArchitecture(TCA) · FirebaseAnalytics
 1. `ChalNaApp`(`@main`) `init` 에서 **Firebase 설정 + TCA dependency override**:
    - `GoogleService-Info.plist`(번들: `ChalNa/Resources/`)가 있으면 `FirebaseApp.configure()` 후 `FirebaseAnalyticsTracker`, 없으면 `NoopAnalyticsTracker` 로 `prepareDependencies { $0.analyticsTracker = ... }`.
    - `WindowGroup { ContentView() }.modelContainer(for: Film.self)`. 새 `@Model` 추가 시 이 시그니처 갱신.
-2. `ContentView` → `RootView`. `RootView`가 세 객체를 만든다: TCA `Store`(AppFeature), `AppRouter`, `EditSession`.
-3. **네비게이션**: `NavigationStack(path: $store.scope(state: \.path, action: \.path))`. `AppFeature`의 `Path` enum(`mediaPicker`/`timeline`/`export`/`filmDetail`)이 스택 케이스. 루트는 `home`(Scope).
-4. **전환 트리거(AppRouter 호환 레이어)**: Feature View 는 `@Environment(AppRouter.self)`로 받아 `router.push(.timeline)` / `router.pop()` 호출 → `RootView.wireRouterHandlers()`가 이를 `store.send(.routerPushedTimeline)` 등 TCA 액션으로 변환 → 리듀서가 `state.path.append(...)`. 즉 **Reducer 의 네비게이션 인텐트 액션은 보통 `.none` 을 반환하고 실제 push/pop 은 View+Router 가 처리**한다.
-5. **편집 상태 전달**: 선택한 `[Clip]`·제목·회전(`rotations`)은 Route payload 나 TCA State 가 아니라 **`EditSession`(`@Environment(EditSession.self)`)에 실어** MediaPicker → Timeline → Export 로 흘려보낸다. (`session.replace(clips:title:)`, `session.cycleRotation()` 등)
-6. **AppMode / devMock**: `App/AppMode.swift`의 `AppMode.current` 가 DEBUG + `CHALNA_APP_MODE=devMock` 일 때 `.devMock`. `RootView`가 MediaPicker 소스를 `.photoLibrary` ↔ `.devFixtures(BundledDevMediaSource())`로 분기.
+2. `ContentView` → `RootView`. `RootView`는 TCA `Store`(AppFeature)를 `@State`로 만들고, `EditSession` 은 `@Dependency(\.editSession)`(liveValue 싱글턴)에서 얻어 environment 로도 주입한다 — **Reducer 와 View 가 같은 인스턴스를 공유**.
+3. **네비게이션**: `NavigationStack(path: $store.scope(state: \.path, action: \.path))`. `AppFeature`의 `Path` enum(`mediaPicker`/`timeline`/`export`/`filmDetail`/`settings`/...)이 스택 케이스. 루트는 `home`(Scope).
+4. **전환 트리거(delegate 패턴)**: 자식 Feature 는 `Action.Delegate` enum 으로 네비게이션 인텐트를 선언하고(예: MediaPicker 의 `.selectionConfirmed(clips:title:)`), 리듀서가 비즈니스 로직 결과로 `.send(.delegate(...))` 를 방출 → `AppFeature`가 `case .path(.element(id:action:.mediaPicker(.delegate(...))))` 매칭으로 `state.path.append/removeAll` 수행. **pop 은 자식 리듀서가 `@Dependency(\.dismiss)` 로 직접** (`.run { _ in await dismiss() }`). View 는 `store.send(...)`만 하고 화면 전환을 모른다.
+5. **편집 상태 전달**: 선택한 `[Clip]`·제목·회전(`rotations`)은 Route payload 나 TCA State 가 아니라 **`EditSession`에 실어** MediaPicker → Timeline → Export 로 흘려보낸다. View 는 `@Environment(EditSession.self)`, Reducer 는 `@Dependency(\.editSession)` 로 접근 (예: AppFeature 가 `selectionConfirmed` delegate 를 받으면 `editSession.replace(clips:title:)` 후 Timeline push).
+6. **AppMode / devMock**: `App/AppMode.swift`의 `AppMode.current` 가 DEBUG + `CHALNA_APP_MODE=devMock` 일 때 `.devMock`. `AppFeature`가 MediaPicker push 시 소스를 `.photoLibrary` ↔ `.devFixtures(BundledDevMediaSource())`로 분기.
 7. 모든 push 화면은 `.toolbar(.hidden, for: .navigationBar)` + `.navigationBarBackButtonHidden(true)` + 커스텀 `.chalNaSwipeBack()`(좌측 엣지 스와이프) 패턴을 적용한다.
 
 ### 모델 / 영속화 경계

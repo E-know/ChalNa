@@ -79,10 +79,20 @@ public struct ExportFeature {
 
         case playerPresentedChanged(Bool)
 
-        // Navigation intents — View 가 router 처리
-        case dismissTapped
+        // Navigation intents
+        case viewDisappeared
+        case backToEditTapped
         case startAnotherTapped
         case homeTapped
+        case delegate(Delegate)
+
+        /// 부모(AppFeature)가 화면 전환으로 해석하는 네비게이션 인텐트.
+        public enum Delegate: Equatable {
+            /// 홈으로 — 부모가 popToRoot.
+            case homeRequested
+            /// 다른 영상 만들기 — 부모가 세션 초기화 후 popToRoot + MediaPicker push.
+            case newFilmRequested
+        }
     }
 
     // MARK: - Dependencies
@@ -91,6 +101,7 @@ public struct ExportFeature {
     @Dependency(\.photoLibraryClient) var photoLibraryClient
     @Dependency(\.analyticsTracker) var analyticsTracker
     @Dependency(\.exportQuotaClient) var exportQuotaClient
+    @Dependency(\.dismiss) var dismiss
 
     private enum CancelID { case exportStream }
 
@@ -206,9 +217,34 @@ public struct ExportFeature {
                 state.isPlayerPresented = isPresented
                 return .none
 
-            case .dismissTapped, .startAnotherTapped, .homeTapped:
+            case .viewDisappeared:
+                // pop 완료 후 뒷정리 전용 — 여기서 dismiss 를 부르면 안 된다(이미 스택에서 빠진 상태).
                 state.isPlayerPresented = false
                 return .cancel(id: CancelID.exportStream)
+
+            case .backToEditTapped:
+                state.isPlayerPresented = false
+                return .concatenate(
+                    .cancel(id: CancelID.exportStream),
+                    .run { _ in await dismiss() }
+                )
+
+            case .startAnotherTapped:
+                state.isPlayerPresented = false
+                return .concatenate(
+                    .cancel(id: CancelID.exportStream),
+                    .send(.delegate(.newFilmRequested))
+                )
+
+            case .homeTapped:
+                state.isPlayerPresented = false
+                return .concatenate(
+                    .cancel(id: CancelID.exportStream),
+                    .send(.delegate(.homeRequested))
+                )
+
+            case .delegate:
+                return .none
             }
         }
     }

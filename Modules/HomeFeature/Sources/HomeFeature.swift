@@ -18,6 +18,15 @@ public struct HomeFeature {
         case onAppear
         case newVlogButtonTapped
         case settingsButtonTapped
+        case filmTapped(filmID: UUID)
+        case delegate(Delegate)
+
+        /// 부모(AppFeature)가 화면 전환으로 해석하는 네비게이션 인텐트.
+        public enum Delegate: Equatable {
+            case newVlogRequested
+            case settingsRequested
+            case filmDetailRequested(filmID: UUID)
+        }
     }
 
     @Dependency(\.analyticsTracker) var analyticsTracker
@@ -31,11 +40,15 @@ public struct HomeFeature {
 
             case .newVlogButtonTapped:
                 analyticsTracker.log(.newVlogTapped)
-                // 부모(현재는 RootView, 추후 AppFeature) 가 navigation 처리.
-                return .none
+                return .send(.delegate(.newVlogRequested))
 
             case .settingsButtonTapped:
-                // 향후 설정 화면 진입.
+                return .send(.delegate(.settingsRequested))
+
+            case let .filmTapped(filmID):
+                return .send(.delegate(.filmDetailRequested(filmID: filmID)))
+
+            case .delegate:
                 return .none
             }
         }

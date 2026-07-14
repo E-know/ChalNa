@@ -28,6 +28,7 @@ public struct SupportFeature {
     }
 
     public enum Action {
+        case backTapped
         case textChanged(String)
         case categorySelected(FeedbackCategory)
         case sendTapped
@@ -42,10 +43,14 @@ public struct SupportFeature {
     @Dependency(\.feedbackClient) var feedbackClient
     @Dependency(\.analyticsTracker) var analyticsTracker
     @Dependency(\.exportQuotaClient) var exportQuotaClient
+    @Dependency(\.dismiss) var dismiss
 
     public var body: some ReducerOf<Self> {
         Reduce { state, action in
             switch action {
+            case .backTapped:
+                return .run { _ in await dismiss() }
+
             case let .textChanged(value):
                 state.text = value
                 return .none
@@ -94,8 +99,11 @@ public struct SupportFeature {
                 return .none
 
             case .alertDismissed:
+                // 전송 성공 알림을 닫을 때만 화면도 닫는다(실패면 머물러 재시도).
+                let wasSuccess = state.alert?.isSuccess == true
                 state.alert = nil
-                return .none
+                guard wasSuccess else { return .none }
+                return .run { _ in await dismiss() }
 
             case let .redeemPresentedChanged(isPresented):
                 state.isRedeemPresented = isPresented

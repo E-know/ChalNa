@@ -1,6 +1,5 @@
 import SwiftUI
 import ComposableArchitecture
-import AppCore
 import Models
 import DesignSystem
 import PhotosService
@@ -11,8 +10,6 @@ import UIKit
 /// Live Photo + 영상을 선택해 Timeline 으로 넘기는 화면. TCA store 기반.
 public struct MediaPickerView: View {
     @Environment(\.openURL) private var openURL
-    @Environment(AppRouter.self) private var router
-    @Environment(EditSession.self) private var session
 
     @Bindable var store: StoreOf<MediaPickerFeature>
     @FocusState private var isTitleFocused: Bool
@@ -90,11 +87,6 @@ public struct MediaPickerView: View {
                 Text("Live Photo를 영상으로 사용하려면 사진 보관함 접근 권한이 필요해요.")
             }
         )
-        .onChange(of: store.confirmation?.id) { _, newID in
-            guard newID != nil, let confirmation = store.confirmation else { return }
-            session.replace(clips: confirmation.clips, title: confirmation.title)
-            router.push(.timeline)
-        }
         .sheet(
             isPresented: $store.isSystemPhotoPickerPresented.sending(\.systemPhotoPickerPresentedChanged)
         ) {
@@ -197,7 +189,6 @@ public struct MediaPickerView: View {
             ChalNaHeaderBackButton {
                 dismissTitleKeyboard()
                 store.send(.dismissTapped)
-                router.pop()
             }
         } trailing: {
             EmptyView()
@@ -584,7 +575,6 @@ public struct MediaPickerView: View {
             Button {
                 dismissTitleKeyboard()
                 store.send(.dismissTapped)
-                router.pop()
             } label: {
                 Text("취소").frame(maxWidth: .infinity)
             }
@@ -919,12 +909,8 @@ private struct DevMediaAssetCard: View {
 
 #Preview("MediaPicker — empty") {
     MediaPickerView(source: .photoLibrary)
-        .environment(AppRouter())
-        .environment(EditSession())
 }
 
 #Preview("MediaPicker — Dev") {
     MediaPickerView(source: .devFixtures(BundledDevMediaSource()))
-        .environment(AppRouter())
-        .environment(EditSession())
 }
