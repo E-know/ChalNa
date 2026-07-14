@@ -8,10 +8,10 @@ struct EditSessionScalesTests {
         Clip(kind: .live, capturedAt: Date(), duration: 1, preset: .jejuSea)
     }
 
-    @Test func testTransformDefaultsToFit() {
+    @Test func testTransformDefaultsToFill() {
         let s = EditSession()
         let c = makeClip()
-        #expect(s.transform(for: c.id) == .fit)
+        #expect(s.transform(for: c.id) == .fill)
     }
 
     @Test func testSetAndReadTransform() {
@@ -27,7 +27,7 @@ struct EditSessionScalesTests {
         let c = makeClip()
         s.setTransform(ClipTransform(scale: 3), for: c.id)
         s.resetTransform(for: c.id)
-        #expect(s.transform(for: c.id) == .fit)
+        #expect(s.transform(for: c.id) == .fill)
     }
 
     @Test func testReplaceClearsScales() {
@@ -35,7 +35,7 @@ struct EditSessionScalesTests {
         let c = makeClip()
         s.setTransform(ClipTransform(scale: 2), for: c.id)
         s.replace(clips: [makeClip()], title: "x")
-        #expect(s.transform(for: c.id) == .fit)
+        #expect(s.transform(for: c.id) == .fill)
         #expect(s.transforms.isEmpty)
     }
 

@@ -2,8 +2,8 @@ import AVFoundation
 import CoreImage
 import CoreGraphics
 
-/// 한 클립 구간의 합성 파라미터. 전경(aspectFit+사용자변환)과 배경(aspectFill 블러)을 위한
-/// y-down(natural→render) CGAffineTransform 두 개를 담는다.
+/// 한 클립 구간의 합성 파라미터. 전경(aspectFill 센터 크롭 + 사용자 변환)을 위한
+/// y-down(natural→render) CGAffineTransform 을 담는다.
 final class ChalNaCompositionInstruction: NSObject, AVVideoCompositionInstructionProtocol, @unchecked Sendable {
     let timeRange: CMTimeRange          // 이 설명서가 적용되는 시간 구간.
     let enablePostProcessing: Bool = false
@@ -13,30 +13,23 @@ final class ChalNaCompositionInstruction: NSObject, AVVideoCompositionInstructio
 
     let trackID: CMPersistentTrackID    // 어느 트랙의 프레임을 읽을지.
     let foreground: CGAffineTransform   // natural→render, y-down (Self.transform 결과)
-    let background: CGAffineTransform   // natural→render, y-down (aspectFill, 중앙)
-    let blurRadius: CGFloat             // 배경 가우시안 블러 세기.
-    let scrimAlpha: CGFloat             // 배경 위 검정막 진하기(0.18).
     /// 이 클립 구간에 전경 위로 올릴, 이미 renderSize 로 미리 렌더한 정적 라벨 오버레이(top-left origin).
     /// nil 이면 라벨 없음 → 합성 스킵.
     let overlayImage: CGImage?
 
     init(timeRange: CMTimeRange, trackID: CMPersistentTrackID, foreground: CGAffineTransform,
-         background: CGAffineTransform, blurRadius: CGFloat, scrimAlpha: CGFloat,
          overlayImage: CGImage? = nil) {
         self.timeRange = timeRange
         self.trackID = trackID
         self.requiredSourceTrackIDs = [NSNumber(value: trackID)]
         self.foreground = foreground
-        self.background = background
-        self.blurRadius = blurRadius
-        self.scrimAlpha = scrimAlpha
         self.overlayImage = overlayImage
         super.init()
     }
 }
 
-/// 9:16 캔버스의 여백(letterbox/pillarbox)을 클립의 aspectFill 블러 버전으로 채우는 커스텀 컴포지터.
-/// 전경은 aspectFit + 사용자 변환, 배경은 aspectFill + 가우시안 블러 + 어두운 스크림.
+/// 9:16 캔버스에 전경(aspectFill 센터 크롭 + 사용자 변환)을 배치하고 라벨 오버레이를 얹는 커스텀 컴포지터.
+/// 전경이 캔버스를 항상 꽉 덮으므로 배경(블러) 레이어는 없다. 만일의 경계 틈은 검정 베이스가 받친다.
 final class ChalNaVideoCompositor: NSObject, AVVideoCompositing, @unchecked Sendable {
     let sourcePixelBufferAttributes: [String: any Sendable]? =
         [kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32BGRA)]
@@ -79,19 +72,13 @@ final class ChalNaVideoCompositor: NSObject, AVVideoCompositing, @unchecked Send
             return image.transformed(by: combined)
         }
 
-        // ① 배경: aspectFill + 블러 + 어두운 스크림.
-        let bgPlaced = placeYDown(src, instruction.background).clampedToExtent()
-        let blurred = bgPlaced.applyingGaussianBlur(sigma: instruction.blurRadius).cropped(to: renderRect)
-        let scrim = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: instruction.scrimAlpha)).cropped(to: renderRect)
-        let background = scrim.composited(over: blurred)
-
-        // ② 전경: aspectFit + 사용자 변환.
+        // ① 전경: aspectFill(센터 크롭) + 사용자 변환. 서브픽셀 경계 틈 대비 검정 베이스 위에 얹는다.
+        let base = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 1)).cropped(to: renderRect)
         let foreground = placeYDown(src, instruction.foreground).cropped(to: renderRect)
+        var output = foreground.composited(over: base).cropped(to: renderRect)
 
-        var output = foreground.composited(over: background).cropped(to: renderRect)
-
-        // ③ 라벨 오버레이: 이미 renderSize 로 미리 렌더한 "정상 방향(top-left, visual-top=row0)" 정적 이미지.
-        // 전경/배경은 `placeYDown` 의 두 flip 으로 "소스 visual-top → 출력 visual-top" 이 되도록 맞춰져 있다.
+        // ② 라벨 오버레이: 이미 renderSize 로 미리 렌더한 "정상 방향(top-left, visual-top=row0)" 정적 이미지.
+        // 전경은 `placeYDown` 의 두 flip 으로 "소스 visual-top → 출력 visual-top" 이 되도록 맞춰져 있다.
         // 반면 `CIImage(cgImage:)` 는 CGImage 의 visual-top 을 y-up CIImage 의 high-y 에 두므로, 그대로
         // 합성하면 전경과 상하가 반대로 놓인다(라벨이 아래로 감). renderH 기준 한 번 flip 해 전경과 정렬한다.
         // (`CompositorLabelTests` 의 TOP 라벨 위치 가드로 확정.)

@@ -15,6 +15,8 @@ import DesignSystem
 struct LabelEditorView: View {
     let clip: Clip
     let rotation: ClipRotation
+    /// 클립의 크롭 프레이밍(줌/이동) — 캔버스를 출력과 동일하게(WYSIWYG) 그리기 위해 받는다.
+    let transform: ClipTransform
     let onCommit: (ClipLabel) -> Void
     let onCancel: () -> Void
 
@@ -43,12 +45,14 @@ struct LabelEditorView: View {
     init(
         clip: Clip,
         rotation: ClipRotation,
+        transform: ClipTransform = .fill,
         initialLabel: ClipLabel,
         onCommit: @escaping (ClipLabel) -> Void,
         onCancel: @escaping () -> Void
     ) {
         self.clip = clip
         self.rotation = rotation
+        self.transform = transform
         self.onCommit = onCommit
         self.onCancel = onCancel
         _label = State(initialValue: initialLabel)
@@ -100,22 +104,38 @@ struct LabelEditorView: View {
 
     private var canvas: some View {
         GeometryReader { proxy in
-            let aspect = LabelBoxGeometry.displayAspect(displaySize: clip.displaySize, rotation: rotation)
-            let box = LabelBoxGeometry.fittedBox(aspect: aspect, in: proxy.size)
+            // 센터 크롭에서 보이는 클립 영역 = 9:16 캔버스 전체 → 라벨 좌표계도 캔버스 기준(export 와 동일).
+            let box = LabelBoxGeometry.fittedBox(aspect: 9.0 / 16.0, in: proxy.size)
             let boxTopGlobalY = proxy.frame(in: .global).minY
             ZStack(alignment: .top) {
-                RotatableContent(rotation: rotation) {
-                    clip.thumbnailView(contentMode: .fill)
-                }
-                .frame(width: box.width, height: box.height)
-                .clipped()
-                .overlay(AutoLabelsOverlay(box: box, capturedAt: clip.capturedAt))
-                .overlay(labelLayer(box: box, boxTopGlobalY: boxTopGlobalY))
-                .onAppear { reflow(from: .zero, to: box) }
-                .onChange(of: box) { oldBox, newBox in reflow(from: oldBox, to: newBox) }
+                clipCanvas(box: box)
+                    .overlay(AutoLabelsOverlay(box: box, capturedAt: clip.capturedAt))
+                    .overlay(labelLayer(box: box, boxTopGlobalY: boxTopGlobalY))
+                    .onAppear { reflow(from: .zero, to: box) }
+                    .onChange(of: box) { oldBox, newBox in reflow(from: oldBox, to: newBox) }
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
         }
+    }
+
+    /// 클립을 출력과 동일한 센터 크롭 프레이밍(ClipFraming SSOT)으로 9:16 박스에 배치.
+    private func clipCanvas(box: CGSize) -> some View {
+        let render = CGSize(width: 1080, height: 1920)
+        let rrect = ClipFraming.resolvedRect(
+            display: clip.displaySize ?? CGSize(width: 9, height: 16),
+            rotation: rotation, render: render, transform: transform
+        )
+        let factor = box.width / render.width
+        return ZStack {
+            Color.black
+            RotatableContent(rotation: rotation) {
+                clip.thumbnailView(contentMode: .fill)
+            }
+            .frame(width: rrect.width * factor, height: rrect.height * factor)
+            .position(x: rrect.midX * factor, y: rrect.midY * factor)
+        }
+        .frame(width: box.width, height: box.height)
+        .clipped()
     }
 
     // MARK: - Label layer

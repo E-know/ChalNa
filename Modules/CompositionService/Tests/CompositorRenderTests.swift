@@ -10,9 +10,9 @@ import Models
 struct CompositorRenderTests {
 
     /// 4분면(좌상 RED·우상 GREEN·좌하 BLUE·우하 YELLOW) 가로 영상을 만들어 export 한 뒤,
-    /// 1080×1920 캔버스에서 전경 클립이 뒤집힘 없이 올바른 위치에 놓이고
-    /// 위/아래 여백이 블러 필(검정 아님)로 채워졌는지 확인한다.
-    @Test func testCompositor_PlacesForegroundUnflipped_AndFillsLetterboxWithBlur() async throws {
+    /// 1080×1920 캔버스에서 전경 클립이 뒤집힘 없이 aspectFill 센터 크롭으로
+    /// 캔버스 전체(상하 여백 없음)를 채우는지 확인한다.
+    @Test func testCompositor_PlacesForegroundUnflipped_CenterCropFillsCanvas() async throws {
         let srcURL = try await makeQuadrantVideo(width: 640, height: 360, seconds: 0.5, fps: 24)
         defer { try? FileManager.default.removeItem(at: srcURL) }
 
@@ -63,17 +63,18 @@ struct CompositorRenderTests {
         // 1080×1920 RGBA8 비트맵으로 그려 픽셀 샘플.
         let sampler = try PixelSampler(cgImage: cgImage, width: 1080, height: 1920)
 
-        // 640×360(16:9) → 1080×1920: fitScale = 1080/640 = 1.6875,
-        // 클립 rect = 1080 × 607.5, 세로 가운데 → y ∈ [656.25, 1263.75].
-        // 4분면(전경, 선명): 좌상 RED · 우상 GREEN · 좌하 BLUE · 우하 YELLOW.
-        let topLeft = sampler.rgb(x: 270, y: 760)
-        let topRight = sampler.rgb(x: 810, y: 760)
-        let bottomLeft = sampler.rgb(x: 270, y: 1160)
-        let bottomRight = sampler.rgb(x: 810, y: 1160)
-        let topBar = sampler.rgb(x: 540, y: 100)
-        let bottomBar = sampler.rgb(x: 540, y: 1850)
+        // 640×360(16:9) → 1080×1920: fillScale = max(1080/640, 1920/360) = 5.3333,
+        // scaled 3413.33×1920, 좌우 센터 크롭. 소스 세로 중앙선(x=320)이 출력 x=540 에 매핑.
+        // 4분면(전경, 선명): 좌상 RED · 우상 GREEN · 좌하 BLUE · 우하 YELLOW (경계 x=540, y=960).
+        let topLeft = sampler.rgb(x: 270, y: 480)
+        let topRight = sampler.rgb(x: 810, y: 480)
+        let bottomLeft = sampler.rgb(x: 270, y: 1440)
+        let bottomRight = sampler.rgb(x: 810, y: 1440)
+        // 구(舊) 레터박스 영역이던 최상/최하단도 이제 선명한 전경이어야 한다(블러/검정 바 없음).
+        let topEdge = sampler.rgb(x: 270, y: 40)
+        let bottomEdge = sampler.rgb(x: 810, y: 1880)
 
-        print("[CompositorRenderTests] topLeft=\(topLeft) topRight=\(topRight) bottomLeft=\(bottomLeft) bottomRight=\(bottomRight) topBar=\(topBar) bottomBar=\(bottomBar)")
+        print("[CompositorRenderTests] topLeft=\(topLeft) topRight=\(topRight) bottomLeft=\(bottomLeft) bottomRight=\(bottomRight) topEdge=\(topEdge) bottomEdge=\(bottomEdge)")
 
         // 전경 4분면: 지배 채널 관계 검사 (±tolerance).
         #expect(topLeft.r > 150 && topLeft.g < 120 && topLeft.b < 120, "좌상단은 RED여야 함: \(topLeft)")
@@ -81,9 +82,9 @@ struct CompositorRenderTests {
         #expect(bottomLeft.b > 150 && bottomLeft.r < 120 && bottomLeft.g < 120, "좌하단은 BLUE여야 함: \(bottomLeft)")
         #expect(bottomRight.r > 150 && bottomRight.g > 150 && bottomRight.b < 120, "우하단은 YELLOW여야 함: \(bottomRight)")
 
-        // 여백: 블러 필이 있으므로 검정 아님.
-        #expect(topBar.r + topBar.g + topBar.b > 60, "상단 여백이 블러 필로 채워져야 함(검정 아님): \(topBar)")
-        #expect(bottomBar.r + bottomBar.g + bottomBar.b > 60, "하단 여백이 블러 필로 채워져야 함(검정 아님): \(bottomBar)")
+        // 캔버스 최상/최하단까지 선명한 4분면 색 — 레터박스/블러 배경이 없어야 한다.
+        #expect(topEdge.r > 150 && topEdge.g < 120 && topEdge.b < 120, "최상단도 RED 전경이어야 함: \(topEdge)")
+        #expect(bottomEdge.r > 150 && bottomEdge.g > 150 && bottomEdge.b < 120, "최하단도 YELLOW 전경이어야 함: \(bottomEdge)")
     }
 
     // MARK: - Helpers

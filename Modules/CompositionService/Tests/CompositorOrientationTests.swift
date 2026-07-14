@@ -121,7 +121,7 @@ struct CompositorOrientationTests {
             preferredTransform: preferredTransform,
             rotation: .r0,
             renderSize: Self.renderSize,
-            framing: .fit
+            framing: .fill
         )
 
         let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: compTrack)

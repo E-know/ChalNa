@@ -90,6 +90,7 @@ public struct TimelineView: View {
             LabelEditorView(
                 clip: clip,
                 rotation: session.rotation(for: clip.id),
+                transform: session.transform(for: clip.id),
                 initialLabel: session.label(for: clip.id),
                 onCommit: { newLabel in
                     session.setLabel(newLabel, for: clip.id)
@@ -231,7 +232,7 @@ public struct TimelineView: View {
     /// 회전 또는 줌/이동이 적용돼 있으면 툴바 점 표시.
     private var currentAdjustActive: Bool {
         guard let id = store.currentClip?.id else { return false }
-        return session.rotation(for: id) != .r0 || session.transform(for: id) != .fit
+        return session.rotation(for: id) != .r0 || session.transform(for: id) != .fill
     }
 
     private func openAdjust() {
