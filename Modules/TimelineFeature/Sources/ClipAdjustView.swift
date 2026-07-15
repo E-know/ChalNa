@@ -76,7 +76,11 @@ public struct ClipAdjustView: View {
             let box = LabelBoxGeometry.fittedBox(aspect: 9.0 / 16.0, in: proxy.size)
             let factor = box.width / Self.render.width
             let live = working ?? committed
-            let rrect = resolvedRectUnclamped(transform: live)
+            // 제스처 중에만 러버밴드 오버슛을 그대로 그리고(unclamped), 휴지 상태는
+            // 항상 clamp 된 사각형으로 렌더 — PreviewPanel/export 와 픽셀 일치(WYSIWYG).
+            let rrect = raw != nil
+                ? resolvedRectUnclamped(transform: live)
+                : ClipFraming.resolvedRect(display: displaySize, rotation: rotation, render: Self.render, transform: live)
 
             ZStack {
                 // 러버밴드 오버슛 순간 드러나는 배경 — 스크롤 바운스처럼 검정.
@@ -132,6 +136,7 @@ public struct ClipAdjustView: View {
     }
 
     /// 3분할(rule of thirds) 그리드 — 드래그 중에만 표시.
+    /// 밝은/어두운 영상 모두에서 보이도록 이중 스트로크(어두운 밑선 + 흰 윗선).
     private func thirdsGrid(box: CGSize) -> some View {
         Canvas { context, size in
             var path = Path()
@@ -143,7 +148,8 @@ public struct ClipAdjustView: View {
                 path.move(to: CGPoint(x: 0, y: y))
                 path.addLine(to: CGPoint(x: size.width, y: y))
             }
-            context.stroke(path, with: .color(.white.opacity(0.55)), lineWidth: 1)
+            context.stroke(path, with: .color(.black.opacity(0.35)), lineWidth: 2.5)
+            context.stroke(path, with: .color(.white.opacity(0.85)), lineWidth: 1)
         }
         .frame(width: box.width, height: box.height)
         .allowsHitTesting(false)
@@ -187,6 +193,21 @@ public struct ClipAdjustView: View {
 
     private func rotate() {
         session.cycleRotation(for: store.clipID)
+        // 회전으로 offset 이동 한계가 바뀌므로(가로↔세로 swap) committed 를 새 회전 기준으로
+        // 재클램프해 세션에 반영 — 한계 밖 offset 이 남아 조정/프리뷰/export 가 어긋나는 것을 방지.
+        let newRotation = rotation
+        let current = committed
+        let reclamped = ClipFraming.clampedOffset(
+            current.offset, display: displaySize, rotation: newRotation, render: Self.render, scale: current.scale
+        )
+        if reclamped != current.offset {
+            session.setTransform(ClipTransform(scale: current.scale, offset: reclamped), for: store.clipID)
+        }
+        // 진행 중이던 제스처 상태는 옛 회전 좌표계 값이므로 무효화.
+        raw = nil
+        working = nil
+        atEdge = false
+        isAdjusting = false
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
@@ -195,8 +216,12 @@ public struct ClipAdjustView: View {
         raw = nil
         atEdge = false
         isAdjusting = false
-        withAnimation(Self.snapBack) { working = nil }
-        session.resetTransform(for: store.clipID)
+        // 시각 변화는 committed(EditSession) 갱신에서 오므로 세션 뮤테이션까지
+        // withAnimation 안에 둬야 스프링 스냅백이 실제로 애니메이션된다.
+        withAnimation(Self.snapBack) {
+            working = nil
+            session.resetTransform(for: store.clipID)
+        }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 

@@ -124,6 +124,7 @@ External(SPM): ComposableArchitecture(TCA) · FirebaseAnalytics
 - **`DevMediaSource`** (`BundledDevMediaSource` actor) — devMock 전용. 번들 `DevFixtures` mp4 를 고정 ID(`dev-jeju-sea` 등)로 제공.
 
 ## 비디오 합성 원칙
+- **출력은 1080×1920(9:16 세로) 고정, 클립은 aspectFill 센터 크롭**이 기본(`ClipTransform.fill`, scale 하한 1.0 — 여백/블러 배경 없음). 배치 기하 SSOT 는 `ClipFraming`(Models)이고 프리뷰·조정 화면·export 가 공유한다(WYSIWYG). 사용자 크롭 조정(줌/이동)은 `EditSession.transforms`.
 - `AVMutableComposition` + `AVMutableVideoComposition`. 모든 트랙 조작은 **`CompositionService` actor 내부에서만**.
 - 익스포트는 `AVAssetExportSession` + `AsyncStream<ExportEvent>`로 진행률 폴링/래핑.
 - 출력 영상 중앙 시간 라벨은 `CATextLayer`로 합성하며, **`UIAppFonts`에 등록된 KERISKEDU 패밀리**(`ChalNa/Resources/Fonts/KERISKEDU/`) 폰트를 PostScript 이름 매칭으로 사용(없으면 시스템 bold fallback).

@@ -6,20 +6,6 @@ import Models
 struct ClipFramingTests {
     let render = CGSize(width: 1080, height: 1920)
 
-    // MARK: - fitScale (라벨/보조 계산용으로 유지)
-
-    /// 가로 1920×1080 → 9:16 캔버스: fitScale = 1080/1920 = 0.5625.
-    @Test func testFitScale_Landscape() {
-        let s = ClipFraming.fitScale(display: CGSize(width: 1920, height: 1080), rotation: .r0, render: render)
-        #expect(abs(s - 0.5625) < 0.0001, "\(s)")
-    }
-
-    /// 세로 720×1280 → 9:16 캔버스: fitScale = min(1080/720, 1920/1280)=min(1.5,1.5)=1.5.
-    @Test func testFitScale_Portrait() {
-        let s = ClipFraming.fitScale(display: CGSize(width: 720, height: 1280), rotation: .r0, render: render)
-        #expect(abs(s - 1.5) < 0.0001, "\(s)")
-    }
-
     // MARK: - fillScale (배치 기준 배율)
 
     /// 가로 1920×1080 → 9:16 캔버스: fillScale = max(1080/1920, 1920/1080) = 1.77778(상하 기준).
@@ -126,5 +112,40 @@ struct ClipFramingTests {
                                           render: render, scale: 0.5)
         #expect(abs(o.x) < 0.0001, "x \(o.x)")
         #expect(abs(o.y) < 0.0001, "y \(o.y)")
+    }
+
+    // MARK: - 회전 + offset 조합 (회전이 이동 한계를 바꾸는 경로)
+
+    /// 세로 1080×1920 + r90 → oriented 1920×1080 → fillScale 1.77778, 가로로만 이동 가능.
+    /// maxFrac = ((1920×1.77778−1080)/2/1080, 0) = (1.08025, 0).
+    @Test func testMaxOffsetFraction_R90_Portrait_BecomesHorizontal() {
+        let limit = ClipFraming.maxOffsetFraction(
+            display: CGSize(width: 1080, height: 1920), rotation: .r90, render: render, scale: 1.0
+        )
+        #expect(abs(limit.x - 1.08025) < 0.001, "x \(limit.x)")
+        #expect(abs(limit.y) < 0.0001, "y \(limit.y)")
+    }
+
+    /// 가로 1920×1080 + r90 → oriented 1080×1920(딱 맞음) → 이동 한계 0.
+    /// r0 에서 유효했던 offset(1.08)이 r90 에서는 (0,0)으로 clamp 되어야 한다
+    /// — 회전 후 stale offset 재클램프의 기하 가드.
+    @Test func testClampedOffset_R90_Landscape_InvalidatesStaleOffset() {
+        let o = ClipFraming.clampedOffset(CGPoint(x: 1.08025, y: 0),
+                                          display: CGSize(width: 1920, height: 1080), rotation: .r90,
+                                          render: render, scale: 1.0)
+        #expect(abs(o.x) < 0.0001, "x \(o.x)")
+        #expect(abs(o.y) < 0.0001, "y \(o.y)")
+    }
+
+    /// r90 + 비제로 offset 의 resolvedRect: 세로 클립을 r90 돌리면 가로가 되어
+    /// offset.x=maxFrac 에서 rect 좌측 끝이 캔버스 좌측(0)에 닿는다.
+    @Test func testResolvedRect_R90_WithOffset_ShiftsWithinLimit() {
+        let r = ClipFraming.resolvedRect(
+            display: CGSize(width: 1080, height: 1920), rotation: .r90, render: render,
+            transform: ClipTransform(scale: 1, offset: CGPoint(x: 1.08025, y: 0))
+        )
+        #expect(abs(r.width - 3413.33) < 0.5, "w \(r.width)")
+        #expect(abs(r.minX - 0) < 0.5, "minX \(r.minX)")
+        #expect(abs(r.minY - 0) < 0.5, "minY \(r.minY)")
     }
 }

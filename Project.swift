@@ -161,6 +161,16 @@ let project = Project(
             // 으로 빠지면서 런타임에 unrecognized selector 가 발생. `-ObjC` 로 강제 로드.
             settings: .settings(base: ["OTHER_LDFLAGS": "$(inherited) -ObjC"])
         ),
+        // 크롭 조정 플로우 시각 검증용 UI 테스트 (devMock, XCTest — CLAUDE.md 예외 허용 대상).
+        .target(
+            name: "ChalNaUITests",
+            destinations: [.iPhone],
+            product: .uiTests,
+            bundleId: "\(Module.bundleIdPrefix).UITests",
+            deploymentTargets: Module.deploymentTargets,
+            buildableFolders: ["ChalNa/UITests"],
+            dependencies: [.target(name: "ChalNa")]
+        ),
         Module.unitTests(
             for: "AppCore",
             dependencies: [

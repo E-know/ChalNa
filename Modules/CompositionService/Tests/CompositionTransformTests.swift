@@ -254,6 +254,48 @@ struct CompositionTransformTests {
         #expect(abs(topLeft.x - 0) < 0.5, "한계 offset 에서 소스 좌측 끝 = 캔버스 좌측: \(topLeft.x)")
     }
 
+    /// preferredTransform 90°(세로로 녹화된 트랙): naturalSize 1920×1080 이지만 표시 크기는
+    /// 1080×1920 → fillScale 1.0, 캔버스를 정확히 채운다.
+    @Test func testTransform_PreferredTransform90_ExactlyFills() {
+        let natural = CGSize(width: 1920, height: 1080)
+        let render = CGSize(width: 1080, height: 1920)
+        let t = AVFoundationCompositionService.transform(
+            naturalSize: natural,
+            preferredTransform: CGAffineTransform(rotationAngle: .pi / 2),
+            rotation: .r0,
+            renderSize: render,
+            framing: .fill
+        )
+        let corners = [
+            CGPoint(x: 0, y: 0),
+            CGPoint(x: natural.width, y: 0),
+            CGPoint(x: 0, y: natural.height),
+            CGPoint(x: natural.width, y: natural.height)
+        ]
+        var xs: [CGFloat] = [], ys: [CGFloat] = []
+        for c in corners {
+            let m = c.applying(t)
+            xs.append(m.x); ys.append(m.y)
+        }
+        #expect(abs((xs.min() ?? -1) - 0) < 0.5, "minX \(xs.min() ?? -1)")
+        #expect(abs((xs.max() ?? -1) - 1080) < 0.5, "maxX \(xs.max() ?? -1)")
+        #expect(abs((ys.min() ?? -1) - 0) < 0.5, "minY \(ys.min() ?? -1)")
+        #expect(abs((ys.max() ?? -1) - 1920) < 0.5, "maxY \(ys.max() ?? -1)")
+    }
+
+    /// 한계를 크게 초과한 offset(x=2.0)은 export 안전망에서 한계값으로 clamp —
+    /// 결과가 정확히 한계 offset 과 동일해야 한다(소스 좌측 끝 = 캔버스 좌측).
+    @Test func testTransform_OffsetBeyondLimit_ClampsToLimit() {
+        let natural = CGSize(width: 1920, height: 1080)
+        let render = CGSize(width: 1080, height: 1920)
+        let t = AVFoundationCompositionService.transform(
+            naturalSize: natural, preferredTransform: .identity, rotation: .r0,
+            renderSize: render, framing: ClipTransform(scale: 1, offset: CGPoint(x: 2.0, y: 0))
+        )
+        let topLeft = CGPoint(x: 0, y: 0).applying(t)
+        #expect(abs(topLeft.x - 0) < 0.5, "한계 초과 offset 은 한계로 clamp: \(topLeft.x)")
+    }
+
     /// 축소(scale 0.5): 하한 1.0 으로 clamp → fill 그대로 렌더(여백/블러 배경이 없으므로 축소 금지).
     @Test func testTransform_UserScaleBelowMin_ClampsToFill() {
         let natural = CGSize(width: 1080, height: 1920)

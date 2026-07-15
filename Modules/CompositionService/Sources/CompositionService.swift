@@ -164,7 +164,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
     }
 
     /// [1·2·3단계] 클립을 한 트랙에 시간순으로 이어 붙이며(1단계), 클립마다 배치 변환
-    /// 2개(2단계)와 라벨 도장(3단계)을 준비하고, 우리만의 VideoComposition을 조립한다.
+    /// (센터 크롭, 2단계)과 라벨 도장(3단계)을 준비하고, 우리만의 VideoComposition을 조립한다.
     private func buildComposition(
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation],

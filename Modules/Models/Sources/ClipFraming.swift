@@ -12,14 +12,6 @@ public enum ClipFraming {
         rotation.swapsAxes ? CGSize(width: display.height, height: display.width) : display
     }
 
-    /// renderSize 안 aspectFit 배율(회전 반영). 0/NaN/Inf 가드.
-    public static func fitScale(display: CGSize, rotation: ClipRotation, render: CGSize) -> CGFloat {
-        let s = orientedSize(display, rotation: rotation)
-        let w = max(s.width, 1), h = max(s.height, 1)
-        let raw = min(render.width / w, render.height / h)
-        return (raw.isFinite && raw > 0) ? raw : 1
-    }
-
     /// renderSize 를 꽉 덮는 aspectFill 배율(회전 반영). 0/NaN/Inf 가드. 모든 배치의 기준 배율.
     public static func fillScale(display: CGSize, rotation: ClipRotation, render: CGSize) -> CGFloat {
         let s = orientedSize(display, rotation: rotation)
