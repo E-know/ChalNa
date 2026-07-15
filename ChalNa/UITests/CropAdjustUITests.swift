@@ -66,7 +66,16 @@ final class CropAdjustUITests: XCTestCase {
                            withVelocity: 300, thenHoldForDuration: 1.0)
         checkpoint(app, name: "50-panned-zoomed", holdSeconds: 3)
 
-        // 4) 더블탭 = 센터 크롭 리셋
+        // 4) 팬 커밋 상태에서 회전 — committed offset 이 새 회전 한계로 재클램프되어
+        //    캔버스가 검게 비지 않아야 한다(리뷰에서 확정된 major 회귀 가드).
+        let rotateButton = app.buttons["회전"].firstMatch
+        XCTAssertTrue(rotateButton.waitForExistence(timeout: 5), "회전 버튼")
+        rotateButton.tap()
+        checkpoint(app, name: "55-rotated-after-pan", holdSeconds: 3)
+        // 원위치(r0)로 3번 더 회전.
+        for _ in 0..<3 { rotateButton.tap() }
+
+        // 5) 더블탭 = 센터 크롭 리셋
         canvasCenter.doubleTap()
         checkpoint(app, name: "60-double-tap-reset", holdSeconds: 3)
     }
