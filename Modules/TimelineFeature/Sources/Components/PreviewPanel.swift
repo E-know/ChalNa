@@ -51,11 +51,8 @@ struct PreviewPanel: View {
     private func clipCanvas(box: CGSize) -> some View {
         ZStack {
             if let clip = store.currentClip {
-                clip.thumbnailView(contentMode: .fill)
-                    .frame(width: box.width, height: box.height)
-                    .clipped()
-                    .blur(radius: 14)
-                    .overlay(Color.black.opacity(0.18))
+                // 전경이 aspectFill(센터 크롭)로 캔버스를 항상 덮으므로 배경은 검정 안전판만.
+                Color.black
 
                 let t = session.transform(for: clip.id)
                 let rrect = ClipFraming.resolvedRect(display: clip.displaySize ?? CGSize(width: 9, height: 16),
@@ -79,34 +76,29 @@ struct PreviewPanel: View {
     }
 
     /// 자동 시간/날짜 라벨을 출력과 동일하게 미리보기에 표시(읽기 전용).
+    /// 센터 크롭에서는 보이는 클립 영역 = 캔버스 전체 → 캔버스 박스를 renderSize 로 간주(export 와 동일).
     @ViewBuilder
     private var autoLabelsOverlay: some View {
         if let clip = store.currentClip {
             GeometryReader { proxy in
-                let aspect = LabelBoxGeometry.displayAspect(displaySize: clip.displaySize, rotation: currentRotation)
-                let box = LabelBoxGeometry.fittedBox(aspect: aspect, in: proxy.size)
-                AutoLabelsOverlay(box: box, capturedAt: clip.capturedAt)
-                    .frame(width: box.width, height: box.height)
-                    .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
+                AutoLabelsOverlay(box: proxy.size, capturedAt: clip.capturedAt)
             }
             .allowsHitTesting(false)
         }
     }
 
     /// 현재 클립에 설정된 라벨을 미리보기 위에 표시(읽기 전용). 에디터와 동일한
-    /// 정규화 좌표(클립 표시 박스 기준)·동일 렌더러(ClipLabelText)로 WYSIWYG 일치.
+    /// 정규화 좌표(캔버스 기준)·동일 렌더러(ClipLabelText)로 WYSIWYG 일치.
     @ViewBuilder
     private var labelOverlay: some View {
         let label = currentLabel
         if store.currentClip != nil, label.isVisible {
             GeometryReader { proxy in
-                let aspect = LabelBoxGeometry.displayAspect(displaySize: store.currentClip?.displaySize, rotation: currentRotation)
-                let box = LabelBoxGeometry.fittedBox(aspect: aspect, in: proxy.size)
-                let fontPx = label.clampedSizeFraction * box.height
+                let fontPx = label.clampedSizeFraction * proxy.size.height
                 ClipLabelText(label: label, fontPx: fontPx)
                     .position(
-                        x: (proxy.size.width - box.width) / 2 + label.position.x * box.width,
-                        y: (proxy.size.height - box.height) / 2 + label.position.y * box.height
+                        x: label.position.x * proxy.size.width,
+                        y: label.position.y * proxy.size.height
                     )
             }
             .allowsHitTesting(false)

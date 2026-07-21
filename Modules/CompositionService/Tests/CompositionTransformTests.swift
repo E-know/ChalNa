@@ -6,10 +6,10 @@ import CompositionService
 
 struct CompositionTransformTests {
 
-    /// r0 + 가로 클립 → 정사각 캔버스: aspectFit으로 좌우 꽉 + 상하 letterbox.
-    /// 1920×1080 → 1080×1080: fitScale 1080/1920 = 0.5625, scaledSize 1080×607.5,
-    /// 좌상단 (0, (1080-607.5)/2 = 236.25)에 매핑.
-    @Test func testTransform_R0_AspectFitWithLetterbox() {
+    /// r0 + 가로 클립 → 정사각 캔버스: aspectFill(센터 크롭)로 상하 꽉 + 좌우 넘침.
+    /// 1920×1080 → 1080×1080: fillScale max(1080/1920, 1080/1080) = 1.0, scaledSize 1920×1080,
+    /// 좌상단 ((1080-1920)/2 = -420, 0)에 매핑.
+    @Test func testTransform_R0_AspectFillCenterCrop() {
         let natural = CGSize(width: 1920, height: 1080)
         let render = CGSize(width: 1080, height: 1080)
         let t = AVFoundationCompositionService.transform(
@@ -17,15 +17,15 @@ struct CompositionTransformTests {
             preferredTransform: .identity,
             rotation: .r0,
             renderSize: render,
-            framing: .fit
+            framing: .fill
         )
         let origin = CGPoint(x: 0, y: 0).applying(t)
         let topRight = CGPoint(x: natural.width, y: 0).applying(t)
         let bottomLeft = CGPoint(x: 0, y: natural.height).applying(t)
-        #expect(abs(origin.x - 0) < 0.5, "좌상단 x는 0이어야 함: \(origin.x)")
-        #expect(abs(origin.y - 236.25) < 0.5, "좌상단 y는 236.25이어야 함: \(origin.y)")
-        #expect(abs(topRight.x - 1080) < 0.5, "우상단 x는 1080이어야 함: \(topRight.x)")
-        #expect(abs(bottomLeft.y - (236.25 + 607.5)) < 0.5, "좌하단 y는 843.75이어야 함: \(bottomLeft.y)")
+        #expect(abs(origin.x - (-420)) < 0.5, "좌상단 x는 -420이어야 함: \(origin.x)")
+        #expect(abs(origin.y - 0) < 0.5, "좌상단 y는 0이어야 함: \(origin.y)")
+        #expect(abs(topRight.x - 1500) < 0.5, "우상단 x는 1500이어야 함: \(topRight.x)")
+        #expect(abs(bottomLeft.y - 1080) < 0.5, "좌하단 y는 1080이어야 함: \(bottomLeft.y)")
     }
 
     /// r90: 가로 1920×1080 클립이 r90 회전 후 1080×1920로 swap되고
@@ -38,7 +38,7 @@ struct CompositionTransformTests {
             preferredTransform: .identity,
             rotation: .r90,
             renderSize: render,
-            framing: .fit
+            framing: .fill
         )
         let renderRect = CGRect(origin: .zero, size: render)
         let corners = [
@@ -65,15 +65,15 @@ struct CompositionTransformTests {
             preferredTransform: .identity,
             rotation: .r180,
             renderSize: render,
-            framing: .fit
+            framing: .fill
         )
         let mapped = CGPoint(x: 0, y: 0).applying(t)
         #expect(abs(mapped.x - render.width) < 0.5)
         #expect(abs(mapped.y - render.height) < 0.5)
     }
 
-    /// 작은 세로 클립 720×1280 → 1080×1920 캔버스: fitScale 1.5, 풀스크린 fit.
-    @Test func testTransform_AspectFit_PortraitClip_FillsRenderExactly() {
+    /// 같은 비율 세로 클립 720×1280 → 1080×1920 캔버스: fillScale 1.5, 풀스크린 정확히 채움.
+    @Test func testTransform_AspectFill_PortraitClip_FillsRenderExactly() {
         let natural = CGSize(width: 720, height: 1280)
         let render = CGSize(width: 1080, height: 1920)
         let t = AVFoundationCompositionService.transform(
@@ -81,7 +81,7 @@ struct CompositionTransformTests {
             preferredTransform: .identity,
             rotation: .r0,
             renderSize: render,
-            framing: .fit
+            framing: .fill
         )
         let topLeft = CGPoint(x: 0, y: 0).applying(t)
         let topRight = CGPoint(x: natural.width, y: 0).applying(t)
@@ -97,8 +97,9 @@ struct CompositionTransformTests {
                 "우하단은 (1080,1920): \(bottomRight)")
     }
 
-    /// 가로 1920×1080 → 1080×1920 캔버스: fitScale 0.5625, 좌우 꽉 + 상하 656.25 letterbox.
-    @Test func testTransform_AspectFit_LandscapeClip_PillarboxesTopBottom() {
+    /// 가로 1920×1080 → 1080×1920 캔버스: fillScale 1920/1080 = 1.77778(상하 기준),
+    /// scaledSize 3413.33×1920 → 상하 꽉 + 좌우 센터 크롭(좌상단 x = -1166.67).
+    @Test func testTransform_AspectFill_LandscapeClip_CenterCropsSides() {
         let natural = CGSize(width: 1920, height: 1080)
         let render = CGSize(width: 1080, height: 1920)
         let t = AVFoundationCompositionService.transform(
@@ -106,19 +107,20 @@ struct CompositionTransformTests {
             preferredTransform: .identity,
             rotation: .r0,
             renderSize: render,
-            framing: .fit
+            framing: .fill
         )
         let topLeft = CGPoint(x: 0, y: 0).applying(t)
         let bottomRight = CGPoint(x: natural.width, y: natural.height).applying(t)
-        // scaledSize = 1080 × 607.5, top letterbox = (1920-607.5)/2 = 656.25
-        #expect(abs(topLeft.x - 0) < 0.5, "좌상단 x는 0: \(topLeft.x)")
-        #expect(abs(topLeft.y - 656.25) < 0.5, "좌상단 y는 656.25: \(topLeft.y)")
-        #expect(abs(bottomRight.x - 1080) < 0.5, "우하단 x는 1080: \(bottomRight.x)")
-        #expect(abs(bottomRight.y - (656.25 + 607.5)) < 0.5, "우하단 y는 1263.75: \(bottomRight.y)")
+        // scaledSize = 3413.33 × 1920, 좌측 crop = (3413.33-1080)/2 = 1166.67
+        #expect(abs(topLeft.x - (-1166.67)) < 0.5, "좌상단 x는 -1166.67: \(topLeft.x)")
+        #expect(abs(topLeft.y - 0) < 0.5, "좌상단 y는 0: \(topLeft.y)")
+        #expect(abs(bottomRight.x - 2246.67) < 0.5, "우하단 x는 2246.67: \(bottomRight.x)")
+        #expect(abs(bottomRight.y - 1920) < 0.5, "우하단 y는 1920: \(bottomRight.y)")
     }
 
-    /// 정사각 1080×1080 → 1080×1920 캔버스: fitScale 1.0, 좌우 꽉 + 상하 420 letterbox.
-    @Test func testTransform_AspectFit_SquareClip_PillarboxesTopBottom() {
+    /// 정사각 1080×1080 → 1080×1920 캔버스: fillScale 1920/1080 = 1.77778,
+    /// scaledSize 1920×1920 → 상하 꽉 + 좌우 센터 크롭(좌상단 x = -420).
+    @Test func testTransform_AspectFill_SquareClip_CenterCropsSides() {
         let natural = CGSize(width: 1080, height: 1080)
         let render = CGSize(width: 1080, height: 1920)
         let t = AVFoundationCompositionService.transform(
@@ -126,20 +128,20 @@ struct CompositionTransformTests {
             preferredTransform: .identity,
             rotation: .r0,
             renderSize: render,
-            framing: .fit
+            framing: .fill
         )
         let topLeft = CGPoint(x: 0, y: 0).applying(t)
         let bottomRight = CGPoint(x: natural.width, y: natural.height).applying(t)
-        // top letterbox = (1920-1080)/2 = 420
-        #expect(abs(topLeft.x - 0) < 0.5)
-        #expect(abs(topLeft.y - 420) < 0.5, "좌상단 y는 420: \(topLeft.y)")
-        #expect(abs(bottomRight.x - 1080) < 0.5)
-        #expect(abs(bottomRight.y - (420 + 1080)) < 0.5, "우하단 y는 1500: \(bottomRight.y)")
+        // 좌측 crop = (1920-1080)/2 = 420
+        #expect(abs(topLeft.x - (-420)) < 0.5, "좌상단 x는 -420: \(topLeft.x)")
+        #expect(abs(topLeft.y - 0) < 0.5, "좌상단 y는 0: \(topLeft.y)")
+        #expect(abs(bottomRight.x - 1500) < 0.5, "우하단 x는 1500: \(bottomRight.x)")
+        #expect(abs(bottomRight.y - 1920) < 0.5, "우하단 y는 1920: \(bottomRight.y)")
     }
 
-    /// 가로 1920×1080 + r90 + 1080×1920 → 풀스크린 fit.
-    /// r90 회전 후 postRotationSize 1080×1920 = renderSize → fitScale 1.0.
-    @Test func testTransform_AspectFit_LandscapeClip_R90_ExactlyFills() {
+    /// 가로 1920×1080 + r90 + 1080×1920 → 풀스크린 fill.
+    /// r90 회전 후 postRotationSize 1080×1920 = renderSize → fillScale 1.0.
+    @Test func testTransform_AspectFill_LandscapeClip_R90_ExactlyFills() {
         let natural = CGSize(width: 1920, height: 1080)
         let render = CGSize(width: 1080, height: 1920)
         let t = AVFoundationCompositionService.transform(
@@ -147,7 +149,7 @@ struct CompositionTransformTests {
             preferredTransform: .identity,
             rotation: .r90,
             renderSize: render,
-            framing: .fit
+            framing: .fill
         )
         let renderRect = CGRect(origin: .zero, size: render)
         let corners = [
@@ -170,8 +172,8 @@ struct CompositionTransformTests {
         #expect(abs((mappedYs.max() ?? 0) - renderRect.maxY) < 0.5, "maxY: \(mappedYs.max() ?? 0)")
     }
 
-    /// 1080×1920 + r0 + 1080×1920: fitScale 1.0, 첫 클립과 캔버스 동일 → identity 매핑.
-    @Test func testTransform_AspectFit_FirstClipIdentity_Unchanged() {
+    /// 1080×1920 + r0 + 1080×1920: fillScale 1.0, 첫 클립과 캔버스 동일 → identity 매핑.
+    @Test func testTransform_AspectFill_FirstClipIdentity_Unchanged() {
         let natural = CGSize(width: 1080, height: 1920)
         let render = CGSize(width: 1080, height: 1920)
         let t = AVFoundationCompositionService.transform(
@@ -179,7 +181,7 @@ struct CompositionTransformTests {
             preferredTransform: .identity,
             rotation: .r0,
             renderSize: render,
-            framing: .fit
+            framing: .fill
         )
         let topLeft = CGPoint(x: 0, y: 0).applying(t)
         let bottomRight = CGPoint(x: natural.width, y: natural.height).applying(t)
@@ -188,8 +190,8 @@ struct CompositionTransformTests {
                 "우하단 (1080,1920): \(bottomRight)")
     }
 
-    /// renderSize == .zero: fitScale 가드 작동, transform이 NaN/Inf 없이 유한.
-    @Test func testTransform_AspectFit_ZeroRenderSize_FallsBackToIdentityScale() {
+    /// renderSize == .zero: fillScale 가드 작동, transform이 NaN/Inf 없이 유한.
+    @Test func testTransform_AspectFill_ZeroRenderSize_FallsBackToIdentityScale() {
         let natural = CGSize(width: 1080, height: 1920)
         let render = CGSize.zero
         let t = AVFoundationCompositionService.transform(
@@ -197,7 +199,7 @@ struct CompositionTransformTests {
             preferredTransform: .identity,
             rotation: .r0,
             renderSize: render,
-            framing: .fit
+            framing: .fill
         )
         let mapped = CGPoint(x: natural.width / 2, y: natural.height / 2).applying(t)
         #expect(t.a.isFinite && t.b.isFinite && t.c.isFinite && t.d.isFinite,
@@ -207,7 +209,7 @@ struct CompositionTransformTests {
     }
 
     /// scale=2: 세로 클립이 2배로 커져 캔버스를 넘는다. 중심은 캔버스 중앙 유지.
-    /// 1080×1920 + fit(1.0)×2 → scaledSize 2160×3840, 좌상단 (-540, -960).
+    /// 1080×1920 + fill(1.0)×2 → scaledSize 2160×3840, 좌상단 (-540, -960).
     @Test func testTransform_UserScale2_GrowsFromCenter() {
         let natural = CGSize(width: 1080, height: 1920)
         let render = CGSize(width: 1080, height: 1920)
@@ -236,9 +238,66 @@ struct CompositionTransformTests {
         #expect(abs(center.y - 960) < 0.5, "cy \(center.y)")
     }
 
-    /// 축소(scale 0.5): 1080×1920 → totalScale 0.5, scaledSize 540×960, centerTranslate (270,480).
-    /// export 가 바닥(max(1.0,...))을 막으면 이 테스트는 실패한다(맞춤으로 렌더).
-    @Test func testTransform_UserScaleHalf_ShrinksBelowFit() {
+    /// 가로 클립 + offset 한계값: 좌측 크롭이 전부 풀려 소스 좌측 끝이 캔버스 좌측에 닿는다.
+    /// 1920×1080 → fill 1.77778, maxFracX = (3413.33-1080)/2/1080 = 1.08025.
+    @Test func testTransform_LandscapeOffsetAtLimit_RevealsSourceEdge() {
+        let natural = CGSize(width: 1920, height: 1080)
+        let render = CGSize(width: 1080, height: 1920)
+        let maxFrac = ClipFraming.maxOffsetFraction(
+            display: natural, rotation: .r0, render: render, scale: 1.0
+        )
+        let t = AVFoundationCompositionService.transform(
+            naturalSize: natural, preferredTransform: .identity, rotation: .r0,
+            renderSize: render, framing: ClipTransform(scale: 1, offset: CGPoint(x: maxFrac.x, y: 0))
+        )
+        let topLeft = CGPoint(x: 0, y: 0).applying(t)
+        #expect(abs(topLeft.x - 0) < 0.5, "한계 offset 에서 소스 좌측 끝 = 캔버스 좌측: \(topLeft.x)")
+    }
+
+    /// preferredTransform 90°(세로로 녹화된 트랙): naturalSize 1920×1080 이지만 표시 크기는
+    /// 1080×1920 → fillScale 1.0, 캔버스를 정확히 채운다.
+    @Test func testTransform_PreferredTransform90_ExactlyFills() {
+        let natural = CGSize(width: 1920, height: 1080)
+        let render = CGSize(width: 1080, height: 1920)
+        let t = AVFoundationCompositionService.transform(
+            naturalSize: natural,
+            preferredTransform: CGAffineTransform(rotationAngle: .pi / 2),
+            rotation: .r0,
+            renderSize: render,
+            framing: .fill
+        )
+        let corners = [
+            CGPoint(x: 0, y: 0),
+            CGPoint(x: natural.width, y: 0),
+            CGPoint(x: 0, y: natural.height),
+            CGPoint(x: natural.width, y: natural.height)
+        ]
+        var xs: [CGFloat] = [], ys: [CGFloat] = []
+        for c in corners {
+            let m = c.applying(t)
+            xs.append(m.x); ys.append(m.y)
+        }
+        #expect(abs((xs.min() ?? -1) - 0) < 0.5, "minX \(xs.min() ?? -1)")
+        #expect(abs((xs.max() ?? -1) - 1080) < 0.5, "maxX \(xs.max() ?? -1)")
+        #expect(abs((ys.min() ?? -1) - 0) < 0.5, "minY \(ys.min() ?? -1)")
+        #expect(abs((ys.max() ?? -1) - 1920) < 0.5, "maxY \(ys.max() ?? -1)")
+    }
+
+    /// 한계를 크게 초과한 offset(x=2.0)은 export 안전망에서 한계값으로 clamp —
+    /// 결과가 정확히 한계 offset 과 동일해야 한다(소스 좌측 끝 = 캔버스 좌측).
+    @Test func testTransform_OffsetBeyondLimit_ClampsToLimit() {
+        let natural = CGSize(width: 1920, height: 1080)
+        let render = CGSize(width: 1080, height: 1920)
+        let t = AVFoundationCompositionService.transform(
+            naturalSize: natural, preferredTransform: .identity, rotation: .r0,
+            renderSize: render, framing: ClipTransform(scale: 1, offset: CGPoint(x: 2.0, y: 0))
+        )
+        let topLeft = CGPoint(x: 0, y: 0).applying(t)
+        #expect(abs(topLeft.x - 0) < 0.5, "한계 초과 offset 은 한계로 clamp: \(topLeft.x)")
+    }
+
+    /// 축소(scale 0.5): 하한 1.0 으로 clamp → fill 그대로 렌더(여백/블러 배경이 없으므로 축소 금지).
+    @Test func testTransform_UserScaleBelowMin_ClampsToFill() {
         let natural = CGSize(width: 1080, height: 1920)
         let render = CGSize(width: 1080, height: 1920)
         let t = AVFoundationCompositionService.transform(
@@ -247,9 +306,8 @@ struct CompositionTransformTests {
         )
         let topLeft = CGPoint(x: 0, y: 0).applying(t)
         let bottomRight = CGPoint(x: natural.width, y: natural.height).applying(t)
-        #expect(abs(topLeft.x - 270) < 0.5, "x \(topLeft.x)")
-        #expect(abs(topLeft.y - 480) < 0.5, "y \(topLeft.y)")
-        #expect(abs(bottomRight.x - 810) < 0.5, "x \(bottomRight.x)")
-        #expect(abs(bottomRight.y - 1440) < 0.5, "y \(bottomRight.y)")
+        #expect(abs(topLeft.x - 0) < 0.5 && abs(topLeft.y - 0) < 0.5, "좌상단 (0,0): \(topLeft)")
+        #expect(abs(bottomRight.x - 1080) < 0.5 && abs(bottomRight.y - 1920) < 0.5,
+                "우하단 (1080,1920): \(bottomRight)")
     }
 }

@@ -7,9 +7,9 @@ import Foundation
 public struct ClipLabel: Equatable, Sendable {
     /// 자막 문구. 빈/공백 문자열이면 자막 없음으로 취급.
     public var text: String
-    /// 클립 이미지 높이 대비 글자 크기 비율. `clampedSizeFraction` 으로 0.04...0.25 클램프해 사용.
+    /// 9:16 캔버스 높이 대비 글자 크기 비율. `clampedSizeFraction` 으로 0.04...0.25 클램프해 사용.
     public var sizeFraction: CGFloat
-    /// 클립 이미지 사각형 기준 정규화 위치(자막 중심). x,y ∈ 0...1, y는 위(0)→아래(1) 스크린 방향.
+    /// 9:16 캔버스 기준 정규화 위치(자막 중심). x,y ∈ 0...1, y는 위(0)→아래(1) 스크린 방향.
     public var position: CGPoint
 
     public init(

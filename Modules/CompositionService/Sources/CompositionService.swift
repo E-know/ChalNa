@@ -71,7 +71,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
     public nonisolated func export(
         clips: [Clip],                          // 이어붙일 클립들(이미 촬영순 정렬)
         rotations: [Clip.ID: ClipRotation],     // 클립별 사용자 회전(없으면 0°)
-        transforms: [Clip.ID: ClipTransform],   // 클립별 확대·이동(없으면 .fit)
+        transforms: [Clip.ID: ClipTransform],   // 클립별 확대·이동(없으면 .fill = 센터 크롭)
         labelSettings: LabelSettings,           // 시간·날짜 라벨 on/off·위치·투명도
         clipLabels: [Clip.ID: ClipLabel]        // 클립별 사용자 자막
     ) -> AsyncStream<ExportEvent> {             // 반환값 = 이벤트가 흘러나오는 통로
@@ -164,7 +164,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
     }
 
     /// [1·2·3단계] 클립을 한 트랙에 시간순으로 이어 붙이며(1단계), 클립마다 배치 변환
-    /// 2개(2단계)와 라벨 도장(3단계)을 준비하고, 우리만의 VideoComposition을 조립한다.
+    /// (센터 크롭, 2단계)과 라벨 도장(3단계)을 준비하고, 우리만의 VideoComposition을 조립한다.
     private func buildComposition(
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation],
@@ -183,13 +183,13 @@ public actor AVFoundationCompositionService: CompositionServicing {
         var compAudioTrack: AVMutableCompositionTrack?   // 오디오는 첫 소리를 만날 때 lazy 생성.
 
         // 1) 출력 캔버스는 항상 outputSize(9:16, 1080×1920) 고정.
-        //    비율이 다른 클립은 `transform()`이 aspectFit + 가운데 정렬해 letterbox/pillarbox 처리.
+        //    비율이 다른 클립은 `transform()`이 aspectFill + 가운데 정렬(센터 크롭)로 캔버스를 꽉 채운다.
         let renderSize = await Self.resolveRenderSize(clips: clips, rotations: rotations)
 
         // 2) 시간순으로 트랙을 채우면서 클립별 layerInstruction 누적.
         //    cursor = "지금까지 채운 시간"(빨래집게). 클립 하나 붙일 때마다 그 길이만큼 전진.
         var cursor = CMTime.zero
-        var layerInstructions: [(timeRange: CMTimeRange, transform: CGAffineTransform, backgroundTransform: CGAffineTransform, capturedAt: Date, clipID: Clip.ID, placedRect: CGRect, thumbnailData: Data?)] = []
+        var layerInstructions: [(timeRange: CMTimeRange, transform: CGAffineTransform, capturedAt: Date, clipID: Clip.ID)] = []
 
         for clip in clips {
             guard let videoURL = clip.videoURL else { continue }   // 영상 없는 클립은 스킵.
@@ -231,46 +231,30 @@ public actor AVFoundationCompositionService: CompositionServicing {
             let naturalSize = (try? await assetVideoTrack.load(.naturalSize)) ?? renderSize
             let userRotation = rotations[clip.id] ?? .r0
 
-            // 전경: aspectFit(다 보이게) + 사용자 확대·이동.
+            // 전경: aspectFill(센터 크롭) + 사용자 확대·이동. 캔버스를 항상 꽉 덮는다.
             let transform = Self.transform(
                 naturalSize: naturalSize,
                 preferredTransform: preferredTransform,
                 rotation: userRotation,
                 renderSize: renderSize,
-                framing: transforms[clip.id] ?? .fit
+                framing: transforms[clip.id] ?? .fill
             )
 
-            // 배경: aspectFill(꽉 채우게) + 중앙 고정. 여백을 메울 블러 소스로 쓰인다.
-            let backgroundTransform = Self.fillTransform(
-                naturalSize: naturalSize,
-                preferredTransform: preferredTransform,
-                rotation: userRotation,
-                renderSize: renderSize
-            )
-
-            // 라벨(특히 사용자 자막)의 위치 기준이 될, 전경이 차지하는 사각형(줌 미반영).
-            let placedRange = CMTimeRange(start: cursor, duration: clipDuration)
-            let pRect = Self.placedRect(
-                naturalSize: naturalSize,
-                preferredTransform: preferredTransform,
-                rotation: userRotation,
-                renderSize: renderSize
-            )
             // 한 클립 구간의 합성 재료를 모아둔다(컴포지터가 나중에 읽음).
-            layerInstructions.append((placedRange, transform, backgroundTransform, clip.capturedAt, clip.id, pRect, clip.thumbnailData))
+            let placedRange = CMTimeRange(start: cursor, duration: clipDuration)
+            layerInstructions.append((placedRange, transform, clip.capturedAt, clip.id))
 
             cursor = CMTimeAdd(cursor, clipDuration)   // 집게를 오른쪽으로 전진.
         }
 
         let hasContent = cursor > .zero   // 한 장이라도 붙었나? 아니면 run()이 noVideoClips 로 중단.
 
-        // 3) [3·4단계] AVMutableVideoComposition 구성. 여백(letterbox)을 클립의 블러 필로 채우기 위해
-        //    커스텀 컴포지터(`ChalNaVideoCompositor`)와 클립별 `ChalNaCompositionInstruction` 을 쓴다.
+        // 3) [3·4단계] AVMutableVideoComposition 구성. 전경이 캔버스를 꽉 덮으므로(센터 크롭)
+        //    커스텀 컴포지터(`ChalNaVideoCompositor`)는 전경 배치 + 라벨 합성만 담당한다.
         let videoComposition = AVMutableVideoComposition()
         videoComposition.renderSize = renderSize
         videoComposition.frameDuration = CMTime(value: 1, timescale: 30)          // 출력 30fps (바로 이 한 줄).
         videoComposition.customVideoCompositorClass = ChalNaVideoCompositor.self  // 우리 플레이팅 담당을 끼운다.
-        let blurRadius = min(renderSize.width, renderSize.height) * 0.04          // 배경 블러 세기 ≈ 43px.
         videoComposition.instructions = layerInstructions.map { entry in
             // 클립별 라벨(시간/날짜/커스텀)을 정적 CGImage 로 미리 렌더해 컴포지터가 전경 위에 합성.
             // 라벨은 구간 내내 안 움직이므로 "도장"처럼 한 번만 그려 둔다(없으면 nil → 합성 스킵).
@@ -279,19 +263,15 @@ public actor AVFoundationCompositionService: CompositionServicing {
             overlay = Self.renderLabelOverlayImage(
                 renderSize: renderSize,
                 capturedAt: entry.capturedAt,
-                placedRect: entry.placedRect,
                 labelSettings: labelSettings,
                 clipLabel: clipLabels[entry.clipID] ?? .default
             )
             #endif
-            // 한 클립 구간의 "합성 설명서"를 만들어 넘긴다(전경/배경 변환·블러·스크림·라벨).
+            // 한 클립 구간의 "합성 설명서"를 만들어 넘긴다(전경 변환·라벨).
             return ChalNaCompositionInstruction(
                 timeRange: entry.timeRange,
                 trackID: compVideoTrack.trackID,
                 foreground: entry.transform,
-                background: entry.backgroundTransform,
-                blurRadius: blurRadius,
-                scrimAlpha: 0.18,                     // 배경 위 검정막 18%.
                 overlayImage: overlay
             )
         }
@@ -371,7 +351,6 @@ public actor AVFoundationCompositionService: CompositionServicing {
     private static func renderLabelOverlayImage(
         renderSize: CGSize,
         capturedAt: Date,
-        placedRect: CGRect,
         labelSettings: LabelSettings,
         clipLabel: ClipLabel
     ) -> CGImage? {
@@ -434,8 +413,9 @@ public actor AVFoundationCompositionService: CompositionServicing {
         }
 
         if custom.isVisible {
+            // 센터 크롭에서는 보이는 클립 영역 = 캔버스 전체 → 자막 앵커도 캔버스 기준.
             for layer in makeCustomLabelLayers(
-                label: custom, placedRect: placedRect, renderSize: renderSize
+                label: custom, placedRect: CGRect(origin: .zero, size: renderSize), renderSize: renderSize
             ) {
                 parentLayer.addSublayer(layer)
             }
@@ -598,8 +578,8 @@ public actor AVFoundationCompositionService: CompositionServicing {
     public static let outputSize = CGSize(width: 1080, height: 1920)
 
     /// 출력 캔버스는 입력 클립과 무관하게 항상 `outputSize`(1080×1920).
-    /// 비율이 다른 클립은 `transform()` 이 aspectFit + 가운데 정렬로 자동 letterbox/pillarbox 처리하고,
-    /// 남는 여백은 블러 배경 레이어가 채운다. (시그니처는 호출부 호환을 위해 유지)
+    /// 비율이 다른 클립은 `transform()` 이 aspectFill + 가운데 정렬(센터 크롭)로 캔버스를 꽉 채운다.
+    /// (시그니처는 호출부 호환을 위해 유지)
     public static func resolveRenderSize(
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation]
@@ -609,8 +589,8 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
     // MARK: - Transform helper
 
-    /// 한 클립을 renderSize 안에 aspectFit(=맞춤)으로 배치하고, 사용자 변환(scale·offset)을 추가 적용한 affine transform.
-    /// framing == .fit 이면 기존 맞춤 동작과 동일(회귀 가드).
+    /// 한 클립을 renderSize 에 aspectFill(=센터 크롭)로 배치하고, 사용자 변환(scale·offset)을 추가 적용한 affine transform.
+    /// framing == .fill 이면 추가 조작 없는 기본 센터 크롭.
     public static func transform(
         naturalSize: CGSize,
         preferredTransform: CGAffineTransform,
@@ -633,10 +613,11 @@ public actor AVFoundationCompositionService: CompositionServicing {
         let rotatedRect = CGRect(origin: .zero, size: displaySize).applying(rotationMatrix)
         let rotationNormalize = CGAffineTransform(translationX: -rotatedRect.minX, y: -rotatedRect.minY)
 
-        // ④ fit 배율은 ClipFraming 과 공유. 사용자 배율(>=1)을 곱한다. (fill 은 여기 min→max 만 다른 쌍둥이)
-        let fitScale = ClipFraming.fitScale(display: displaySize, rotation: rotation, render: renderSize)
-        let userScale = max(0.05, framing.scale)
-        let totalScale = fitScale * userScale
+        // ④ fill(센터 크롭) 배율은 ClipFraming 과 공유. 사용자 배율은 [1, 4] 로 clamp —
+        //    1 미만이면 캔버스 여백이 드러나므로 금지(블러 배경 없음).
+        let fillScale = ClipFraming.fillScale(display: displaySize, rotation: rotation, render: renderSize)
+        let userScale = min(max(framing.scale, ClipTransform.minScale), ClipTransform.maxScale)
+        let totalScale = fillScale * userScale
 
         let scaledSize = CGSize(width: postRotationSize.width * totalScale,
                                 height: postRotationSize.height * totalScale)
@@ -659,58 +640,6 @@ public actor AVFoundationCompositionService: CompositionServicing {
             .concatenating(scaleMatrix)
             .concatenating(centerTranslate)
             .concatenating(offsetTranslate)
-    }
-
-    /// `transform()` 의 aspectFILL 버전. 배경 블러 필 전용 — 항상 캔버스를 꽉 채우고(중앙) 사용자 scale/offset 은 무시한다.
-    /// preferredTransform·회전 처리는 `transform()` 과 동일, fit 의 `min(...)` 배율만 `max(...)` 로 교체.
-    public static func fillTransform(
-        naturalSize: CGSize,
-        preferredTransform: CGAffineTransform,
-        rotation: ClipRotation,
-        renderSize: CGSize
-    ) -> CGAffineTransform {
-        let displayRect = CGRect(origin: .zero, size: naturalSize).applying(preferredTransform)
-        let displaySize = CGSize(width: abs(displayRect.width), height: abs(displayRect.height))
-        let postRotationSize: CGSize = rotation.swapsAxes
-            ? CGSize(width: displaySize.height, height: displaySize.width)
-            : displaySize
-
-        let normalizeAfterPreferred = CGAffineTransform(translationX: -displayRect.minX, y: -displayRect.minY)
-
-        let rotationMatrix = rotation.transform
-        let rotatedRect = CGRect(origin: .zero, size: displaySize).applying(rotationMatrix)
-        let rotationNormalize = CGAffineTransform(translationX: -rotatedRect.minX, y: -rotatedRect.minY)
-
-        // fill 배율: 짧은 축이 아니라 긴 축 기준으로 캔버스를 덮도록 max.
-        let w = max(postRotationSize.width, 1)
-        let h = max(postRotationSize.height, 1)
-        let rawScale = max(renderSize.width / w, renderSize.height / h)
-        let fillScale = (rawScale.isFinite && rawScale > 0) ? rawScale : 1
-
-        let scaledSize = CGSize(width: postRotationSize.width * fillScale,
-                                height: postRotationSize.height * fillScale)
-        let scaleMatrix = CGAffineTransform(scaleX: fillScale, y: fillScale)
-        let centerTranslate = CGAffineTransform(translationX: (renderSize.width - scaledSize.width) / 2,
-                                                y: (renderSize.height - scaledSize.height) / 2)
-
-        return preferredTransform
-            .concatenating(normalizeAfterPreferred)
-            .concatenating(rotationMatrix)
-            .concatenating(rotationNormalize)
-            .concatenating(scaleMatrix)
-            .concatenating(centerTranslate)
-    }
-
-    /// 한 클립이 renderSize 안에서 aspectFit + 가운데 정렬됐을 때 차지하는 사각형(줌 미반영 = 라벨 기준).
-    public static func placedRect(
-        naturalSize: CGSize,
-        preferredTransform: CGAffineTransform,
-        rotation: ClipRotation,
-        renderSize: CGSize
-    ) -> CGRect {
-        let displayRect = CGRect(origin: .zero, size: naturalSize).applying(preferredTransform)
-        let displaySize = CGSize(width: abs(displayRect.width), height: abs(displayRect.height))
-        return ClipFraming.resolvedRect(display: displaySize, rotation: rotation, render: renderSize, transform: .fit)
     }
 
     /// 클립 이미지 사각형 기준 정규화 위치(라벨 중심, y=위→아래)를

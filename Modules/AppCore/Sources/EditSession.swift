@@ -15,7 +15,7 @@ public final class EditSession: @unchecked Sendable {
     public var rotations: [Clip.ID: ClipRotation]
     /// 클립별 사용자 라벨. dict miss = `.default`(빈 라벨).
     public var labels: [Clip.ID: ClipLabel]
-    /// 클립별 사용자 변환(줌/이동). dict miss = `.fit`.
+    /// 클립별 사용자 변환(줌/이동). dict miss = `.fill`(센터 크롭).
     public var transforms: [Clip.ID: ClipTransform]
 
     public init(
@@ -72,7 +72,7 @@ public final class EditSession: @unchecked Sendable {
     // MARK: - Transform (zoom/offset)
 
     public func transform(for id: Clip.ID) -> ClipTransform {
-        transforms[id] ?? .fit
+        transforms[id] ?? .fill
     }
 
     public func setTransform(_ transform: ClipTransform, for id: Clip.ID) {

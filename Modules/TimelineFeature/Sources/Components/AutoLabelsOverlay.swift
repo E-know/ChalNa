@@ -17,13 +17,16 @@ struct AutoLabelsOverlay: View {
     @AppStorage("labelDatePosition") private var datePosition = LabelPosition.bottomCenter
     @AppStorage("labelDateOpacity") private var dateOpacity = 1.0
 
-    private static let timeFormatter: DateFormatter = {
+    /// 영상 출력(CompositionService.timeOnlyFormatter)과 동일하게 앱 표시 언어 기준 분기.
+    /// en: 12시간 `h:mm a`, 그 외(ko·ja): 24시간 `HH:mm`. 현재 타임존.
+    private static func timeFormatter() -> DateFormatter {
+        let locale = overlayLocale()
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
+        f.locale = locale
         f.timeZone = .current
-        f.dateFormat = "HH:mm"
+        f.dateFormat = (locale.language.languageCode?.identifier == "en") ? "h:mm a" : "HH:mm"
         return f
-    }()
+    }
     /// 영상 출력(CompositionService.dateOnlyFormatter)과 동일하게 앱 표시 언어 기준 분기.
     /// en: `MM/dd/yyyy`, 그 외(ko·ja): `yyyy/MM/dd`. 현재 타임존.
     private static func dateFormatter() -> DateFormatter {
@@ -52,7 +55,7 @@ struct AutoLabelsOverlay: View {
         let padding = CGSize(width: box.width * LabelLayout.paddingFraction,
                              height: box.height * LabelLayout.paddingFraction)
         let gap = minDim * LabelLayout.stackGapFraction
-        let timeText = Self.timeFormatter.string(from: capturedAt)
+        let timeText = Self.timeFormatter().string(from: capturedAt)
         let dateText = Self.dateFormatter().string(from: capturedAt)
         let timeSize = measure(timeText, fontPx: timeFont)
         let dateSize = measure(dateText, fontPx: dateFont)
