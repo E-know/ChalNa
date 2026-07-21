@@ -7,17 +7,16 @@ import HomeFeature
 import FilmDetailFeature
 import AppCore
 import DesignSystem
-import PhotosService
-import Models
 import SettingsFeature
 
-/// 앱 루트. TCA AppFeature 의 StackState 로 navigation 을 통합. AppRouter 는 호환용 thin wrapper.
+/// 앱 루트. TCA AppFeature 의 StackState 가 navigation 의 단일 출처.
+/// push 는 자식 delegate → AppFeature, pop 은 자식 리듀서의 dismiss 의존성이 처리한다.
 public struct RootView: View {
     @State private var store = Store(initialState: AppFeature.State()) {
         AppFeature()
     }
-    @State private var router = AppRouter()
-    @State private var session = EditSession()
+    /// Reducer(@Dependency)와 View(environment)가 같은 인스턴스를 공유한다.
+    @Dependency(\.editSession) private var session
     @State private var languageStore = AppLanguageStore()
 
     public init() {}
@@ -33,11 +32,9 @@ public struct RootView: View {
                 .navigationBarBackButtonHidden(true)
                 .chalNaSwipeBack()
         }
-        .environment(router)
         .environment(session)
         .environment(languageStore)
         .environment(\.locale, languageStore.locale)
-        .onAppear { wireRouterHandlers() }
     }
 
     @ViewBuilder
@@ -53,44 +50,6 @@ public struct RootView: View {
         case let .support(s):       SupportView(store: s)
         case let .clipAdjust(s):    ClipAdjustView(store: s)
         case let .language(s):      LanguageView(store: s)
-        }
-    }
-
-    private func wireRouterHandlers() {
-        router.pushHandler = { [store] route in
-            switch route {
-            case .mediaPicker:
-                store.send(.routerPushedMediaPicker(source: currentMediaPickerSource))
-            case .timeline:
-                store.send(.routerPushedTimeline)
-            case .export:
-                store.send(.routerPushedExport)
-            case let .filmDetail(filmID):
-                store.send(.routerPushedFilmDetail(filmID: filmID))
-            case .settings:
-                store.send(.routerPushedSettings)
-            case .labelSettings:
-                store.send(.routerPushedLabelSettings)
-            case let .labelPosition(kind):
-                store.send(.routerPushedLabelPosition(kind: kind))
-            case .support:
-                store.send(.routerPushedSupport)
-            case let .clipAdjust(clipID):
-                store.send(.routerPushedClipAdjust(clipID: clipID))
-            case .language:
-                store.send(.routerPushedLanguage)
-            }
-        }
-        router.popHandler = { [store] in store.send(.routerPopped) }
-        router.popToRootHandler = { [store] in store.send(.routerPoppedToRoot) }
-    }
-
-    private var currentMediaPickerSource: MediaPickerSource {
-        switch AppMode.current {
-        case .real:
-            return .photoLibrary
-        case .devMock:
-            return .devFixtures(BundledDevMediaSource())
         }
     }
 }

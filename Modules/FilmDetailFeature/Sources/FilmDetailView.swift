@@ -3,14 +3,12 @@ import SwiftData
 import AVKit
 import AVFoundation
 import ComposableArchitecture
-import AppCore
 import Models
 import DesignSystem
 import FileStorage
 
 /// 라이브러리 필름 1개의 메타 정보 + 재생/공유/삭제 액션 화면.
 public struct FilmDetailView: View {
-    @Environment(AppRouter.self) private var router
     @Environment(\.modelContext) private var modelContext
 
     @Bindable var store: StoreOf<FilmDetailFeature>
@@ -46,7 +44,7 @@ public struct FilmDetailView: View {
 
     private var header: some View {
         ChalNaNavigationBar(titleKey: "필름 정보") {
-            ChalNaHeaderBackButton { router.pop() }
+            ChalNaHeaderBackButton { store.send(.backTapped) }
         } trailing: {
             EmptyView()
         }
@@ -313,7 +311,7 @@ public struct FilmDetailView: View {
                 .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
                 .foregroundColor(ChalNaColor.Gray.g500)
                 .multilineTextAlignment(.center)
-            Button("홈으로") { router.pop() }
+            Button("홈으로") { store.send(.backTapped) }
                 .buttonStyle(.chalNa(.outlined, size: .md))
                 .padding(.top, 8)
             Spacer()
@@ -328,8 +326,7 @@ public struct FilmDetailView: View {
         FilmStorage.deleteMovie(filename: film.movieFilename)
         modelContext.delete(film)
         try? modelContext.save()
-        store.send(.deleteConfirmed)
-        router.pop()
+        store.send(.deleteConfirmed)   // reducer 가 dismiss 처리
     }
 
     // MARK: - Formatters

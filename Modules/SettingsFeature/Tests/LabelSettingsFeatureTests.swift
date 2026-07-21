@@ -29,10 +29,12 @@ struct LabelSettingsFeatureTests {
         await store.send(.dateOpacityChanged(0.2))
         #expect(store.state.dateOpacity == 0.2)
     }
-    @Test func positionRowTapsAreNoOp() async {
+    @Test func positionRowTapsEmitDelegates() async {
         let store = TestStore(initialState: LabelSettingsFeature.State()) { LabelSettingsFeature() }
         store.exhaustivity = .off
         await store.send(.timePositionRowTapped)
+        await store.receive(\.delegate)   // .positionRequested(.time) — 화면 전환은 부모가 해석
         await store.send(.datePositionRowTapped)
+        await store.receive(\.delegate)   // .positionRequested(.date)
     }
 }

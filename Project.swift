@@ -58,7 +58,6 @@ let project = Project(
         Module.framework(
             name: "MediaPickerFeature",
             dependencies: [
-                .target(name: "AppCore"),
                 .target(name: "AnalyticsService"),
                 .target(name: "Models"),
                 .target(name: "DesignSystem"),
@@ -101,7 +100,6 @@ let project = Project(
         Module.framework(
             name: "FilmDetailFeature",
             dependencies: [
-                .target(name: "AppCore"),
                 .target(name: "AnalyticsService"),
                 .target(name: "Models"),
                 .target(name: "DesignSystem"),

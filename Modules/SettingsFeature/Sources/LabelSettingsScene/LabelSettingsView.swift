@@ -1,11 +1,9 @@
 import SwiftUI
 import ComposableArchitecture
-import AppCore
 import Models
 import DesignSystem
 
 public struct LabelSettingsView: View {
-    @Environment(AppRouter.self) private var router
     let store: StoreOf<LabelSettingsFeature>
 
     public init(store: StoreOf<LabelSettingsFeature>) {
@@ -15,7 +13,7 @@ public struct LabelSettingsView: View {
     public var body: some View {
         VStack(spacing: 0) {
             ChalNaNavigationBar(titleKey: "라벨") {
-                ChalNaHeaderBackButton { router.pop() }
+                ChalNaHeaderBackButton { store.send(.backTapped) }
             } trailing: {
                 EmptyView()
             }
@@ -31,10 +29,7 @@ public struct LabelSettingsView: View {
                             position: store.timePosition,
                             opacity: store.timeOpacity,
                             onToggle: { store.send(.timeToggled($0)) },
-                            onPositionTap: {
-                                store.send(.timePositionRowTapped)
-                                router.push(.labelPosition(.time))
-                            },
+                            onPositionTap: { store.send(.timePositionRowTapped) },
                             onOpacityChange: { store.send(.timeOpacityChanged($0)) }
                         )
                         Divider().overlay(ChalNaColor.Gray.g100)
@@ -44,10 +39,7 @@ public struct LabelSettingsView: View {
                             position: store.datePosition,
                             opacity: store.dateOpacity,
                             onToggle: { store.send(.dateToggled($0)) },
-                            onPositionTap: {
-                                store.send(.datePositionRowTapped)
-                                router.push(.labelPosition(.date))
-                            },
+                            onPositionTap: { store.send(.datePositionRowTapped) },
                             onOpacityChange: { store.send(.dateOpacityChanged($0)) }
                         )
                     }
@@ -138,5 +130,4 @@ public struct LabelSettingsView: View {
 
 #Preview {
     LabelSettingsView(store: Store(initialState: LabelSettingsFeature.State()) { LabelSettingsFeature() })
-        .environment(AppRouter())
 }

@@ -25,6 +25,8 @@ public struct FilmDetailFeature {
         case onAppear
         case missingFileNoticed
 
+        case backTapped
+
         case playTapped
         case playerPresentedChanged(Bool)
 
@@ -39,6 +41,7 @@ public struct FilmDetailFeature {
     }
 
     @Dependency(\.analyticsTracker) var analyticsTracker
+    @Dependency(\.dismiss) var dismiss
 
     public var body: some ReducerOf<Self> {
         Reduce { state, action in
@@ -48,6 +51,9 @@ public struct FilmDetailFeature {
 
             case .missingFileNoticed:
                 return .none
+
+            case .backTapped:
+                return .run { _ in await dismiss() }
 
             case .playTapped:
                 state.isPlayerPresented = true
@@ -76,7 +82,7 @@ public struct FilmDetailFeature {
             case .deleteConfirmed:
                 state.isDeleteAlertPresented = false
                 analyticsTracker.log(.filmDeleted(filmID: state.filmID))
-                return .none
+                return .run { _ in await dismiss() }
             }
         }
     }

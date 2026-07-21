@@ -108,11 +108,21 @@ public struct TimelineFeature {
         case playheadElapsedUpdated(TimeInterval)
         case currentClipEnded
 
-        // Navigation intents (View 가 router 처리)
+        // Navigation intents
         case dismissTapped
         case saveTapped
+        case adjustCurrentTapped
         case rotateCurrentTapped
+        case delegate(Delegate)
+
+        /// 부모(AppFeature)가 화면 전환으로 해석하는 네비게이션 인텐트.
+        public enum Delegate: Equatable {
+            case exportRequested
+            case clipAdjustRequested(clipID: Clip.ID)
+        }
     }
+
+    @Dependency(\.dismiss) var dismiss
 
     // MARK: - Reducer
 
@@ -236,13 +246,20 @@ public struct TimelineFeature {
                 return .none
 
             case .dismissTapped:
-                return .none   // View 가 router.pop()
+                return .run { _ in await dismiss() }
 
             case .saveTapped:
-                return .none   // View 가 router.push(.export)
+                return .send(.delegate(.exportRequested))
+
+            case .adjustCurrentTapped:
+                guard let clipID = state.currentClip?.id else { return .none }
+                return .send(.delegate(.clipAdjustRequested(clipID: clipID)))
 
             case .rotateCurrentTapped:
                 return .none   // View 가 session.cycleRotation
+
+            case .delegate:
+                return .none
             }
         }
     }

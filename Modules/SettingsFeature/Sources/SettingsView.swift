@@ -1,11 +1,9 @@
 import SwiftUI
 import ComposableArchitecture
-import AppCore
 import DesignSystem
 
 /// 설정 최상위 메뉴. 현재 '라벨' 항목 1개 — 향후 다른 메뉴 행을 카드에 추가.
 public struct SettingsView: View {
-    @Environment(AppRouter.self) private var router
     let store: StoreOf<SettingsFeature>
 
     public init(store: StoreOf<SettingsFeature>) {
@@ -15,7 +13,7 @@ public struct SettingsView: View {
     public var body: some View {
         VStack(spacing: 0) {
             ChalNaNavigationBar(titleKey: "설정") {
-                ChalNaHeaderBackButton { router.pop() }
+                ChalNaHeaderBackButton { store.send(.backTapped) }
             } trailing: {
                 EmptyView()
             }
@@ -36,20 +34,18 @@ public struct SettingsView: View {
                 VStack(spacing: 0) {
                     menuRow(title: "라벨", subtitle: "영상에 표시되는 시각·날짜 라벨") {
                         store.send(.labelMenuTapped)
-                        router.push(.labelSettings)
                     }
 
                     Divider().overlay(ChalNaColor.Gray.g100)
 
                     menuRow(title: "언어", subtitle: "앱 표시 언어를 선택하세요") {
-                        router.push(.language)
+                        store.send(.languageMenuTapped)
                     }
 
                     Divider().overlay(ChalNaColor.Gray.g100)
 
                     menuRow(title: "문의·신고", subtitle: "불편한 점이나 제안을 보내주세요") {
                         store.send(.supportMenuTapped)
-                        router.push(.support)
                     }
                 }
                 .background(
@@ -98,5 +94,4 @@ public struct SettingsView: View {
 
 #Preview {
     SettingsView(store: Store(initialState: SettingsFeature.State()) { SettingsFeature() })
-        .environment(AppRouter())
 }

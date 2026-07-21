@@ -13,7 +13,6 @@ import UIKit
 
 /// Timeline에서 "저장"을 누르면 진입. AVFoundationCompositionService 를 구동해 mp4 를 만든다.
 public struct ExportView: View {
-    @Environment(AppRouter.self) private var router
     @Environment(EditSession.self) private var session
     @Environment(\.modelContext) private var modelContext
 
@@ -56,7 +55,7 @@ public struct ExportView: View {
         }
         .onDisappear {
             UIApplication.shared.isIdleTimerDisabled = false
-            store.send(.dismissTapped)
+            store.send(.viewDisappeared)
         }
         // 영상 합성 중에는 화면 자동 잠금(idle timer)을 막아 작업이 중단되지 않게 한다.
         .onChange(of: store.phase) { _, newPhase in
@@ -363,7 +362,6 @@ public struct ExportView: View {
 
                 Button {
                     store.send(.homeTapped)
-                    router.popToRoot()
                 } label: {
                     HStack(spacing: 6) {
                         Text("홈으로")
@@ -394,7 +392,7 @@ public struct ExportView: View {
             }
             .buttonStyle(.chalNaCoral)
 
-            Button("편집으로 돌아가기") { router.pop() }
+            Button("편집으로 돌아가기") { store.send(.backToEditTapped) }
                 .buttonStyle(.chalNaOutline)
                 .frame(maxWidth: .infinity)
         }
@@ -402,9 +400,6 @@ public struct ExportView: View {
 
     private func startAnotherFilm() {
         store.send(.startAnotherTapped)
-        session.clear()
-        router.popToRoot()
-        router.push(.mediaPicker)
     }
 
     // MARK: - Play overlay
@@ -473,7 +468,6 @@ private struct ExportVideoPlayerCover: UIViewControllerRepresentable {
             ExportFeature()
         }
     )
-    .environment(AppRouter())
     .environment(session)
     .modelContainer(for: Film.self, inMemory: true)
 }
@@ -489,7 +483,6 @@ private struct ExportVideoPlayerCover: UIViewControllerRepresentable {
             ExportFeature()
         }
     )
-    .environment(AppRouter())
     .environment(session)
     .modelContainer(for: Film.self, inMemory: true)
 }

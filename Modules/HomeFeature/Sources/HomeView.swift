@@ -7,7 +7,6 @@ import SwiftData
 
 /// 앱 루트 화면. Vlog 만들기 CTA + 최근 필름 라이브러리.
 public struct HomeView: View {
-    @Environment(AppRouter.self) private var router
     @Environment(AppLanguageStore.self) private var languageStore
     let store: StoreOf<HomeFeature>
 
@@ -52,7 +51,6 @@ public struct HomeView: View {
                 Spacer()
                 Button {
                     store.send(.settingsButtonTapped)
-                    router.push(.settings)
                 } label: {
                     Image(systemName: "gearshape")
                         .font(.system(size: 20))
@@ -109,8 +107,6 @@ public struct HomeView: View {
     private var primaryAction: some View {
         Button {
             store.send(.newVlogButtonTapped)
-            // 임시: navigation 은 여전히 router 가 처리. Step 6 에서 AppFeature.StackState 로 통합 예정.
-            router.push(.mediaPicker)
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "plus")
@@ -143,7 +139,7 @@ public struct HomeView: View {
                 LazyVStack(spacing: 12) {
                     ForEach(Array(films.enumerated()), id: \.element.id) { idx, film in
                         Button {
-                            router.push(.filmDetail(filmID: film.id))
+                            store.send(.filmTapped(filmID: film.id))
                         } label: {
                             FilmRow(film: film, fallbackIndex: idx)
                         }
@@ -233,7 +229,6 @@ private struct FilmRow: View {
 
 #Preview("Home") {
     HomeView()
-        .environment(AppRouter())
         .environment(EditSession())
         .environment(AppLanguageStore())
         .modelContainer(for: Film.self, inMemory: true)

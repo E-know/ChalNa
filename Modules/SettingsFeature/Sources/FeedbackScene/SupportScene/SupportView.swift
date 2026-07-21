@@ -1,11 +1,9 @@
 import SwiftUI
 import ComposableArchitecture
-import AppCore
 import DesignSystem
 
 /// 문의·신고 화면. 분류 칩 + 멀티라인 입력 + 전송 버튼.
 public struct SupportView: View {
-    @Environment(AppRouter.self) private var router
     @Bindable var store: StoreOf<SupportFeature>
 
     private let placeholder = String(localized: "불편한 점이나 제안을 자유롭게 적어주세요.")
@@ -44,11 +42,10 @@ public struct SupportView: View {
                 set: { if !$0 { store.send(.alertDismissed) } }
             ),
             presenting: store.alert
-        ) { info in
+        ) { _ in
             Button("확인", role: .cancel) {
-                // 알림 상태를 먼저 비운 뒤(재표시 방지) pop. 성공 시에만 화면을 닫는다(실패면 머물러 재시도).
+                // 성공 시 화면 닫기 판단은 reducer(alertDismissed)가 한다.
                 store.send(.alertDismissed)
-                if info.isSuccess { router.pop() }
             }
         } message: { info in
             Text(info.message)
@@ -69,7 +66,7 @@ public struct SupportView: View {
 
     private var header: some View {
         ChalNaNavigationBar(titleKey: "문의·신고") {
-            ChalNaHeaderBackButton { router.pop() }
+            ChalNaHeaderBackButton { store.send(.backTapped) }
         } trailing: {
             EmptyView()
         }
@@ -191,5 +188,4 @@ public struct SupportView: View {
 
 #Preview {
     SupportView(store: Store(initialState: SupportFeature.State()) { SupportFeature() })
-        .environment(AppRouter())
 }

@@ -6,7 +6,6 @@ import DesignSystem
 
 /// 타임라인 편집 화면. TCA store 기반.
 public struct TimelineView: View {
-    @Environment(AppRouter.self) private var router
     @Environment(EditSession.self) private var session
 
     @Bindable var store: StoreOf<TimelineFeature>
@@ -139,7 +138,6 @@ public struct TimelineView: View {
         ) {
             ChalNaHeaderBackButton {
                 store.send(.dismissTapped)
-                router.pop()
             }
         } trailing: {
             EmptyView()
@@ -217,10 +215,7 @@ public struct TimelineView: View {
                 onAdjust: { openAdjust() },
                 onLabel: { openLabelEditor() },
                 onDelete: { store.send(.deleteCurrentRequested) },
-                onSave: {
-                    store.send(.saveTapped)
-                    router.push(.export)
-                }
+                onSave: { store.send(.saveTapped) }
             )
             .padding(.bottom, 16)
         }
@@ -235,8 +230,8 @@ public struct TimelineView: View {
     }
 
     private func openAdjust() {
-        guard let id = store.currentClip?.id else { return }
-        router.push(.clipAdjust(clipID: id))
+        guard store.currentClip != nil else { return }
+        store.send(.adjustCurrentTapped)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
@@ -256,7 +251,6 @@ public struct TimelineView: View {
 
 #Preview("Idle") {
     TimelineView()
-        .environment(AppRouter())
         .environment(EditSession())
 }
 
@@ -266,6 +260,5 @@ public struct TimelineView: View {
             TimelineFeature()
         }
     )
-    .environment(AppRouter())
     .environment(EditSession())
 }

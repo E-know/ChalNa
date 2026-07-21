@@ -5,7 +5,6 @@ import DesignSystem
 
 /// 앱 표시 언어 선택 화면. 실제 상태는 AppLanguageStore(@Observable env)가 보유.
 public struct LanguageView: View {
-    @Environment(AppRouter.self) private var router
     @Environment(AppLanguageStore.self) private var languageStore
     let store: StoreOf<LanguageFeature>
 
@@ -16,7 +15,7 @@ public struct LanguageView: View {
     public var body: some View {
         VStack(spacing: 0) {
             ChalNaNavigationBar(titleKey: "언어") {
-                ChalNaHeaderBackButton { router.pop() }
+                ChalNaHeaderBackButton { store.send(.backTapped) }
             } trailing: {
                 EmptyView()
             }
@@ -74,6 +73,5 @@ public struct LanguageView: View {
     LanguageView(store: Store(initialState: LanguageFeature.State(), reducer: {
         LanguageFeature()
     }))
-    .environment(AppRouter())
     .environment(AppLanguageStore())
 }

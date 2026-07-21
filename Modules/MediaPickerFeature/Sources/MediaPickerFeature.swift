@@ -3,7 +3,6 @@ import Foundation
 import Photos
 import Models
 import PhotosService
-import AppCore
 import AnalyticsService
 
 /// 사진 보관함에서 Live Photo / 영상을 선택해 Timeline 으로 넘기는 화면의 Reducer.
@@ -41,9 +40,6 @@ public struct MediaPickerFeature {
         public var scrollProgress: Double = 0
         public var isResolving: Bool = false
 
-        /// confirm 이 완료되면 set. View 가 onChange 로 잡아 navigation 처리.
-        public var confirmation: Confirmation?
-
         /// 미리보기 시트로 띄울 선택된 미디어. nil 이면 시트가 닫혀 있음.
         public var previewAsset: PhotoLibraryAsset?
 
@@ -53,12 +49,6 @@ public struct MediaPickerFeature {
         ) {
             self.source = source
             self.photoAuthorizationStatus = photoAuthorizationStatus
-        }
-
-        public struct Confirmation: Equatable {
-            public let id: UUID
-            public let clips: [Clip]
-            public let title: String
         }
     }
 
@@ -104,6 +94,14 @@ public struct MediaPickerFeature {
         // Primary action
         case primaryActionTapped
         case devResolveCompleted(Result<[Clip], MediaPickerError>)
+
+        case delegate(Delegate)
+
+        /// 부모(AppFeature)가 화면 전환으로 해석하는 네비게이션 인텐트.
+        public enum Delegate {
+            /// 선택 확정 — 부모가 EditSession 에 싣고 Timeline 으로 push.
+            case selectionConfirmed(clips: [Clip], title: String)
+        }
     }
 
     public struct MediaLoaded: Equatable {
@@ -130,8 +128,8 @@ public struct MediaPickerFeature {
     // MARK: - Dependencies
 
     @Dependency(\.photoLibraryClient) var photoLibraryClient
-    @Dependency(\.uuid) var uuid
     @Dependency(\.analyticsTracker) var analyticsTracker
+    @Dependency(\.dismiss) var dismiss
 
     // MARK: - Reducer
 
@@ -162,7 +160,7 @@ public struct MediaPickerFeature {
                 return .none
 
             case .dismissTapped:
-                return .none   // 부모(RootView)가 router.pop()
+                return .run { _ in await dismiss() }
 
             case .photoLauncherTapped:
                 let current = photoLibraryClient.authorizationStatus()
@@ -364,13 +362,15 @@ public struct MediaPickerFeature {
                 guard !clips.isEmpty else { return .none }
                 let ordered = clips.sorted { $0.capturedAt < $1.capturedAt }
                 let trimmed = state.titleInput.trimmingCharacters(in: .whitespacesAndNewlines)
-                state.confirmation = State.Confirmation(id: uuid(), clips: ordered, title: trimmed)
                 analyticsTracker.log(.clipsConfirmed(count: ordered.count))
-                return .none
+                return .send(.delegate(.selectionConfirmed(clips: ordered, title: trimmed)))
 
             case let .devResolveCompleted(.failure(error)):
                 state.isResolving = false
                 state.devErrorMessage = error.message
+                return .none
+
+            case .delegate:
                 return .none
             }
         }
@@ -406,9 +406,8 @@ public struct MediaPickerFeature {
         }
         let ordered = clips.sorted { $0.capturedAt < $1.capturedAt }
         let trimmed = state.titleInput.trimmingCharacters(in: .whitespacesAndNewlines)
-        state.confirmation = State.Confirmation(id: uuid(), clips: ordered, title: trimmed)
         analyticsTracker.log(.clipsConfirmed(count: ordered.count))
-        return .none
+        return .send(.delegate(.selectionConfirmed(clips: ordered, title: trimmed)))
     }
 
     private func confirmDevFixtures(state: inout State, source: any DevMediaSourcing) -> Effect<Action> {

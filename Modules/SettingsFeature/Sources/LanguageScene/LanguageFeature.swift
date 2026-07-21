@@ -9,9 +9,18 @@ public struct LanguageFeature {
         public init() {}
     }
 
-    public enum Action: Equatable {}
+    public enum Action: Equatable {
+        case backTapped
+    }
+
+    @Dependency(\.dismiss) var dismiss
 
     public var body: some ReducerOf<Self> {
-        EmptyReducer()
+        Reduce { _, action in
+            switch action {
+            case .backTapped:
+                return .run { _ in await dismiss() }
+            }
+        }
     }
 }

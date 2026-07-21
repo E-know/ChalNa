@@ -9,7 +9,6 @@ import DesignSystem
 /// 편집은 EditSession 에 live 반영(회전 기존 동작과 동일, 별도 취소 없음).
 public struct ClipAdjustView: View {
     @Environment(EditSession.self) private var session
-    @Environment(AppRouter.self) private var router
 
     let store: StoreOf<ClipAdjustFeature>
     @State private var playback = ClipPlaybackController()
@@ -47,11 +46,10 @@ public struct ClipAdjustView: View {
 
     private var topBar: some View {
         ChalNaNavigationBar(titleKey: "조정") {
-            ChalNaHeaderBackButton { router.pop() }
+            ChalNaHeaderBackButton { store.send(.backTapped) }
         } trailing: {
             ChalNaHeaderTextAction("완료") {
                 store.send(.doneTapped)
-                router.pop()
             }
         }
         .padding(.horizontal, 16)
