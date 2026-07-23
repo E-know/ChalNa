@@ -54,6 +54,25 @@
 - **사회적 증거(평점·사용자 수)는 보류** — Adapty: 실제 평점이 좋을 때만 효과. 출시 전이므로 실지표 확보 후 A/B로 추가.
 - 가격 ₩1,500/주는 목업 표시용. 실제 가격은 App Store Connect 상품 설정을 UI에서 동적 로드.
 
+### 애니메이션 명세
+
+**Figma 프로토타입 (완료)**: `온보딩 플로우` 시작점(가치①)에서 재생 — CTA 탭/드래그 시 다음 화면으로 Smart Animate(0.35s, ease-out) 전환. 위치가 통일된 dots·CTA·헤드라인이 자연스럽게 이어지고, 페이월 CTA는 Home으로 Dissolve(체험 시작 연출).
+
+**SwiftUI 구현 (화면별 등장 연출)** — 공통: 페이지 최초 표시 시 1회 실행, `.easeOut` 계열, **Reduce Motion 시 fade-only** (SplashView 패턴 준수). 페이지 전환은 TabView(page) 기본 스와이프.
+
+| 화면 | 연출 |
+|---|---|
+| 가치① | 샘플 필름 **자동 재생**(무음·반복). 필름스트립 셀 5개가 트레일링에서 순차 슬라이드-인(50ms stagger), 재생 버튼 subtle pulse(scale 1.0↔1.06, 1.2s 반복) |
+| 질문 | 선택 카드 4장 staggered fade+slide-up(60ms). 선택 시 spring(scale 0.97→1.0) + 보더/배경색 애니메이션 |
+| 가치② | **핵심 연출** — 클립 카드 4장이 뒤섞인 배열에서 촬영일 순으로 재정렬(`matchedGeometryEffect` + spring), 완료 후 날짜 마커가 왼쪽부터 순차 점등 |
+| 가치③ | 시간 라벨 fade-in(0.3s) → 날짜 라벨(+0.15s) → 토글 2개 순차 ON 플립(토글 애니메이션으로 "선택 가능"을 한 번 더 암시) |
+| 가치④ 자막 | 자막 박스 타이핑 연출("제주 바다", 커서 깜빡임) → 크기 슬라이더 노브가 살짝 이동하며 박스 크기가 연동해 커지는 데모 1회 |
+| 권한 | 아이콘 원 스케일-인 spring(0.8→1.0) |
+| 페이월 | 타임라인 3스텝 위→아래 순차 등장(120ms stagger) + 연결선이 세로로 그려지는 연출. CTA 등장 후 1회 subtle bounce. 가격 카드는 정적 유지(과한 강조 금지) |
+
+- 구현: SwiftUI 표준(`PhaseAnimator`/`withAnimation`/`matchedGeometryEffect`), Swift Concurrency 전용(GCD 금지 규칙 준수).
+- 근거: Fabulous 몰입형 연출·"결과물 먼저" 패턴(리서치 ①③). 페이월 애니메이션 효과 수치(RevenueCat "+12–18%")는 근거 약함 — 과하지 않게 1회성 등장 연출로 제한.
+
 ## 4. 구현 아키텍처 (승인된 접근: 신규 모듈 2개)
 
 - **`OnboardingFeature`** (Feature 레이어)
