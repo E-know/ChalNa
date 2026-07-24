@@ -1,0 +1,47 @@
+{
+  "identifier" : "F9A1C2D3",
+  "nonRenewingSubscriptions" : [ ],
+  "products" : [ ],
+  "settings" : {
+    "_locale" : "ko_KR",
+    "_storefront" : "KOR"
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21000001",
+      "localizations" : [ ],
+      "name" : "ChalNa Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [ ],
+          "codeOffers" : [ ],
+          "displayPrice" : "1500",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "A1B2C3D4",
+          "introductoryOffer" : {
+            "internalID" : "B2C3D4E5",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P3D"
+          },
+          "localizations" : [
+            {
+              "description" : "영상 무제한 생성과 모든 편집 기능",
+              "displayName" : "ChalNa Pro 주간",
+              "locale" : "ko_KR"
+            }
+          ],
+          "productID" : "ios.inho.ChalNa.pro.weekly",
+          "recurringSubscriptionPeriod" : "P1W",
+          "referenceName" : "ChalNa Pro Weekly",
+          "subscriptionGroupID" : "21000001",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

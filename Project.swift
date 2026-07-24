@@ -263,5 +263,19 @@ let project = Project(
                 ])
             )
         ),
+        .scheme(
+            name: "ChalNa Paywall Dev",
+            shared: true,
+            buildAction: .buildAction(targets: ["ChalNa"]),
+            runAction: .runAction(
+                configuration: .debug,
+                executable: "ChalNa",
+                arguments: .arguments(environmentVariables: [
+                    "CHALNA_APP_MODE": "devMock",
+                    "CHALNA_FORCE_ONBOARDING": "1",
+                ]),
+                options: .options(storeKitConfigurationPath: "ChalNa.storekit")
+            )
+        ),
     ]
 )
