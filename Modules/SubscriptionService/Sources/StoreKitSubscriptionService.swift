@@ -70,7 +70,20 @@ extension SubscriptionClient: DependencyKey {
                 try await AppStore.sync()
                 return await hasActiveEntitlement()
             },
-            isSubscribed: { await hasActiveEntitlement() },
+            isSubscribed: {
+                // 런치 게이트가 이 호출을 기다린다 — StoreKit 데몬 무응답(설정 미부착 시뮬레이터,
+                // 드문 XPC 장애)에 무한 대기하지 않도록 3초 타임아웃. 타임아웃 = 미구독 취급(fail-closed).
+                await withTaskGroup(of: Bool?.self) { group in
+                    group.addTask { await hasActiveEntitlement() }
+                    group.addTask {
+                        try? await Task.sleep(for: .seconds(3))
+                        return nil
+                    }
+                    let first = await group.next() ?? nil
+                    group.cancelAll()
+                    return first ?? false
+                }
+            },
             isSubscribedCached: { cache.value },
             observeTransactionUpdates: {
                 for await result in Transaction.updates {
