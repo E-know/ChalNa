@@ -45,6 +45,16 @@ let project = Project(
             ]
         ),
         Module.framework(
+            name: "OnboardingFeature",
+            dependencies: [
+                .target(name: "AnalyticsService"),
+                .target(name: "Models"),
+                .target(name: "DesignSystem"),
+                .target(name: "SubscriptionService"),
+                .external(name: "ComposableArchitecture"),
+            ]
+        ),
+        Module.framework(
             name: "AppCore",
             dependencies: [
                 .target(name: "Models"),
@@ -158,6 +168,7 @@ let project = Project(
                 .target(name: "TimelineFeature"),
                 .target(name: "FilmDetailFeature"),
                 .target(name: "SettingsFeature"),
+                .target(name: "OnboardingFeature"),
                 .external(name: "ComposableArchitecture"),
                 .external(name: "FirebaseAnalytics"),
             ],
@@ -226,6 +237,13 @@ let project = Project(
             dependencies: [
                 .target(name: "AppCore"),
                 .target(name: "Models"),
+                .external(name: "ComposableArchitecture"),
+            ]
+        ),
+        Module.unitTests(
+            for: "OnboardingFeature",
+            dependencies: [
+                .target(name: "SubscriptionService"),
                 .external(name: "ComposableArchitecture"),
             ]
         ),
