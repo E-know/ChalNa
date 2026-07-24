@@ -1069,7 +1069,8 @@ struct Value1PageView: View {
         .padding(.horizontal, 34)
         .padding(.vertical, 6)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            // 라디우스는 토큰만 — 앱 Timeline 필름스트립과 동일하게 sheet(16).
+            RoundedRectangle(cornerRadius: ChalNaRadius.sheet, style: .continuous)
                 .fill(ChalNaColor.Gray.g900)
                 .frame(height: 64)
         )
