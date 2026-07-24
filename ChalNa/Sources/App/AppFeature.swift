@@ -9,6 +9,8 @@ import ExportFeature
 import FilmDetailFeature
 import PhotosService
 import SettingsFeature
+import OnboardingFeature
+import SubscriptionService
 
 /// 앱 루트 Reducer. Home 을 root 로 두고 나머지 화면을 StackState 로 push.
 /// 화면 전환은 각 자식 Feature 의 `delegate` 액션을 여기서 path 조작으로 해석한다.
@@ -21,6 +23,9 @@ public struct AppFeature {
     public struct State {
         public var home = HomeFeature.State()
         public var path = StackState<Path.State>()
+        /// 하드 페이월 게이트. 구독(체험 포함) 비활성 시 온보딩/페이월 오버레이 표시.
+        @Presents public var onboarding: OnboardingFeature.State?
+        @Shared(.appStorage("hasSeenOnboarding")) public var hasSeenOnboarding = false
 
         public init() {}
     }
@@ -28,6 +33,9 @@ public struct AppFeature {
     public enum Action {
         case home(HomeFeature.Action)
         case path(StackActionOf<Path>)
+        case task
+        case gateResolved(subscribed: Bool)
+        case onboarding(PresentationAction<OnboardingFeature.Action>)
     }
 
     @Reducer
@@ -46,6 +54,7 @@ public struct AppFeature {
 
     @Dependency(\.analyticsTracker) var analyticsTracker
     @Dependency(\.editSession) var editSession
+    @Dependency(\.subscriptionClient) var subscriptionClient
 
     public var body: some ReducerOf<Self> {
         Scope(state: \.home, action: \.home) {
@@ -125,11 +134,45 @@ public struct AppFeature {
                 }
                 return .none
 
+            // MARK: Onboarding gate
+
+            case .task:
+                // devMock 은 게이트 스킵 (UITests·fixture 플로우 보호). 강제 표시는 env 로.
+                let forced = ProcessInfo.processInfo.environment["CHALNA_FORCE_ONBOARDING"] == "1"
+                let shouldGate = AppMode.current == .real || forced
+                return .merge(
+                    // 갱신/환불 트랜잭션 finish (앱 수명 동안 유지되는 옵저버).
+                    .run { _ in await subscriptionClient.observeTransactionUpdates() },
+                    shouldGate
+                        ? .run { send in
+                            let subscribed = await subscriptionClient.isSubscribed()
+                            await send(.gateResolved(subscribed: subscribed))
+                        }
+                        : .none
+                )
+
+            case let .gateResolved(subscribed):
+                guard !subscribed else { return .none }
+                state.onboarding = OnboardingFeature.State(
+                    mode: state.hasSeenOnboarding ? .paywallOnly : .full
+                )
+                return .none
+
+            case .onboarding(.presented(.delegate(.completed))):
+                state.onboarding = nil
+                return .none
+
+            case .onboarding:
+                return .none
+
             case .home, .path:
                 return .none
             }
         }
         .forEach(\.path, action: \.path)
+        .ifLet(\.$onboarding, action: \.onboarding) {
+            OnboardingFeature()
+        }
     }
 
     // MARK: - Helpers

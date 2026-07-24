@@ -71,7 +71,16 @@ extension SubscriptionClient: DependencyKey {
                 return await hasActiveEntitlement()
             },
             isSubscribed: { await hasActiveEntitlement() },
-            isSubscribedCached: { cache.value }
+            isSubscribedCached: { cache.value },
+            observeTransactionUpdates: {
+                for await result in Transaction.updates {
+                    guard case let .verified(transaction) = result else { continue }
+                    if transaction.productID == SubscriptionConstants.weeklyProductID {
+                        cache.setValue(transaction.revocationDate == nil)
+                    }
+                    await transaction.finish()
+                }
+            }
         )
     }()
 }

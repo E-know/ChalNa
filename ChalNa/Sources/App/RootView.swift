@@ -8,6 +8,7 @@ import FilmDetailFeature
 import AppCore
 import DesignSystem
 import SettingsFeature
+import OnboardingFeature
 
 /// 앱 루트. TCA AppFeature 의 StackState 가 navigation 의 단일 출처.
 /// push 는 자식 delegate → AppFeature, pop 은 자식 리듀서의 dismiss 의존성이 처리한다.
@@ -22,16 +23,27 @@ public struct RootView: View {
     public init() {}
 
     public var body: some View {
-        NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
-            HomeView(store: store.scope(state: \.home, action: \.home))
-                .toolbar(.hidden, for: .navigationBar)
-                .chalNaSwipeBack()
-        } destination: { childStore in
-            destinationView(for: childStore)
-                .toolbar(.hidden, for: .navigationBar)
-                .navigationBarBackButtonHidden(true)
-                .chalNaSwipeBack()
+        ZStack {
+            NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
+                HomeView(store: store.scope(state: \.home, action: \.home))
+                    .toolbar(.hidden, for: .navigationBar)
+                    .chalNaSwipeBack()
+            } destination: { childStore in
+                destinationView(for: childStore)
+                    .toolbar(.hidden, for: .navigationBar)
+                    .navigationBarBackButtonHidden(true)
+                    .chalNaSwipeBack()
+            }
+
+            // 하드 페이월 게이트 — fullScreenCover 대신 오버레이(런치 플래시 방지, 스플래시와 자연 연결).
+            if let onboardingStore = store.scope(state: \.onboarding, action: \.onboarding.presented) {
+                OnboardingView(store: onboardingStore)
+                    .transition(.opacity)
+                    .zIndex(1)
+            }
         }
+        .animation(.easeInOut(duration: 0.25), value: store.onboarding == nil)
+        .task { store.send(.task) }
         .environment(session)
         .environment(languageStore)
         .environment(\.locale, languageStore.locale)

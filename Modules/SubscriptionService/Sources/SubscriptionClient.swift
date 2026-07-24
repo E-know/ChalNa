@@ -50,6 +50,9 @@ public struct SubscriptionClient: Sendable {
     public var isSubscribed: @Sendable () async -> Bool = { false }
     /// 리듀서 동기 컨텍스트용 캐시 (isSubscribed/purchase 가 갱신).
     public var isSubscribedCached: @Sendable () -> Bool = { false }
+    /// 앱 수명 동안 StoreKit 트랜잭션 업데이트(갱신·환불·승인 완료)를 관찰하고 finish 한다.
+    /// 앱 시작 시 1회 호출해 장기 실행 — AppFeature `.task` 에서 구동.
+    public var observeTransactionUpdates: @Sendable () async -> Void = {}
 }
 
 extension SubscriptionClient: TestDependencyKey {
@@ -67,7 +70,8 @@ extension SubscriptionClient: TestDependencyKey {
         purchase: { .success },
         restore: { false },
         isSubscribed: { false },
-        isSubscribedCached: { false }
+        isSubscribedCached: { false },
+        observeTransactionUpdates: {}
     )
 }
 
