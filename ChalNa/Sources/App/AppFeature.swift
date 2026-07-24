@@ -56,6 +56,8 @@ public struct AppFeature {
     @Dependency(\.editSession) var editSession
     @Dependency(\.subscriptionClient) var subscriptionClient
 
+    private enum CancelID { case transactionObserver, gate }
+
     public var body: some ReducerOf<Self> {
         Scope(state: \.home, action: \.home) {
             HomeFeature()
@@ -142,17 +144,19 @@ public struct AppFeature {
                 let shouldGate = AppMode.current == .real || forced
                 return .merge(
                     // 갱신/환불 트랜잭션 finish (앱 수명 동안 유지되는 옵저버).
-                    .run { _ in await subscriptionClient.observeTransactionUpdates() },
+                    .run { _ in await subscriptionClient.observeTransactionUpdates() }
+                        .cancellable(id: CancelID.transactionObserver, cancelInFlight: true),
                     shouldGate
                         ? .run { send in
                             let subscribed = await subscriptionClient.isSubscribed()
                             await send(.gateResolved(subscribed: subscribed))
                         }
+                        .cancellable(id: CancelID.gate, cancelInFlight: true)
                         : .none
                 )
 
             case let .gateResolved(subscribed):
-                guard !subscribed else { return .none }
+                guard !subscribed, state.onboarding == nil else { return .none }
                 state.onboarding = OnboardingFeature.State(
                     mode: state.hasSeenOnboarding ? .paywallOnly : .full
                 )
