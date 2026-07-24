@@ -5,6 +5,7 @@ import AppCore
 import CompositionService
 import PhotosService
 import AnalyticsService
+import SubscriptionService
 
 /// Timeline → Export 화면 Reducer. 진행률/완료/실패 phase 와 사진 보관함 저장 phase 를 함께 관리.
 @Reducer
@@ -101,6 +102,7 @@ public struct ExportFeature {
     @Dependency(\.photoLibraryClient) var photoLibraryClient
     @Dependency(\.analyticsTracker) var analyticsTracker
     @Dependency(\.exportQuotaClient) var exportQuotaClient
+    @Dependency(\.subscriptionClient) var subscriptionClient
     @Dependency(\.dismiss) var dismiss
 
     private enum CancelID { case exportStream }
@@ -112,17 +114,20 @@ public struct ExportFeature {
             switch action {
             case let .startExport(clips, rotations, transforms, clipLabels):
                 guard !clips.isEmpty else { return .none }
-                switch exportQuotaClient.reserveExport() {
-                case .allowed:
-                    break
-                case let .blocked(reason):
-                    state.phase = .failed
-                    state.progress = 0
-                    state.errorMessage = reason.message
-                    state.exportedURL = nil
-                    state.didAddToLibrary = false
-                    analyticsTracker.log(.exportFailed(reason: "quota_\(reason)"))
-                    return .none
+                // 구독(체험 포함) 활성 시 쿼터 우회 — 리딤 코드와 동일 취급.
+                if !subscriptionClient.isSubscribedCached() {
+                    switch exportQuotaClient.reserveExport() {
+                    case .allowed:
+                        break
+                    case let .blocked(reason):
+                        state.phase = .failed
+                        state.progress = 0
+                        state.errorMessage = reason.message
+                        state.exportedURL = nil
+                        state.didAddToLibrary = false
+                        analyticsTracker.log(.exportFailed(reason: "quota_\(reason)"))
+                        return .none
+                    }
                 }
                 state.phase = .exporting
                 state.progress = 0

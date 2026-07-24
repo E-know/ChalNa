@@ -91,6 +91,7 @@ let project = Project(
                 .target(name: "CompositionService"),
                 .target(name: "FileStorage"),
                 .target(name: "PhotosService"),
+                .target(name: "SubscriptionService"),
                 .external(name: "ComposableArchitecture"),
             ]
         ),
@@ -201,6 +202,7 @@ let project = Project(
                 .target(name: "Models"),
                 .target(name: "CompositionService"),
                 .target(name: "PhotosService"),
+                .target(name: "SubscriptionService"),
                 .external(name: "ComposableArchitecture"),
             ]
         ),

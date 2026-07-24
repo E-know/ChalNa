@@ -5,6 +5,7 @@ import Models
 import PhotosService
 import CompositionService
 import AppCore
+import SubscriptionService
 @testable import ExportFeature
 
 @MainActor
@@ -16,6 +17,7 @@ struct ExportFeatureQuotaTests {
         let store = TestStore(initialState: ExportFeature.State()) {
             ExportFeature()
         } withDependencies: {
+            $0.subscriptionClient.isSubscribedCached = { false }
             $0.exportQuotaClient.reserveExport = {
                 didReserve.setValue(true)
                 return .allowed
@@ -43,6 +45,7 @@ struct ExportFeatureQuotaTests {
         let store = TestStore(initialState: ExportFeature.State()) {
             ExportFeature()
         } withDependencies: {
+            $0.subscriptionClient.isSubscribedCached = { false }
             $0.exportQuotaClient.reserveExport = { .blocked(.dailyLimit) }
             $0.compositionClient.export = { _, _, _, _, _ in
                 didStartComposition.setValue(true)
@@ -56,6 +59,30 @@ struct ExportFeatureQuotaTests {
         #expect(!didStartComposition.value)
         #expect(store.state.phase == .failed)
         #expect(store.state.errorMessage == ExportQuotaBlockReason.dailyLimit.message)
+    }
+
+    @Test func subscribedUserBypassesQuota() async {
+        let clip = exportableClip()
+        let output = URL(fileURLWithPath: "/tmp/chalna-export.mp4")
+        let store = TestStore(initialState: ExportFeature.State()) {
+            ExportFeature()
+        } withDependencies: {
+            $0.subscriptionClient.isSubscribedCached = { true }
+            // 쿼터가 소진돼 있어도 구독자는 통과해야 한다.
+            $0.exportQuotaClient.reserveExport = { .blocked(.dailyLimit) }
+            $0.compositionClient.export = { _, _, _, _, _ in
+                AsyncStream { continuation in
+                    continuation.yield(.completed(output))
+                    continuation.finish()
+                }
+            }
+            $0.photoLibraryClient.saveVideoToPhotoLibrary = { _ in .ok }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.startExport(clips: [clip], rotations: [:], transforms: [:], clipLabels: [:]))
+        await store.receive(\.exportCompleted)
+        #expect(store.state.phase == .done)
     }
 
     private func exportableClip() -> Clip {
