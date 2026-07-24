@@ -27,9 +27,10 @@ xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
 xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test
 
-# 단일 테스트 (Swift Testing 파일/케이스 단위). 테스트 타겟명은 `<모듈>Tests`.
-xcodebuild ... test \
-  -only-testing:TimelineFeatureTests/TimelinePlaybackTests/testAdvancePlayheadSimulated_UpdatesCurrentIndex
+# 모듈 단위 테스트 — 모듈 테스트 타겟은 앱 스킴이 아니라 Tuist 자동 생성 "모듈 스킴"에 연결돼 있다.
+# (`-scheme ChalNa test -only-testing:<모듈>Tests` 는 타겟에 닿지 않음)
+xcodebuild -workspace ChalNa.xcworkspace -scheme OnboardingFeature \
+           -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test
 ```
 
 - **스킴이 두 개다**:
@@ -38,7 +39,8 @@ xcodebuild ... test \
 - 단일 모듈만 빌드/포커스: `tuist focus <Module>` (예: `tuist focus DesignSystem`).
 - 의존성 그래프: `tuist graph` → `docs/architecture-graph.png`.
 - iOS 빌드/시뮬레이터 실행은 가능하면 `ios-build-run` 서브에이전트에 위임한다 (매번 fresh build → 설치/실행으로 시각 검증).
-- 테스트 타겟: `AppCoreTests` · `CompositionServiceTests` · `PhotosServiceTests` · `TimelineFeatureTests`. 케이스는 SwiftUI Preview 보조용 `SampleData`를 적극 활용한다.
+- 테스트 타겟: `AppCoreTests` · `CompositionServiceTests` · `PhotosServiceTests` · `TimelineFeatureTests` · `MediaPickerFeatureTests` · `SettingsFeatureTests` · `ExportFeatureTests` · `OnboardingFeatureTests`. 케이스는 SwiftUI Preview 보조용 `SampleData`를 적극 활용한다.
+- 온보딩/페이월 개발 실행: `ChalNa Paywall Dev` 스킴 (devMock + `CHALNA_FORCE_ONBOARDING=1` + 루트 `ChalNa.storekit` 로컬 상품 attach). 하드 페이월 게이트는 devMock 에서 기본 스킵.
 
 ## 기술 스택 (엄수)
 - **Swift 6.0+, iOS 18+** (`AVAssetExportSession` async API 등으로 deployment 18 고정).
@@ -64,10 +66,10 @@ xcodebuild ... test \
 ```
 앱 셸     ChalNa  ── @main ChalNaApp · ContentView · App/{AppFeature(TCA root)·RootView·AppMode}
             │
-Feature   HomeFeature · MediaPickerFeature · TimelineFeature · ExportFeature · FilmDetailFeature
+Feature   HomeFeature · MediaPickerFeature · TimelineFeature · ExportFeature · FilmDetailFeature · SettingsFeature · OnboardingFeature
 (모두 @Reducer)   │  (Feature끼리 직접 import 금지)
             │
-서비스/코어  AppCore(EditSession) · PhotosService · CompositionService · AnalyticsService
+서비스/코어  AppCore(EditSession) · PhotosService · CompositionService · AnalyticsService · SubscriptionService(StoreKit 2)
             │
 모델/DS    Models ·····  DesignSystem (dynamic framework, 의존 없음 = 최하단)
             │
@@ -79,7 +81,7 @@ External(SPM): ComposableArchitecture(TCA) · FirebaseAnalytics
 핵심 의존 규칙 (`Project.swift`가 단일 출처):
 - **DesignSystem / FileStorage** 는 다른 모듈에 의존하지 않는다 (최하단). DesignSystem 은 `isDynamic: true`(동적 프레임워크).
 - **Models → FileStorage** 만 의존. (과거의 DesignSystem 의존은 제거됨 — 색상 hex 헬퍼를 Models 자체 `ColorHex.swift`로 내재화)
-- **PhotosService / CompositionService → Models, TCA**. **AnalyticsService → TCA, FirebaseAnalytics** (Models 도 모름).
+- **PhotosService / CompositionService → Models, TCA**. **AnalyticsService → TCA, FirebaseAnalytics** (Models 도 모름). **SubscriptionService → TCA 만** (StoreKit 2 래핑 `SubscriptionClient` + `TrialReminderClient`; 주간 구독 `ios.inho.ChalNa.pro.weekly`).
 - **AppCore → Models, TCA** (Feature 모름).
 - **Feature → AppCore + 필요한 서비스 + Models + DesignSystem + TCA**. Feature 끼리는 절대 직접 import 안 한다 — 화면 전환은 자기 모듈의 `delegate` 액션으로 선언만 하고, 해석(매핑)은 앱 셸의 `AppFeature`가 한다.
 - 앱 타겟은 `OTHER_LDFLAGS = -ObjC` 를 강제한다 (Firebase ObjC 카테고리가 dead-code-strip 되어 `unrecognized selector` 나는 것 방지).

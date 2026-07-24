@@ -123,5 +123,16 @@
 
 ## 9. 작업 순서
 
-1. ~~Figma `1.2.0` 페이지에 화면 추가~~ (완료 — 리서치 반영판 6화면)
-2. 사용자 확인 후 SwiftUI 구현 (writing-plans 스킬로 상세 계획 후 진행)
+1. ~~Figma `1.2.0` 페이지에 화면 추가~~ (완료 — 리서치 반영판 7화면)
+2. ~~SwiftUI 구현~~ (완료 — `feature/onboarding-paywall` 브랜치, 최종 전체 리뷰 "머지 가능")
+
+## 10. 출시(심사 제출) 전 필수 후속 항목
+
+최종 전체 브랜치 리뷰(2026-07-24)에서 확정된 목록:
+
+1. **App Store Connect**: `ios.inho.ChalNa.pro.weekly` 구독 상품 생성 (주간 ₩1,500 + 3일 무료 체험, 그룹 "ChalNa Pro").
+2. **개인정보처리방침 URL**: `PaywallView.Legal.privacy` placeholder(`https://chalna.app/privacy`) 를 실제 URL 로 교체 + ASC 메타데이터 등록.
+3. **온보딩/페이월 문자열 국제화**: 신규 문자열 ~40개(온보딩 카피·페이월 고지·토스트·D-2 알림 본문·관심사명)가 `Localizable.xcstrings` 에 미등록 — en/ja 번역 추가 (현재 en/ja 기기에서 첫 화면+결제 고지만 한국어로 노출됨).
+4. **Interrupted purchase 대응**: Ask-to-Buy 승인/타임아웃 후 entitlement 확인 시 페이월 **자동** 해제 (현재는 "구매 복원" 수동 탈출만 — 심사 코멘트 리스크).
+5. **실기기 sandbox E2E 1회**: 구매 → 게이트 해제 → export 쿼터 우회. (시뮬레이터 자동 검증은 게이트+온보딩 렌더까지 완료; 구매 시트는 Xcode "ChalNa Paywall Dev" 스킴 실행으로 확인 가능)
+6. 가치① 샘플 필름 자동 재생용 프로덕션 번들 영상 에셋.
