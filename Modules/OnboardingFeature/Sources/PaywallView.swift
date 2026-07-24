@@ -159,7 +159,7 @@ public struct PaywallView: View {
                 }
             }
             .buttonStyle(.chalNa(.filled, size: .xl, fillWidth: true))
-            .disabled(store.isPurchasing)
+            .disabled(store.isPurchasing || store.isRestoring)
             .scaleEffect(ctaBounced || reduceMotion ? 1.0 : 0.98)
             .padding(.horizontal, 24)
 
@@ -176,7 +176,7 @@ public struct PaywallView: View {
     private var legalLinks: some View {
         HStack(spacing: 6) {
             Button("구매 복원") { store.send(.restoreTapped) }
-                .disabled(store.isRestoring)
+                .disabled(store.isPurchasing || store.isRestoring)
             Text(verbatim: "·")
             Link("이용약관", destination: Legal.terms)
             Text(verbatim: "·")

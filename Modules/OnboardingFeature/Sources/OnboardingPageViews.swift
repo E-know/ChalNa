@@ -86,15 +86,19 @@ struct Value1PageView: View {
             }
         }
         .onAppear {
-            guard cellsShown == 0 else { return }
-            if reduceMotion {
-                cellsShown = 5
-            } else {
-                for i in 1...5 {
-                    withAnimation(.easeOut(duration: 0.35).delay(Double(i) * 0.05)) { cellsShown = i }
+            if cellsShown == 0 {
+                if reduceMotion {
+                    cellsShown = 5
+                } else {
+                    for i in 1...5 {
+                        withAnimation(.easeOut(duration: 0.35).delay(Double(i) * 0.05)) { cellsShown = i }
+                    }
                 }
             }
             withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) { pulsing = true }
+        }
+        .onDisappear {
+            withAnimation(nil) { pulsing = false }
         }
     }
 
@@ -169,8 +173,7 @@ struct InterestPageView: View {
             onTap(interest)
         } label: {
             VStack(spacing: 12) {
-                Image(systemName: interest.symbolName)
-                    .font(ChalNaTypography.krBody(24))
+                interestIcon(interest)
                     .foregroundColor(ChalNaColor.Purple.p600)
                 Text(interest.koreanName)
                     .font(ChalNaTypography.krBody(ChalNaTypography.Size.body2, weight: isSelected ? .bold : .medium))
@@ -192,6 +195,17 @@ struct InterestPageView: View {
             .animation(.spring(duration: 0.3), value: isSelected)
         }
         .buttonStyle(.plain)
+    }
+
+    /// `.family` 는 DDS `ChalNaIcon(.heart)` 재사용, 나머지는 대응 DDS 아이콘이 없어 SF Symbol 유지.
+    @ViewBuilder
+    private func interestIcon(_ interest: OnboardingInterest) -> some View {
+        if interest == .family {
+            ChalNaIcon(.heart, size: 24)
+        } else {
+            Image(systemName: interest.symbolName)
+                .font(ChalNaTypography.krBody(24))
+        }
     }
 }
 
@@ -235,20 +249,18 @@ struct SortingPageView: View {
                 timelineBar
             }
         }
-        .onAppear {
+        .task {
             guard order != [0, 1, 2, 3] else { return }
             if reduceMotion {
                 order = [0, 1, 2, 3]
                 markersLit = 4
                 return
             }
-            Task {
-                try? await Task.sleep(for: .seconds(0.8))
-                withAnimation(.spring(duration: 0.7)) { order = [0, 1, 2, 3] }
-                for i in 1...4 {
-                    try? await Task.sleep(for: .seconds(0.15))
-                    withAnimation(.easeOut(duration: 0.2)) { markersLit = i }
-                }
+            try? await Task.sleep(for: .seconds(0.8))
+            withAnimation(.spring(duration: 0.7)) { order = [0, 1, 2, 3] }
+            for i in 1...4 {
+                try? await Task.sleep(for: .seconds(0.15))
+                withAnimation(.easeOut(duration: 0.2)) { markersLit = i }
             }
         }
     }
@@ -365,21 +377,19 @@ struct SubtitlePageView: View {
                 sizeSlider
             }
         }
-        .onAppear {
+        .task {
             guard typed.isEmpty else { return }
             if reduceMotion {
                 typed = fullText
                 sliderValue = 0.45
                 return
             }
-            Task {
-                for character in fullText {
-                    typed.append(character)
-                    try? await Task.sleep(for: .seconds(0.12))
-                }
-                try? await Task.sleep(for: .seconds(0.3))
-                withAnimation(.spring(duration: 0.5)) { sliderValue = 0.45 }
+            for character in fullText {
+                typed.append(character)
+                try? await Task.sleep(for: .seconds(0.12))
             }
+            try? await Task.sleep(for: .seconds(0.3))
+            withAnimation(.spring(duration: 0.5)) { sliderValue = 0.45 }
         }
     }
 
