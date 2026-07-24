@@ -39,6 +39,12 @@ let project = Project(
             ]
         ),
         Module.framework(
+            name: "SubscriptionService",
+            dependencies: [
+                .external(name: "ComposableArchitecture"),
+            ]
+        ),
+        Module.framework(
             name: "AppCore",
             dependencies: [
                 .target(name: "Models"),
@@ -145,6 +151,7 @@ let project = Project(
                 .target(name: "PhotosService"),
                 .target(name: "AppCore"),
                 .target(name: "AnalyticsService"),
+                .target(name: "SubscriptionService"),
                 .target(name: "HomeFeature"),
                 .target(name: "MediaPickerFeature"),
                 .target(name: "ExportFeature"),
