@@ -35,6 +35,14 @@ public enum AnalyticsEvent: Sendable, Equatable {
     case feedbackSubmitted(category: String)
     case feedbackSendFailed(reason: String)
 
+    // 온보딩 / 구독
+    case onboardingStepViewed(step: Int)
+    case onboardingInterestSelected(interest: String)
+    case paywallViewed
+    case trialStarted
+    case purchaseFailed(reason: String)
+    case purchasesRestored
+
     /// Firebase Analytics 에 보낼 이벤트 이름 (snake_case).
     public var name: String {
         switch self {
@@ -56,13 +64,20 @@ public enum AnalyticsEvent: Sendable, Equatable {
         case .labelPositionChanged:  return "label_position_changed"
         case .feedbackSubmitted:     return "feedback_submitted"
         case .feedbackSendFailed:    return "feedback_send_failed"
+        case .onboardingStepViewed:       return "onboarding_step_viewed"
+        case .onboardingInterestSelected: return "onboarding_interest_selected"
+        case .paywallViewed:              return "paywall_viewed"
+        case .trialStarted:               return "trial_started"
+        case .purchaseFailed:             return "purchase_failed"
+        case .purchasesRestored:          return "purchases_restored"
         }
     }
 
     /// Firebase Analytics 파라미터 (Sendable primitives 만 허용).
     public var parameters: [String: AnalyticsParameterValue] {
         switch self {
-        case .homeViewed, .newVlogTapped, .timelineOpened, .exportScreenOpened, .vlogSavedToLibrary, .settingsOpened:
+        case .homeViewed, .newVlogTapped, .timelineOpened, .exportScreenOpened, .vlogSavedToLibrary, .settingsOpened,
+             .paywallViewed, .trialStarted, .purchasesRestored:
             return [:]
         case let .mediaPickerOpened(source):
             return ["source": .string(source.rawValue)]
@@ -88,6 +103,12 @@ public enum AnalyticsEvent: Sendable, Equatable {
         case let .feedbackSubmitted(category):
             return ["category": .string(category)]
         case let .feedbackSendFailed(reason):
+            return ["reason": .string(reason)]
+        case let .onboardingStepViewed(step):
+            return ["step": .int(step)]
+        case let .onboardingInterestSelected(interest):
+            return ["interest": .string(interest)]
+        case let .purchaseFailed(reason):
             return ["reason": .string(reason)]
         }
     }
