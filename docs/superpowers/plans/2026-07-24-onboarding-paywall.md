@@ -1680,15 +1680,42 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 
 ---
 
-### Task 7: AppFeature/RootView 게이팅 통합
+### Task 7: AppFeature/RootView 게이팅 통합 (+ Transaction.updates 옵저버)
 
 **Files:**
+- Modify: `Modules/SubscriptionService/Sources/SubscriptionClient.swift`
+- Modify: `Modules/SubscriptionService/Sources/StoreKitSubscriptionService.swift`
 - Modify: `ChalNa/Sources/App/AppFeature.swift`
 - Modify: `ChalNa/Sources/App/RootView.swift`
 
 **Interfaces:**
 - Consumes: `OnboardingFeature`(Task 4~6), `SubscriptionClient.isSubscribed`(Task 1/2), `AppMode.current`(기존)
-- Produces: `AppFeature.Action.task` — RootView 의 `.task` 가 전송
+- Produces: `AppFeature.Action.task` — RootView 의 `.task` 가 전송; `SubscriptionClient.observeTransactionUpdates() async -> Void`
+
+- [ ] **Step 0: Transaction.updates 옵저버 추가** (Task 2 리뷰 발견 사항 — 갱신/환불/Ask-to-Buy 트랜잭션은 `Transaction.updates` 로만 도착하며 finish 하지 않으면 무한 누적된다)
+
+`SubscriptionClient.swift` 의 `isSubscribedCached` 선언 아래에 추가:
+
+```swift
+    /// 앱 수명 동안 StoreKit 트랜잭션 업데이트(갱신·환불·승인 완료)를 관찰하고 finish 한다.
+    /// 앱 시작 시 1회 호출해 장기 실행 — AppFeature `.task` 에서 구동.
+    public var observeTransactionUpdates: @Sendable () async -> Void = {}
+```
+
+`StoreKitSubscriptionService.swift` 의 liveValue 반환 `SubscriptionClient(...)` 마지막 인자(`isSubscribedCached:` 다음)에 추가:
+
+```swift
+            isSubscribedCached: { cache.value },
+            observeTransactionUpdates: {
+                for await result in Transaction.updates {
+                    guard case let .verified(transaction) = result else { continue }
+                    if transaction.productID == SubscriptionConstants.weeklyProductID {
+                        cache.setValue(transaction.revocationDate == nil)
+                    }
+                    await transaction.finish()
+                }
+            }
+```
 
 - [ ] **Step 1: AppFeature.swift 수정**
 
@@ -1724,11 +1751,17 @@ Dependencies 에 추가:
             case .task:
                 // devMock 은 게이트 스킵 (UITests·fixture 플로우 보호). 강제 표시는 env 로.
                 let forced = ProcessInfo.processInfo.environment["CHALNA_FORCE_ONBOARDING"] == "1"
-                guard AppMode.current == .real || forced else { return .none }
-                return .run { send in
-                    let subscribed = await subscriptionClient.isSubscribed()
-                    await send(.gateResolved(subscribed: subscribed))
-                }
+                let shouldGate = AppMode.current == .real || forced
+                return .merge(
+                    // 갱신/환불 트랜잭션 finish (앱 수명 동안 유지되는 옵저버).
+                    .run { _ in await subscriptionClient.observeTransactionUpdates() },
+                    shouldGate
+                        ? .run { send in
+                            let subscribed = await subscriptionClient.isSubscribed()
+                            await send(.gateResolved(subscribed: subscribed))
+                        }
+                        : .none
+                )
 
             case let .gateResolved(subscribed):
                 guard !subscribed else { return .none }
