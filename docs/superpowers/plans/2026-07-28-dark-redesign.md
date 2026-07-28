@@ -1353,6 +1353,8 @@ public struct ChalNaNavAction: View {
     public static func close(action: @escaping () -> Void) -> ChalNaNavAction {
         .init(kind: .icon(.close), label: "닫기", action: action)
     }
+    // 주의: "닫기" 는 Localizable.xcstrings 에 아직 en/ja 번역이 없다(사전 확인 완료).
+    // Step 6 에서 번역을 추가한다. "뒤로" 는 이미 Back/戻る 가 있다.
 
     public static func icon(
         _ kind: ChalNaIconKind,
@@ -1430,7 +1432,14 @@ import SwiftUI
 /// 근거: `docs/superpowers/specs/2026-07-28-app-redesign-design.md` §5.1
 public struct ChalNaNavBar: View {
 
-    /// 좌·우 슬롯 폭 = 44pt 액션 + 좌우 6pt 여백.
+    /// 좌·우 슬롯 **최소** 폭 = 44pt 액션 + 좌우 6pt 여백.
+    ///
+    /// 고정폭이 아니라 최소폭이다. `.text("완료")` 같은 텍스트 액션은 Dynamic Type 확대 시
+    /// 56pt 를 넘길 수 있고(headline 17pt 에서 "Done" ≈ 38pt + 좌우 8pt 패딩 = 54pt,
+    /// accessibility1 에서는 여유가 사라진다), 고정폭이면 그 글자가 잘린다.
+    /// 최소폭으로 두면 슬롯이 필요한 만큼 늘어나 타이틀을 밀어낸다 —
+    /// **타이틀이 살짝 비대칭이 되는 것이 글자가 잘리는 것보다 낫다.**
+    /// 겹침 방지(감사 #20)는 HStack 이 공간을 배분하는 것으로 이미 보장된다.
     private static let slot: CGFloat = 56
     public static let height: CGFloat = 52
 
@@ -1472,7 +1481,7 @@ public struct ChalNaNavBar: View {
     public var body: some View {
         HStack(spacing: 0) {
             leading
-                .frame(width: Self.slot, alignment: .leading)
+                .frame(minWidth: Self.slot, alignment: .leading)
 
             VStack(spacing: 1) {
                 titleText
@@ -1493,7 +1502,7 @@ public struct ChalNaNavBar: View {
             .frame(maxWidth: .infinity)
 
             trailing
-                .frame(width: Self.slot, alignment: .trailing)
+                .frame(minWidth: Self.slot, alignment: .trailing)
         }
         .padding(.horizontal, 8)
         .frame(minHeight: Self.height)
@@ -1561,16 +1570,37 @@ xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
 
 Expected: 에러 없음 (신규 파일만 추가, 기존 헤더는 그대로 남아 있다).
 
-- [ ] **Step 5: Xcode 프리뷰로 긴 타이틀 충돌 여부 확인**
+- [ ] **Step 5: `닫기` 번역 추가**
+
+`ChalNaNavAction.close` 의 `accessibilityLabel` 이 `"닫기"` 인데, `ChalNa/Resources/Localizable.xcstrings`
+에 이 키의 en/ja 번역이 **없다**(사전 확인 완료 — `뒤로`/`저장`/`완료` 는 있다).
+번역 없이 두면 영어·일본어 UI 에서 VoiceOver 가 "닫기" 를 그대로 읽는다.
+
+`Localizable.xcstrings` 에 다음 항목을 추가한다 (기존 항목들과 같은 구조):
+
+```json
+    "닫기" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Close" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "閉じる" } }
+      }
+    },
+```
+
+> 구 `ChalNaHeaderCloseButton` 은 라벨로 `"취소"`(Cancel/キャンセル)를 썼는데, 닫기 버튼에
+> "취소" 는 의미가 어긋난다. `"닫기"` 로 바꾸는 것이 맞고 그래서 새 키가 필요하다.
+
+- [ ] **Step 6: Xcode 프리뷰로 긴 타이틀 충돌 여부 확인**
 
 `ChalNaNavBar.swift` 를 Xcode 에서 열고 Canvas 프리뷰를 실행한다.
 확인할 것: 두 번째 바의 긴 제목이 **back 버튼·"저장" 위로 겹치지 않고 말줄임**되는지.
 겹친다면 `slot` 폭 또는 `frame(maxWidth: .infinity)` 배치가 잘못된 것이다.
 
-- [ ] **Step 6: 커밋**
+- [ ] **Step 7: 커밋**
 
 ```bash
-git add Modules/DesignSystem/Sources/Components/ChalNaNavBar.swift \
+git add ChalNa/Resources/Localizable.xcstrings \
+        Modules/DesignSystem/Sources/Components/ChalNaNavBar.swift \
         Modules/DesignSystem/Sources/Components/ChalNaNavAction.swift \
         Modules/DesignSystem/Sources/Modifiers/View+ChalNaScrollHairline.swift
 git commit -m "$(cat <<'EOF'
