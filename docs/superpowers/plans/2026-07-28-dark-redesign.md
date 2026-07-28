@@ -3828,23 +3828,16 @@ open /tmp/p2-settings.png
 확인할 것: 카드가 `surface`(배경보다 살짝 밝음)로 보이는가, 행 구분선이 좌측 16pt 인셋인가,
 chevron 이 `textSecondary` 인가, 흰 판이 남아 있지 않은가.
 
-> **★ 상태바 스타일 판정 (Task 3 에서 이관된 미해결 질문).**
-> Task 3 이 `Info.plist UIUserInterfaceStyle: Dark` 를 넣었지만, 그 시점의 Home 화면은
-> 헤더가 `Color.white` 라 상태바 영역까지 흰 띠가 덮고 있어서 **상태바 글자가 흰색이어야
-> 하는지 검정이어야 하는지를 판정할 수 없었다**(흰 배경 위 검정 글자는 그 자체로 정상이다).
+> **상태바 스타일 — 이미 해결됨(조치 불필요).** Task 3 직후 컨트롤러가 Splash 화면
+> (`Purple.p900` 어두운 배경)에서 스크린샷으로 확정했다: 시계·WiFi·배터리가 **흰색**으로
+> 렌더된다. 즉 `UIUserInterfaceStyle: Dark` 는 정상 동작한다.
 >
-> 이 화면은 `ChalNaNavBar` 가 `ChalNaColor.bg.ignoresSafeArea(edges: .top)` 로 상단 세이프
-> 에어리어까지 어둡게 채우는 **첫 안정 화면**이므로, 여기서 확정한다:
+> Task 3 때 Home 에서 상태바가 검정으로 보인 것은, 헤더의 `Color.white` 띠가 상태바
+> 영역을 덮고 있어 iOS 가 그 위에 **검정 글자를 올린 것**이다(흰 배경 위 검정 = 정상·가독).
+> iOS 가 화면별로 적응하므로 Task 17 이 그 흰 헤더를 없애면 Home 도 흰 상태바가 된다.
 >
-> - **상태바 글자·아이콘이 흰색이면** → `UIUserInterfaceStyle: Dark` 가 정상 동작. 끝.
-> - **여전히 검정이면** → plist 가 런타임에 먹지 않는 것이다. 원인을 찾아 보고하되
->   **`preferredColorScheme(.dark)` / `overrideUserInterfaceStyle` / `statusBarStyle` 오버라이드를
->   임시 처방으로 넣지 말 것.** 그 오버라이드는 원인을 덮고, 키보드·알림·`PHPicker`·
->   `AVPlayerViewController`·공유시트 같은 시스템 UI 는 여전히 라이트로 남는다.
->   의심 지점: `AppCore/Sources/LanguageBundle.swift` 의 `object_setClass(Bundle.main, ...)`
->   번들 클래스 스위즐링이 `Bundle.main.infoDictionary` 조회에 영향을 주는지.
->
-> 판정 결과를 리포트에 반드시 적는다.
+> **따라서 `preferredColorScheme` / `overrideUserInterfaceStyle` / `statusBarStyle` 오버라이드를
+> 넣지 말 것.** 넣으면 흰 배경 구간에서 흰 글자가 되어 시계가 사라진다.
 
 - [ ] **Step 4: 커밋**
 
