@@ -224,9 +224,13 @@ struct ChalNaColorContrastTests {
 
 ```bash
 tuist generate
-xcodebuild -workspace ChalNa.xcworkspace -scheme DesignSystemTests \
+xcodebuild -workspace ChalNa.xcworkspace -scheme DesignSystem \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test 2>&1 | tail -30
 ```
+
+> **스킴명 주의.** Tuist 는 테스트 타겟을 별도 스킴으로 만들지 않고 베이스 모듈 스킴
+> (`DesignSystem`)의 test action 에 붙인다. `-scheme DesignSystemTests` 는 존재하지 않는다.
+> 다른 모듈(`AppCore` 등)도 같은 패턴이다.
 
 Expected: 컴파일 실패 — `ChalNaColor` 에 `bg`, `surface` 등의 멤버가 없음
 (`value of type 'ChalNaColor' has no member 'bg'`).
@@ -374,7 +378,7 @@ extension Color {
 - [ ] **Step 5: 테스트가 통과하는 것을 확인**
 
 ```bash
-xcodebuild -workspace ChalNa.xcworkspace -scheme DesignSystemTests \
+xcodebuild -workspace ChalNa.xcworkspace -scheme DesignSystem \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test 2>&1 | tail -30
 ```
 
@@ -489,7 +493,7 @@ struct ChalNaTypographyTests {
 - [ ] **Step 2: 테스트가 실패하는 것을 확인**
 
 ```bash
-xcodebuild -workspace ChalNa.xcworkspace -scheme DesignSystemTests \
+xcodebuild -workspace ChalNa.xcworkspace -scheme DesignSystem \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test 2>&1 | tail -30
 ```
 
@@ -666,7 +670,7 @@ public extension Text {
 - [ ] **Step 4: 테스트가 통과하는 것을 확인**
 
 ```bash
-xcodebuild -workspace ChalNa.xcworkspace -scheme DesignSystemTests \
+xcodebuild -workspace ChalNa.xcworkspace -scheme DesignSystem \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test 2>&1 | tail -30
 ```
 
@@ -1129,7 +1133,7 @@ struct ChalNaIconTests {
 - [ ] **Step 2: 테스트가 실패하는 것을 확인**
 
 ```bash
-xcodebuild -workspace ChalNa.xcworkspace -scheme DesignSystemTests \
+xcodebuild -workspace ChalNa.xcworkspace -scheme DesignSystem \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test 2>&1 | tail -30
 ```
 
@@ -1240,7 +1244,7 @@ public struct ChalNaIcon: View {
 - [ ] **Step 4: 테스트가 통과하는 것을 확인**
 
 ```bash
-xcodebuild -workspace ChalNa.xcworkspace -scheme DesignSystemTests \
+xcodebuild -workspace ChalNa.xcworkspace -scheme DesignSystem \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test 2>&1 | tail -30
 ```
 
