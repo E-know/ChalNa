@@ -58,7 +58,7 @@ public struct ChalNaButtonStyle: ButtonStyle {
     public func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(size.font)
-            .tracking(ChalNaTypography.Tracking.titleKR)
+            .tracking(ChalNaTypography.Tracking.title)
             .foregroundColor(isEnabled ? foreground : disabledForeground)
             .frame(minHeight: size.height)
             .padding(.horizontal, size.horizontalPadding)

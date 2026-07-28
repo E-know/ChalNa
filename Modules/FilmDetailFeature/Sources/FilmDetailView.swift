@@ -163,7 +163,7 @@ public struct FilmDetailView: View {
 
     private func durationBadge(for film: Film) -> some View {
         Text(Self.durationLabel(film.totalDurationSeconds))
-            .font(ChalNaTypography.mono(12, weight: .semibold))
+            .font(ChalNaTypography.mono(.caption, weight: .semibold))
             .foregroundColor(Color.white)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
