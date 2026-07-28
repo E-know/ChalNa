@@ -1269,7 +1269,30 @@ Expected: 전부 PASS. **실패한다면** 그 심볼 이름이 iOS 18 에 없�
 Xcode 의 SF Symbols 앱에서 대체 이름을 찾아 `systemName` 을 수정한다
 (예: `arrow.down.to.line` 이 없으면 `square.and.arrow.down`).
 
-- [ ] **Step 5: 앱 빌드 확인**
+- [ ] **Step 5: `ChalNaChip` 의 글리프 크기 누락을 고친다 (SF Symbols 전환 부수 효과)**
+
+`Modules/DesignSystem/Sources/Components/ChalNaChip.swift` 의 `leadingGlyph` default 분기가
+**`size:` 인자 없이** `ChalNaIcon` 을 호출한다 — 즉 기본값 24pt 글리프를 10pt 프레임에 넣는다:
+
+```swift
+            default:
+                ChalNaIcon(icon ?? .download).frame(width: 10, height: 10)
+```
+
+이를 다음으로 바꾼다:
+
+```swift
+            default:
+                ChalNaIcon(icon ?? .download, size: 10)
+```
+
+> **왜 지금 고치는가.** 커스텀 Lucide 패스에서는 1.5pt 얇은 선이라 넘침이 눈에 잘 안 띄었지만,
+> SF Symbols 는 채워진 글리프라 10pt 프레임 밖으로 확실히 삐져나온다.
+> 도달 경로: `ExportView.swift:211`(DONE 칩 — 실사용자 노출), `MediaPickerView.swift:329`(DEV 칩),
+> Showcase 3곳. `ChalNaChip` 은 Task 9 에서 `ChalNaTag` 로 대체되지만 그때까지 이 상태로 둘 수 없다.
+> 바깥 `.frame(width: 10, height: 10)` 은 그대로 둔다(레이아웃 슬롯 역할).
+
+- [ ] **Step 6: 앱 빌드 확인**
 
 ```bash
 xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
@@ -1278,10 +1301,12 @@ xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
 
 Expected: 에러 없음. `ChalNaIcon(...)` 호출 41곳은 `size:` 만 쓰므로 시그니처가 그대로다.
 
-- [ ] **Step 6: 커밋**
+- [ ] **Step 7: 커밋**
 
 ```bash
-git add Modules/DesignSystem/Sources/Icons/ChalNaIcon.swift Modules/DesignSystem/Tests/ChalNaIconTests.swift
+git add Modules/DesignSystem/Sources/Icons/ChalNaIcon.swift \
+        Modules/DesignSystem/Sources/Components/ChalNaChip.swift \
+        Modules/DesignSystem/Tests/ChalNaIconTests.swift
 git commit -m "$(cat <<'EOF'
 ♻️ refactor(DesignSystem): 아이콘을 SF Symbols 로 단일화
 
