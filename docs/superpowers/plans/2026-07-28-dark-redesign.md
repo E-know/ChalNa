@@ -1009,14 +1009,25 @@ check "Color(hex:)" 'Color\(hex:' \
   'Models/Sources/ColorHex.swift' \
   'Models/Sources/ThumbnailPreset.swift'
 
-# 3. cornerRadius 숫자 리터럴 — 아이콘 패스·UIKit visiblePath 는 예외
-check "cornerRadius 리터럴" 'cornerRadius: [0-9]' \
+# 3. cornerRadius 숫자 리터럴 — 세 가지 형태를 모두 잡는다:
+#      RoundedRectangle(cornerRadius: 8)   ← 콜론형
+#      layer.cornerRadius = 16             ← UIKit 대입형
+#      .cornerRadius(15)                   ← SwiftUI 베어 모디파이어 (CLAUDE.md 가 명시적으로 금지)
+#    'cornerRadius: [0-9]' 만 쓰면 뒤 두 형태를 영구히 못 본다.
+#    ChalNaRadius.md 처럼 토큰을 넘기는 경우는 숫자가 아니라 안 걸린다.
+# 예외: 아이콘 Path 기하(반지름이 아님), FilmStripCollectionView(Task 21 이 토큰화하며 이 예외를 제거)
+check "cornerRadius 리터럴" 'cornerRadius[:=(] *[0-9]' \
   'DesignSystem/Sources/Icons/ChalNaIcon.swift' \
   'FilmStripCollectionView.swift'
 
-# 4. 흰색 하드코딩 — 라벨 박스(영상 출력 픽셀 일치)만 예외
+# 4. 흰색 하드코딩 — 영상 출력 픽셀과 일치해야 하는 곳만 예외
+#    CompositionService: CLAUDE.md 가 "CompositionService 의 비디오 텍스트 오버레이는
+#    불가피한 예외" 라고 명시하고, 스펙 §10 비범위에도 들어 있어 손댈 수 없다.
+#    (UIColor.white 2곳: CompositionService.swift:488 라벨 전경, :566 배경 레이어)
+#    이 예외가 없으면 규칙 4 는 Task 26 에서 결코 0 이 될 수 없다.
 check "흰색 하드코딩" '(Color\.white|\.white\b)' \
   'DesignSystem/Sources/Tokens/' \
+  'CompositionService/Sources/CompositionService.swift' \
   'TimelineFeature/Sources/Components/ClipLabelText.swift' \
   'TimelineFeature/Sources/LabelEditorView.swift' \
   'Models/Sources/ClipLabel.swift' \
@@ -1042,7 +1053,8 @@ chmod +x scripts/design-lint.sh
 ```
 
 Expected: exit 1. 대략 다음 규모의 위반이 보고된다 —
-`.font(.system(` 18건 내외, 흰색 하드코딩 60건 내외, `UIColor(named:)` 1건.
+`.font(.system(` 18건, `Color(hex:)` 0건, `cornerRadius 리터럴` 2건, 흰색 하드코딩 64건, `UIColor(named:)` 1건.
+(흰색은 CompositionService 2곳을 예외로 뺀 뒤의 수치다.)
 **이 숫자를 커밋 메시지에 기록해 P5 에서 0 이 되는 것을 대조한다.**
 
 - [ ] **Step 3: 커밋**
@@ -5550,6 +5562,18 @@ ChalNaTag("LIVE", variant: .live)
                         : ChalNaColor.textSecondary)
 ```
 
+또한 **72줄의 `collectionView.layer.cornerRadius = 16`** 을 토큰으로 바꾼다:
+
+```swift
+        collectionView.layer.cornerRadius = ChalNaRadius.md
+```
+
+> 이 줄은 `cornerRadius: [0-9]` 패턴(콜론형)에 걸리지 않아 lint 가 못 보던 리터럴이다
+> (Task 4 리뷰에서 발견 → 패턴을 `cornerRadius[:=(] *[0-9]` 로 확장했다).
+> 값 16 은 새 스케일에 없으므로 가장 가까운 `md`(14)로 매핑한다. 배경이 `bg` 로 바뀌어
+> 화면과 같은 색이 되므로 이 라운딩은 시각적으로 사실상 무해하다 —
+> 리터럴을 없애는 것이 목적이다.
+
 `params.visiblePath = UIBezierPath(roundedRect: cell.contentView.bounds, cornerRadius: 4)`(365줄)의
 `4` 를 `ChalNaRadius.xs` 로 바꾼다:
 
@@ -5640,7 +5664,10 @@ open /tmp/p4-filmstrip.png
 - [ ] **Step 5: design-lint 예외 정리 후 커밋**
 
 `scripts/design-lint.sh` 의 `cornerRadius 리터럴` `check` 호출에서
-`'FilmStripCollectionView.swift'` 예외 줄을 **삭제**한다 (이제 토큰을 쓴다).
+`'FilmStripCollectionView.swift'` 예외 줄을 **삭제**한다 — 이 파일의 리터럴 2곳
+(72줄 `layer.cornerRadius = 16`, 365줄 `visiblePath cornerRadius: 4`)을 모두 토큰화했으므로
+예외가 더 필요하지 않다. 예외는 파일 단위라서 남겨두면 이 파일에 새로 들어오는
+리터럴이 영구히 보이지 않게 된다.
 
 ```bash
 ./scripts/design-lint.sh 2>&1 | grep -E "^(✓|✗)"
