@@ -222,6 +222,7 @@ let project = Project(
                 .external(name: "ComposableArchitecture"),
             ]
         ),
+        Module.unitTests(for: "DesignSystem"),
     ],
     schemes: [
         .scheme(
