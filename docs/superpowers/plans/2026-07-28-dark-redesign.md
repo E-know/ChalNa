@@ -873,28 +873,31 @@ public extension View {
 
 - [ ] **Step 6: dead colorset 삭제**
 
+**사전 확인 완료:** `ChalNaColors.xcassets` 는 `Modules/DesignSystem/Resources` 의
+**유일한 내용물**이다. 따라서 삭제하면 폴더가 비고, `hasResources: true` 도 함께 제거해야 한다
+(Tuist `buildableFolders` 가 빈/없는 폴더를 가리키면 실패한다). 세 동작을 한 번에 한다:
+
 ```bash
 git rm -r Modules/DesignSystem/Resources/ChalNaColors.xcassets
-ls -A Modules/DesignSystem/Resources 2>/dev/null || echo "EMPTY"
+rmdir Modules/DesignSystem/Resources
 ```
 
-`FilmStripCollectionView.swift:71` 이 `UIColor(named: "ChalNaInk")` 로 이 에셋을 참조하지만
-**항상 nil 을 반환**하므로(다른 번들) 동작 변화가 없다. 이 줄은 Task 21 에서 토큰으로 교체된다.
+그리고 `Project.swift` 의 DesignSystem 타겟에서 `hasResources: true` 줄을 **삭제**한다
+(현재 7~11행):
 
-> **위 `ls` 가 `EMPTY` 를 출력하면** `Modules/DesignSystem/Resources` 가 비었다는 뜻이다.
-> `Module.framework(name: "DesignSystem", hasResources: true, ...)` 의 `buildableFolders` 가
-> 존재하지 않거나 빈 폴더를 가리키면 Tuist 가 실패할 수 있다. 그 경우
-> `Project.swift:7-11` 의 DesignSystem 타겟에서 `hasResources: true` 를 **제거**한다:
->
-> ```swift
->         Module.framework(
->             name: "DesignSystem",
->             isDynamic: true
->         ),
-> ```
->
-> 그리고 빈 디렉터리를 지운다: `rmdir Modules/DesignSystem/Resources`.
-> (DesignSystem 은 이제 코드 정의 토큰만 쓰므로 리소스가 필요 없다.)
+```swift
+        Module.framework(
+            name: "DesignSystem",
+            isDynamic: true
+        ),
+```
+
+DesignSystem 은 이제 코드로 정의된 토큰만 쓰므로 리소스가 필요 없다.
+
+`FilmStripCollectionView.swift:71` 이 `UIColor(named: "ChalNaInk")` 로 이 에셋을 참조하는
+**유일한 곳**이지만(전수 확인 완료), colorset 이 DesignSystem.framework 번들에 있고
+`UIColor(named:)` 의 기본 조회는 `Bundle.main` 이라 **항상 nil 을 반환**한다 → `.black` 으로 낙하.
+따라서 삭제해도 동작 변화가 없다. 이 줄은 Task 21 에서 토큰으로 교체된다.
 
 - [ ] **Step 7: 빌드 확인**
 
