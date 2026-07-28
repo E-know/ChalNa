@@ -1905,10 +1905,15 @@ EOF
   ChalNaListRow.navigate(title:subtitle:value:enabled:action:)
   ChalNaListRow.toggle(title:subtitle:isOn:onChange:)
   ChalNaListRow.slider(title:value:range:step:enabled:trailingText:onChange:)
-  ChalNaListRow.check(title:isChecked:action:)
+  ChalNaListRow.check(verbatimTitle:isChecked:action:)
   ChalNaListRow.plain(title:subtitle:trailing:)
   ```
   모두 `minHeight: 56` (고정 높이 아님 — Dynamic Type 확대 시 밀려 커진다).
+- Produces: **verbatim 변형 2종** — `ChalNaListRow.navigateVerbatim(title:subtitle:value:enabled:action:)`,
+  `ChalNaListRow.toggleVerbatim(title:subtitle:isOn:onChange:)`. 둘 다 `title`/`subtitle` 을 `String` 으로 받는다.
+  **필요한 이유:** `LabelKind.title`·`.subtitle` 은 `String(localized:)` 로 **이미 해석된 `String`** 이다
+  (`Models/Sources/LabelSettings.swift:86,93` 확인됨). 이를 `LocalizedStringKey` 로 넘기면 이중 조회가 되어
+  번역 테이블에서 다시 찾다가 키 자체를 반환하는, 조용히 잘못된 동작이 된다.
 - Produces: `ChalNaListDivider` — 행 사이 구분선 (좌측 16pt 인셋).
 - Produces: `ChalNaSlider(value: Binding<Double>, range: ClosedRange<Double> = 0...1, step: Double? = nil, onEditingChanged: @escaping (Bool) -> Void = { _ in })`.
 
@@ -2001,13 +2006,14 @@ public struct ChalNaListRow: View {
     }
 
     private let titleText: Text
-    private let subtitle: LocalizedStringKey?
+    /// LocalizedStringKey 변형과 verbatim 변형이 같은 저장소를 쓰도록 `Text` 로 보관한다.
+    private let subtitleText: Text?
     private let enabled: Bool
     private let kind: Kind
 
-    private init(titleText: Text, subtitle: LocalizedStringKey?, enabled: Bool, kind: Kind) {
+    private init(titleText: Text, subtitleText: Text?, enabled: Bool, kind: Kind) {
         self.titleText = titleText
-        self.subtitle = subtitle
+        self.subtitleText = subtitleText
         self.enabled = enabled
         self.kind = kind
     }
@@ -2021,7 +2027,9 @@ public struct ChalNaListRow: View {
         enabled: Bool = true,
         action: @escaping () -> Void
     ) -> ChalNaListRow {
-        .init(titleText: Text(title), subtitle: subtitle, enabled: enabled,
+        .init(titleText: Text(title),
+              subtitleText: subtitle.map { Text($0) },
+              enabled: enabled,
               kind: .navigate(value: value, action: action))
     }
 
@@ -2031,7 +2039,40 @@ public struct ChalNaListRow: View {
         isOn: Bool,
         onChange: @escaping (Bool) -> Void
     ) -> ChalNaListRow {
-        .init(titleText: Text(title), subtitle: subtitle, enabled: true,
+        .init(titleText: Text(title),
+              subtitleText: subtitle.map { Text($0) },
+              enabled: true,
+              kind: .toggle(isOn: isOn, onChange: onChange))
+    }
+
+    // MARK: - verbatim 변형
+    //
+    // `LabelKind.title` 처럼 `String(localized:)` 로 **이미 해석된 String** 을 받는 경우용.
+    // 이를 LocalizedStringKey 로 넘기면 번역 테이블에서 다시 찾는 이중 조회가 되어
+    // 조용히 잘못된 동작이 된다.
+
+    public static func navigateVerbatim(
+        title: String,
+        subtitle: String? = nil,
+        value: String? = nil,
+        enabled: Bool = true,
+        action: @escaping () -> Void
+    ) -> ChalNaListRow {
+        .init(titleText: Text(verbatim: title),
+              subtitleText: subtitle.map { Text(verbatim: $0) },
+              enabled: enabled,
+              kind: .navigate(value: value, action: action))
+    }
+
+    public static func toggleVerbatim(
+        title: String,
+        subtitle: String? = nil,
+        isOn: Bool,
+        onChange: @escaping (Bool) -> Void
+    ) -> ChalNaListRow {
+        .init(titleText: Text(verbatim: title),
+              subtitleText: subtitle.map { Text(verbatim: $0) },
+              enabled: true,
               kind: .toggle(isOn: isOn, onChange: onChange))
     }
 
@@ -2044,7 +2085,7 @@ public struct ChalNaListRow: View {
         trailingText: String? = nil,
         onChange: @escaping (Double) -> Void
     ) -> ChalNaListRow {
-        .init(titleText: Text(title), subtitle: nil, enabled: enabled,
+        .init(titleText: Text(title), subtitleText: nil, enabled: enabled,
               kind: .slider(value: value, range: range, step: step,
                             trailingText: trailingText, onChange: onChange))
     }
@@ -2055,7 +2096,7 @@ public struct ChalNaListRow: View {
         isChecked: Bool,
         action: @escaping () -> Void
     ) -> ChalNaListRow {
-        .init(titleText: Text(verbatim: verbatimTitle), subtitle: nil, enabled: true,
+        .init(titleText: Text(verbatim: verbatimTitle), subtitleText: nil, enabled: true,
               kind: .check(isChecked: isChecked, action: action))
     }
 
@@ -2064,7 +2105,9 @@ public struct ChalNaListRow: View {
         subtitle: LocalizedStringKey? = nil,
         @ViewBuilder trailing: () -> Trailing
     ) -> ChalNaListRow {
-        .init(titleText: Text(title), subtitle: subtitle, enabled: true,
+        .init(titleText: Text(title),
+              subtitleText: subtitle.map { Text($0) },
+              enabled: true,
               kind: .plain(trailing: AnyView(trailing())))
     }
 
@@ -2092,8 +2135,8 @@ public struct ChalNaListRow: View {
                     .foregroundColor(enabled ? ChalNaColor.textPrimary : ChalNaColor.textTertiary)
                     .multilineTextAlignment(.leading)
 
-                if let subtitle {
-                    Text(subtitle)
+                if let subtitleText {
+                    subtitleText
                         .font(ChalNaTypography.label)
                         .foregroundColor(enabled ? ChalNaColor.textSecondary : ChalNaColor.textTertiary)
                         .multilineTextAlignment(.leading)
@@ -3866,7 +3909,9 @@ EOF
         onPositionTap: @escaping () -> Void,
         onOpacityChange: @escaping (Double) -> Void
     ) -> some View {
-        ChalNaListRow.toggle(
+        // LabelKind.title/.subtitle 은 String(localized:) 로 이미 해석된 String 이다
+        // (Models/Sources/LabelSettings.swift:86,93). verbatim 변형을 써야 이중 조회를 피한다.
+        ChalNaListRow.toggleVerbatim(
             title: kind.title,
             subtitle: kind.subtitle,
             isOn: isOn,
@@ -3894,8 +3939,10 @@ EOF
     }
 ```
 
-> `kind.title` / `kind.subtitle` 의 타입을 확인한다. `ChalNaListRow` 는 `LocalizedStringKey` 를
-> 받으므로 `LabelKind.title`/`.subtitle` 이 `String` 이면 `LocalizedStringKey(kind.title)` 로 감싼다.
+> **타입 확정(사전 확인 완료).** `LabelKind.title`·`.subtitle` 은 `String(localized:)` 로
+> 이미 해석된 `String` 이므로 **`toggleVerbatim` 을 쓴다.** `LocalizedStringKey` 변형에 넘기면
+> 번역 테이블을 다시 조회해 키 자체를 반환하는, 조용히 잘못된 동작이 된다.
+> `LabelPosition.koreanName` 도 `String` 이며 `navigate(value:)` 가 이미 `String` 을 받으므로 그대로 쓴다.
 > `kind.subtitle` 은 기존에 `monoFallback` 로 렌더됐지만 한글이 섞이면 폴백이 생기므로
 > `ChalNaListRow` 의 `.label`(시스템 폰트)로 바뀐다 — 의도된 변경(감사 #11).
 
@@ -4015,8 +4062,11 @@ EOF
 > **이것이 감사 #1 의 수정이다.** 기존 코드는
 > `.strokeBorder(..., lineWidth: isSelected ? 0 : 10)` 로 비선택 셀에 10pt 테두리를 그렸다.
 > 위 구현에는 `lineWidth: 1` 만 있다. 또 `.font(.system(size: 14, ...))` 직접 호출도 사라진다.
-> `store.kind.title` 이 `LocalizedStringKey` 라면 `verbatimTitle:` 대신
-> 문자열 보간이 가능한 형태로 바꿔야 한다 — `String(localized:)` 로 해석한 뒤 보간한다.
+>
+> **타이틀 보간(사전 확인 완료).** `store.kind.title` 은 이미 해석된 `String` 이므로
+> `verbatimTitle: "\(store.kind.title) 위치"` 가 맞다. 기존 코드도 `ChalNaNavigationBar(title:)`
+> (verbatim init)에 같은 보간을 넘기고 있었으므로 **동작·i18n 범위가 그대로 유지된다.**
+> " 위치" 접미사의 로컬라이즈는 기존에도 없던 것이라 이번 범위에서 새로 만들지 않는다.
 
 - [ ] **Step 3: 빌드 후 두 화면 스크린샷**
 
@@ -5096,17 +5146,18 @@ EOF
 
 ```swift
     private var header: some View {
+        // ExportPhase.title/.tag 는 String(localized:) 로 이미 해석된 String 이다
+        // (ExportFeature.swift:256,264). 다시 감싸면 이중 조회가 된다.
         ChalNaNavBar(
-            verbatimTitle: String(localized: store.phase.title),
-            caption: String(localized: store.phase.tag),
+            verbatimTitle: store.phase.title,
+            caption: store.phase.tag,
             showsDivider: true
         )
     }
 ```
 
-> `store.phase.title` / `.tag` 의 타입을 확인한다. `LocalizedStringKey` 라면
-> `ChalNaNavBar(title: store.phase.title, ...)` 를 쓰고 caption 은 별도 처리한다.
-> `String` 이라면 위 코드대로 `String(localized:)` 로 해석한다.
+> **타입 확정(사전 확인 완료).** `ExportPhase.title`·`.tag` 는 둘 다 `String(localized:)` 로
+> 이미 해석된 `String` 이다. `verbatimTitle:`·`caption:`(String?) 에 그대로 넘긴다.
 > `tagColor` 함수는 caption 색이 고정(`textSecondary`)으로 바뀌므로 **삭제**한다.
 
 - [ ] **Step 3: 커버에 진행률을 얹는다 — 이 태스크의 핵심**
