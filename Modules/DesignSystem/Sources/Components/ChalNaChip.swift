@@ -90,7 +90,7 @@ public struct ChalNaChip: View {
                     .resizable()
                     .scaledToFit()
             default:
-                ChalNaIcon(icon ?? .download).frame(width: 10, height: 10)
+                ChalNaIcon(icon ?? .download, size: 10)
         }
     }
 }
