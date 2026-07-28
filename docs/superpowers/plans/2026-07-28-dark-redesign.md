@@ -1349,7 +1349,82 @@ EOF
   높이 52. 좌·우 슬롯 고정 56pt.
 - Produces: `View.chalNaScrollHairline(progress: Double)`.
 
-- [ ] **Step 1: ChalNaNavAction 작성**
+- [ ] **Step 1: Showcase 도달 경로 추가 (P1 전체의 시각 검증 수단)**
+
+**문제.** 계획은 P1 컴포넌트의 검증 수단으로 "Showcase 스크린샷"을 지정하지만,
+`DesignSystemShowcaseView` 는 `ContentView.swift:32` 의 `#Preview` 에만 존재하고
+**실행 중인 앱에서 도달할 방법이 없다**(사전 확인 완료). Xcode Canvas 는 헤드리스로 열 수 없으므로
+지금 상태로는 Task 6~12 가 만드는 컴포넌트 18종을 눈으로 볼 수가 없다.
+
+DEBUG 전용 환경변수 경로를 하나 만든다.
+
+`ChalNa/Sources/App/AppMode.swift` 끝에 추가:
+
+```swift
+extension AppMode {
+    /// DEBUG 전용. `CHALNA_APP_MODE=showcase` 로 실행하면 앱 대신
+    /// 디자인 시스템 쇼케이스를 띄운다 — P1 컴포넌트의 시각 검증 경로.
+    ///
+    /// enum 케이스가 아니라 별도 플래그인 이유: `AppMode` 에 케이스를 더하면
+    /// `AppFeature` 의 `.real`/`.devMock` switch 가 비망라가 되어 그쪽까지 손대야 한다.
+    static var isShowcase: Bool {
+        #if DEBUG
+        return ProcessInfo.processInfo.environment["CHALNA_APP_MODE"] == "showcase"
+        #else
+        return false
+        #endif
+    }
+}
+```
+
+`ChalNa/Sources/ContentView.swift` 의 `body` 를 분기한다 (기존 내용은 `mainContent` 로 추출):
+
+```swift
+    public var body: some View {
+        if AppMode.isShowcase {
+            DesignSystemShowcaseView()
+        } else {
+            mainContent
+        }
+    }
+
+    private var mainContent: some View {
+        ZStack {
+            // RootView 를 스플래시 뒤에서 미리 생성 → 페이드아웃 시 홈이 이미 준비됨.
+            RootView()
+
+            if showSplash {
+                SplashView()
+                    .transition(.opacity)
+                    .zIndex(1)
+            }
+        }
+        .task {
+            try? await Task.sleep(for: .seconds(1.5))
+            withAnimation(.easeInOut(duration: 0.35)) { showSplash = false }
+        }
+    }
+```
+
+이후 **Task 6~12 는 모두 이 명령으로 컴포넌트를 실물 확인한다:**
+
+```bash
+xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
+           -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+           -derivedDataPath /tmp/chalna-dd build
+xcrun simctl install "iPhone 17 Pro" /tmp/chalna-dd/Build/Products/Debug-iphonesimulator/ChalNa.app
+xcrun simctl terminate "iPhone 17 Pro" ios.inho.ChalNa 2>/dev/null || true
+SIMCTL_CHILD_CHALNA_APP_MODE=showcase xcrun simctl launch "iPhone 17 Pro" ios.inho.ChalNa
+sleep 3
+xcrun simctl io "iPhone 17 Pro" screenshot /tmp/showcase.png
+```
+
+> Showcase 는 Task 12 에서 새 인벤토리로 재작성된다. Task 6~11 동안에는 구 Showcase 가
+> 뜨므로 **새로 만든 컴포넌트는 아직 거기 없다.** 그래서 각 태스크는 자기가 만든 컴포넌트를
+> 구 Showcase 하단에 임시 섹션으로 덧붙여 스크린샷을 찍고, Task 12 의 전면 재작성 때
+> 그 임시 섹션들이 정식 구조로 흡수된다. 임시 섹션은 `// TEMP(T<N>):` 주석으로 표시한다.
+
+- [ ] **Step 2: ChalNaNavAction 작성**
 
 `Modules/DesignSystem/Sources/Components/ChalNaNavAction.swift`:
 
@@ -1455,7 +1530,7 @@ private struct NavActionPressStyle: ButtonStyle {
 }
 ```
 
-- [ ] **Step 2: ChalNaNavBar 작성**
+- [ ] **Step 3: ChalNaNavBar 작성**
 
 `Modules/DesignSystem/Sources/Components/ChalNaNavBar.swift`:
 
@@ -1577,7 +1652,7 @@ public struct ChalNaNavBar: View {
 }
 ```
 
-- [ ] **Step 3: chalNaScrollHairline 모디파이어 작성**
+- [ ] **Step 4: chalNaScrollHairline 모디파이어 작성**
 
 `Modules/DesignSystem/Sources/Modifiers/View+ChalNaScrollHairline.swift`:
 
@@ -1600,7 +1675,7 @@ public extension View {
 }
 ```
 
-- [ ] **Step 4: 빌드 확인**
+- [ ] **Step 5: 빌드 확인**
 
 ```bash
 xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
@@ -1609,7 +1684,7 @@ xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
 
 Expected: 에러 없음 (신규 파일만 추가, 기존 헤더는 그대로 남아 있다).
 
-- [ ] **Step 5: `닫기` 번역 추가**
+- [ ] **Step 6: `닫기` 번역 추가**
 
 `ChalNaNavAction.close` 의 `accessibilityLabel` 이 `"닫기"` 인데, `ChalNa/Resources/Localizable.xcstrings`
 에 이 키의 en/ja 번역이 **없다**(사전 확인 완료 — `뒤로`/`저장`/`완료` 는 있다).
@@ -1629,13 +1704,13 @@ Expected: 에러 없음 (신규 파일만 추가, 기존 헤더는 그대로 남
 > 구 `ChalNaHeaderCloseButton` 은 라벨로 `"취소"`(Cancel/キャンセル)를 썼는데, 닫기 버튼에
 > "취소" 는 의미가 어긋난다. `"닫기"` 로 바꾸는 것이 맞고 그래서 새 키가 필요하다.
 
-- [ ] **Step 6: Xcode 프리뷰로 긴 타이틀 충돌 여부 확인**
+- [ ] **Step 7: Showcase 에 임시 섹션 추가 후 실물 스크린샷으로 긴 타이틀 충돌 확인**
 
 `ChalNaNavBar.swift` 를 Xcode 에서 열고 Canvas 프리뷰를 실행한다.
 확인할 것: 두 번째 바의 긴 제목이 **back 버튼·"저장" 위로 겹치지 않고 말줄임**되는지.
 겹친다면 `slot` 폭 또는 `frame(maxWidth: .infinity)` 배치가 잘못된 것이다.
 
-- [ ] **Step 7: 커밋**
+- [ ] **Step 8: 커밋**
 
 ```bash
 git add ChalNa/Resources/Localizable.xcstrings \
