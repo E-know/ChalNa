@@ -1014,9 +1014,11 @@ check "Color(hex:)" 'Color\(hex:' \
 #      layer.cornerRadius = 16             ← UIKit 대입형
 #      .cornerRadius(15)                   ← SwiftUI 베어 모디파이어 (CLAUDE.md 가 명시적으로 금지)
 #    'cornerRadius: [0-9]' 만 쓰면 뒤 두 형태를 영구히 못 본다.
+#    구분자 앞 공백을 반드시 허용해야 한다 — `layer.cornerRadius = 16` 은
+#    cornerRadius 와 '=' 사이에 공백이 있어 'cornerRadius[:=(]' 로는 안 걸린다.
 #    ChalNaRadius.md 처럼 토큰을 넘기는 경우는 숫자가 아니라 안 걸린다.
 # 예외: 아이콘 Path 기하(반지름이 아님), FilmStripCollectionView(Task 21 이 토큰화하며 이 예외를 제거)
-check "cornerRadius 리터럴" 'cornerRadius[:=(] *[0-9]' \
+check "cornerRadius 리터럴" 'cornerRadius *[:=(] *[0-9]' \
   'DesignSystem/Sources/Icons/ChalNaIcon.swift' \
   'FilmStripCollectionView.swift'
 
