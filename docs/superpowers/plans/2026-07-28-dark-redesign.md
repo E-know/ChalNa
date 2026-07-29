@@ -2680,9 +2680,15 @@ private struct ThumbFrame: ViewModifier {
         if let size {
             content.frame(width: size.width, height: size.height)
         } else {
+            // 컨테이너를 9:16 박스로 확정하고, 그 안의 이미지는 호출처가
+            // scaledToFill 로 넘치게 한 뒤 .clipped() 로 크롭한다.
+            //
+            // contentMode 는 반드시 .fit 이다. .fill 은 "제안된 공간을 채우도록" 크기를
+            // 정하는데, LazyVGrid 셀의 높이 제안은 유연하므로 결과가 불확정해진다.
+            // .fit 은 제안 안에 맞추므로 폭 = 열 폭, 높이 = 폭 × 16/9 로 확정된다.
             content
                 .frame(maxWidth: .infinity)
-                .aspectRatio(aspect, contentMode: .fill)
+                .aspectRatio(aspect, contentMode: .fit)
                 .clipped()
         }
     }
@@ -2723,7 +2729,20 @@ private struct ThumbFrame: ViewModifier {
 }
 ```
 
-- [ ] **Step 3: 프리뷰로 밝은 썸네일 선택 링 확인**
+- [ ] **Step 3: 그리드 모드 기하 + 밝은 썸네일 선택 링 확인**
+
+`MediaThumb` 은 두 모드가 있고 **그리드 모드(`size: nil`)의 기하가 이 컴포넌트의 유일한 위험 지점**이다.
+TEMP 섹션에 반드시 3열 `LazyVGrid` 안의 `MediaThumb(state:)`(size 미지정)을 넣고 스크린샷으로 확인한다.
+
+확인할 것:
+1. **셀이 9:16 세로 비율인가.** 정사각형이거나 화면을 벗어나거나 높이가 0 이면 `contentMode` 문제다.
+   계획은 `.fit` 으로 지정돼 있다(제안 안에 맞춤 → 폭 = 열 폭, 높이 = 폭 × 16/9).
+   만약 `.fit` 으로 셀이 이상하게 나오면 `.fill` 을 시도하고, **어느 쪽이 맞았는지 리포트에 적는다** —
+   나중에 이 컴포넌트를 쓰는 Task 17(홈 2열 포스터 그리드)·Task 18(미디어 3열 그리드)이
+   같은 판단을 반복하지 않게 하려는 것이다.
+2. 3열 간격이 균일하고 셀 폭이 열 폭을 꽉 채우는가.
+3. **밝은 썸네일에서도 선택 링이 보이는가** — 이게 이중 스트로크의 존재 이유다.
+   흰→노랑 그라디언트 같은 아주 밝은 콘텐츠로 테스트한다.
 
 Xcode Canvas 에서 `MediaThumb.swift` 프리뷰를 본다.
 확인할 것: **두 번째 카드(흰→노랑 그라디언트, 아주 밝음)에서도 accent 링이 보이는지.**
