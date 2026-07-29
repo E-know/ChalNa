@@ -38,6 +38,14 @@
   xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
              -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
   ```
+- **시뮬레이터가 "Invalid device state" 로 잇달아 실패하면** 다음으로 복구한다:
+  ```bash
+  xcrun simctl shutdown all; killall Simulator 2>/dev/null; sleep 3
+  xcrun simctl boot "iPhone 17 Pro"
+  ```
+  Task 8·9 에서 두 번 발생했다. 원인은 `ChalNaIconTests` 가 콜드 런에서 간헐적으로 크래시하며
+  `simctl diagnose` 를 트리거해 CoreSimulator 를 흔드는 것으로 보인다. 재실행하면 통과한다
+  (16/16, 1초 내). **테스트 코드를 고치려 하지 말고 위 레시피로 복구한 뒤 재실행한다.**
 - **`-derivedDataPath` 는 항상 `/tmp/chalna-build` 하나만 쓴다.** 태스크마다 다른 경로를 쓰면
   DerivedData 가 태스크당 ~2.2GB 씩 쌓여 `/tmp` 가 차고 빌드가 `lipo` 에러로 실패한다
   (Task 7 에서 실제 발생 — 잔여물 3.8GB). 새 경로를 만들지 말고 기존 것을 재사용한다.
@@ -1029,11 +1037,14 @@ check "cornerRadius 리터럴" 'cornerRadius *[:=(] *[0-9]' \
   'FilmStripCollectionView.swift'
 
 # 4. 흰색 하드코딩 — 영상 출력 픽셀과 일치해야 하는 곳만 예외
+#    회색조 이니셜라이저 형태(Color(white:) / UIColor(white:))도 반드시 포함한다.
+#    이게 빠지면 Color.white 를 Color(white: 1.0) 으로 바꾸는 것만으로 규칙을 우회할 수 있어
+#    Task 26 게이트가 무의미해진다 (Task 9 에서 실제로 이 형태가 들어왔다).
 #    CompositionService: CLAUDE.md 가 "CompositionService 의 비디오 텍스트 오버레이는
 #    불가피한 예외" 라고 명시하고, 스펙 §10 비범위에도 들어 있어 손댈 수 없다.
 #    (UIColor.white 2곳: CompositionService.swift:488 라벨 전경, :566 배경 레이어)
 #    이 예외가 없으면 규칙 4 는 Task 26 에서 결코 0 이 될 수 없다.
-check "흰색 하드코딩" '(Color\.white|\.white\b)' \
+check "흰색 하드코딩" '(Color\.white|\.white\b|Color\(white:|UIColor\(white:)' \
   'DesignSystem/Sources/Tokens/' \
   'CompositionService/Sources/CompositionService.swift' \
   'TimelineFeature/Sources/Components/ClipLabelText.swift' \
@@ -2793,6 +2804,7 @@ EOF
 - Create: `Modules/DesignSystem/Sources/Components/ChalNaCanvas.swift`
 - Modify: `Modules/TimelineFeature/Sources/Components/LabelBoxGeometry.swift` (DesignSystem 으로 위임)
 - Create: `Modules/DesignSystem/Tests/ChalNaCanvasGeometryTests.swift`
+- Modify: `scripts/design-lint.sh` (규칙 4 회색조 사각지대 차단)
 
 **Interfaces:**
 - Consumes: `ChalNaColor.canvas`, `ChalNaRadius.md`.
@@ -2807,7 +2819,32 @@ EOF
   `overlay` 는 clip 밖에 그려진다(HUD·배지가 라운딩에 잘리지 않게).
 - `LabelBoxGeometry.fittedBox` 는 시그니처 그대로 유지하고 내부에서 `ChalNaCanvasGeometry` 를 호출한다 — 기존 호출처 3곳 무변경.
 
-- [ ] **Step 1: ChalNaCanvas 작성**
+- [ ] **Step 1: lint 규칙 4 의 회색조 사각지대 차단**
+
+Task 9 에서 `Color(white: 0.97)` 이 Showcase 에 들어왔고 **lint 가 이를 보지 못했다**
+(`DesignSystemShowcaseView.swift:404,424`). 사용 자체는 정당하다 — DEBUG 전용 데모
+그라디언트로, 예외로 둔 `ThumbnailPreset` 콘텐츠 그라디언트와 같은 성격이다.
+문제는 규칙이다: **`Color.white` 를 `Color(white: 1.0)` 으로 바꾸는 것만으로 규칙을
+우회할 수 있으면 Task 26 게이트가 무의미해진다.** (Task 4 리뷰가 이 사각지대를 예고했다.)
+
+`scripts/design-lint.sh` 의 규칙 4 패턴을 교체한다:
+
+```bash
+check "흰색 하드코딩" '(Color\.white|\.white\b|Color\(white:|UIColor\(white:)' \
+```
+
+그리고 그 위 주석에 한 줄 추가:
+
+```bash
+#    회색조 이니셜라이저 형태(Color(white:) / UIColor(white:))도 반드시 포함한다.
+#    이게 빠지면 Color.white 를 Color(white: 1.0) 으로 바꾸는 것만으로 규칙을 우회할 수 있다.
+```
+
+**기대 결과: 흰색 카운트가 58 → 60 으로 올라간다.** 이것은 회귀가 아니라 **정직한 재집계**다
+(숨어 있던 2건이 드러난 것). Task 12 가 Showcase 를 전면 재작성하면 그 2건이 사라져 다시 내려간다.
+Task 26 기준선은 여전히 "모든 규칙 0" 이다.
+
+- [ ] **Step 2: ChalNaCanvas 작성**
 
 `Modules/DesignSystem/Sources/Components/ChalNaCanvas.swift`:
 
@@ -2895,7 +2932,7 @@ public struct ChalNaCanvas<Content: View, Overlay: View>: View {
 }
 ```
 
-- [ ] **Step 2: LabelBoxGeometry 를 위임으로 변경**
+- [ ] **Step 3: LabelBoxGeometry 를 위임으로 변경**
 
 `Modules/TimelineFeature/Sources/Components/LabelBoxGeometry.swift` 전체를 교체한다:
 
@@ -2913,7 +2950,7 @@ enum LabelBoxGeometry {
 }
 ```
 
-- [ ] **Step 3: `fittedBox` 기하 테스트 작성 (현재 커버리지 0)**
+- [ ] **Step 4: `fittedBox` 기하 테스트 작성 (현재 커버리지 0)**
 
 **사전 확인 결과 `fittedBox` 를 검사하는 테스트가 하나도 없다.** 기존 TimelineFeature 테스트는
 `LabelAnchorMathTests`(박스 크기를 *입력으로 받는다*) · `TimelinePlaybackTests` ·
@@ -2997,7 +3034,7 @@ struct ChalNaCanvasGeometryTests {
 }
 ```
 
-- [ ] **Step 4: 빌드 + 테스트 확인**
+- [ ] **Step 5: 빌드 + 테스트 확인**
 
 ```bash
 xcodebuild -workspace ChalNa.xcworkspace -scheme DesignSystem \
@@ -3009,7 +3046,7 @@ xcodebuild -workspace ChalNa.xcworkspace -scheme TimelineFeature \
 Expected: DesignSystem **22개**(기존 16 + 신규 6) PASS, TimelineFeature 기존 테스트 전부 PASS.
 TimelineFeature 쪽은 보조 증거일 뿐이고 **실제 잠금은 위 6개 테스트**다.
 
-- [ ] **Step 5: 커밋**
+- [ ] **Step 6: 커밋**
 
 ```bash
 git add Modules/DesignSystem/Sources/Components/ChalNaCanvas.swift \
