@@ -27,40 +27,42 @@ public struct ChalNaTextField: View {
         VStack(alignment: .leading, spacing: 8) {
             if let label {
                 Text(label)
-                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.small, weight: .medium))
-                    .foregroundColor(ChalNaColor.Gray.g900)
+                    .font(ChalNaTypography.label)
+                    .foregroundColor(ChalNaColor.textPrimary)
             }
 
-            TextField(placeholder, text: $text)
+            TextField("", text: $text, prompt: Text(verbatim: placeholder)
+                .foregroundColor(ChalNaColor.textTertiary))
+                .tint(ChalNaColor.accent)
                 .focused($isFocused)
-                .font(ChalNaTypography.krBody(ChalNaTypography.Size.body, weight: .regular))
-                .foregroundColor(ChalNaColor.Gray.g900)
+                .font(ChalNaTypography.body)
+                .foregroundColor(ChalNaColor.textPrimary)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .background(
-                    RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                        .fill(Color.white)
+                    RoundedRectangle(cornerRadius: ChalNaRadius.sm, style: .continuous)
+                        .fill(ChalNaColor.surface)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
+                    RoundedRectangle(cornerRadius: ChalNaRadius.sm, style: .continuous)
                         .strokeBorder(borderColor, lineWidth: borderWidth)
                 )
 
             if let errorText {
                 Text(errorText)
-                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.caption))
+                    .font(ChalNaTypography.caption)
                     .foregroundColor(ChalNaColor.danger)
             } else if let helper {
                 Text(helper)
-                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.caption))
-                    .foregroundColor(ChalNaColor.Gray.g500)
+                    .font(ChalNaTypography.caption)
+                    .foregroundColor(ChalNaColor.textSecondary)
             }
         }
     }
 
     private var borderColor: Color {
         if errorText != nil { return ChalNaColor.danger }
-        return isFocused ? ChalNaColor.Purple.p600 : ChalNaColor.Gray.g200
+        return isFocused ? ChalNaColor.accent : ChalNaColor.borderStrong
     }
 
     private var borderWidth: CGFloat {
@@ -76,5 +78,5 @@ public struct ChalNaTextField: View {
         ChalNaTextField(label: "Error 상태", placeholder: "값을 입력하세요", errorText: "30자 이내로 입력해 주세요.", text: $failing)
     }
     .padding(24)
-    .background(Color.white)
+    .background(ChalNaColor.bg)
 }

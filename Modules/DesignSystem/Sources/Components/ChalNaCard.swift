@@ -19,6 +19,7 @@ public struct ChalNaCard<Content: View>: View {
 
     public var body: some View {
         content()
+            .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.md, style: .continuous))
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(

@@ -30,6 +30,7 @@ public extension View {
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
                     .task(id: message) {
                         try? await Task.sleep(nanoseconds: 2_200_000_000)
+                        guard !Task.isCancelled else { return }
                         onDismiss()
                     }
             }

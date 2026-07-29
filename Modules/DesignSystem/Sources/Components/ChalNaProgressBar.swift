@@ -27,7 +27,10 @@ public struct ChalNaProgressBar: View {
         .accessibilityValue(Text(verbatim: "\(Int(clamped * 100))%"))
     }
 
-    private var clamped: Double { max(0, min(1, progress)) }
+    private var clamped: Double {
+        guard progress.isFinite else { return 0 }
+        return max(0, min(1, progress))
+    }
 }
 
 #Preview {
