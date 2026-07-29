@@ -18,6 +18,7 @@ public struct DesignSystemShowcaseView: View {
                 navBarSection // TEMP(T6): Task 12 재작성 때 정식 구조로 흡수
                 cardListRowT8Section // TEMP(T8): Task 12 재작성 때 정식 구조로 흡수
                 tagThumbT9Section // TEMP(T9): Task 12 재작성 때 정식 구조로 흡수
+                stateComponentsT11Section // TEMP(T11): Task 12 재작성 때 정식 구조로 흡수
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 32)
@@ -430,6 +431,52 @@ public struct DesignSystemShowcaseView: View {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // MARK: - State Components (TEMP(T11): Task 12 재작성 때 정식 구조로 흡수)
+
+    private var stateComponentsT11Section: some View {
+        sectionShell(title: "State Components (TEMP T11)") {
+            VStack(alignment: .leading, spacing: 24) {
+                VStack(spacing: 12) {
+                    ChalNaProgressBar(progress: 0.0)
+                    ChalNaProgressBar(progress: 0.62)
+                    ChalNaProgressBar(progress: 1.0)
+                }
+
+                ChalNaEmptyState(
+                    title: "아직 만든 필름이 없어요",
+                    message: "Live Photo와 짧은 영상을 촬영일 순서로 이어 붙여\n한 편의 필름을 만들어 보세요.",
+                    actionTitle: "첫 Vlog 시작하기"
+                ) {}
+
+                ChalNaEmptyState(
+                    title: "검색 결과가 없어요",
+                    message: "다른 키워드로 다시 시도해 보세요."
+                )
+
+                ChalNaNotice(
+                    title: "영상 파일을 찾을 수 없어요",
+                    message: "앱을 다시 설치하셨거나 파일이 삭제되었어요. 재생과 공유는 불가능하고, 라이브러리에서 항목을 정리할 수 있어요."
+                )
+
+                Color.clear
+                    .frame(height: 100)
+                    .chalNaToast(message: "사진 보관함에 저장했어요") {}
+
+                ZStack {
+                    LinearGradient(colors: [.blue.opacity(0.6), .cyan], startPoint: .top, endPoint: .bottom)
+                    ChalNaBlockingOverlay(
+                        title: "사진을 불러오는 중",
+                        detail: "Live Photo와 영상을 정성껏 추출하고 있어요",
+                        progressText: "05 / 12",
+                        accessibilityLabel: "사진을 불러오는 중이에요"
+                    )
+                }
+                .frame(height: 320)
+                .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.md, style: .continuous))
             }
         }
     }
