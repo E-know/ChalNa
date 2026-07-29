@@ -16,11 +16,12 @@ public struct DesignSystemShowcaseView: View {
                 textFieldSection
                 foundationSection
                 navBarSection // TEMP(T6): Task 12 재작성 때 정식 구조로 흡수
+                cardListRowT8Section // TEMP(T8): Task 12 재작성 때 정식 구조로 흡수
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 32)
         }
-        .background(Color.white.ignoresSafeArea())
+        .chalNaScreen()
     }
 
     // MARK: - Header
@@ -373,6 +374,14 @@ public struct DesignSystemShowcaseView: View {
         }
     }
 
+    // MARK: - Card & ListRow (TEMP(T8): Task 12 재작성 때 정식 구조로 흡수)
+
+    private var cardListRowT8Section: some View {
+        sectionShell(title: "Card & ListRow (TEMP T8)") {
+            ShowcaseCardListRow()
+        }
+    }
+
     // MARK: - Helpers
 
     private func sectionShell<C: View>(title: String, @ViewBuilder content: () -> C) -> some View {
@@ -400,6 +409,46 @@ private struct ShowcaseTextField: View {
         VStack(spacing: 16) {
             ChalNaTextField(label: "필름 제목", placeholder: "예: 제주도, 우리의 봄", helper: "비워두면 자동으로 채워져요.", text: $text)
             ChalNaTextField(label: "에러 상태", placeholder: "값을 입력하세요", errorText: "30자 이내로 입력해 주세요.", text: $failing)
+        }
+    }
+}
+
+/// Card·ListRow·Slider 데모용 wrapper (State 보유). TEMP(T8): Task 12 재작성 때 제거.
+private struct ShowcaseCardListRow: View {
+    @State private var autoPlayOn = true
+    @State private var labelOn = false
+    @State private var opacity: Double = 0.6
+    @State private var isKorean = true
+    @State private var standaloneValue: Double = 0.4
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            ChalNaCard {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("제주도, 우리의 봄")
+                        .font(ChalNaTypography.headline)
+                        .foregroundColor(ChalNaColor.textPrimary)
+                    Text(verbatim: "8 클립 · 01:40")
+                        .font(ChalNaTypography.label)
+                        .foregroundColor(ChalNaColor.textSecondary)
+                }
+            }
+
+            ChalNaCard(padding: 0) {
+                VStack(spacing: 0) {
+                    ChalNaListRow.navigate(title: "비활성 행", value: "예시", enabled: false) {}
+                    ChalNaListDivider()
+                    ChalNaListRow.toggle(title: "자동 재생", isOn: autoPlayOn) { autoPlayOn = $0 }
+                    ChalNaListDivider()
+                    ChalNaListRow.toggleVerbatim(title: "제목 라벨 표시", isOn: labelOn) { labelOn = $0 }
+                    ChalNaListDivider()
+                    ChalNaListRow.slider(title: "투명도", value: opacity, trailingText: "\(Int(opacity * 100))%") { opacity = $0 }
+                    ChalNaListDivider()
+                    ChalNaListRow.check(verbatimTitle: "한국어", isChecked: isKorean) { isKorean.toggle() }
+                }
+            }
+
+            ChalNaSlider(value: $standaloneValue)
         }
     }
 }
