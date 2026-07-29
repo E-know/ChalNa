@@ -67,7 +67,9 @@ check "흰색 하드코딩" '(Color\.white|\.white\b)' \
   'TimelineFeature/Sources/Components/ClipLabelText.swift' \
   'TimelineFeature/Sources/LabelEditorView.swift' \
   'Models/Sources/ClipLabel.swift' \
-  'Models/Sources/ThumbnailPreset.swift'
+  'Models/Sources/ThumbnailPreset.swift' \
+  'DesignSystem/Sources/Components/ChalNaTag.swift' \
+  'DesignSystem/Sources/Components/MediaThumb.swift'
 
 # 5. UIColor(named:) — 번들 조회가 조용히 실패하는 패턴
 check "UIColor(named:)" 'UIColor\(named:'

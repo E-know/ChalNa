@@ -17,6 +17,7 @@ public struct DesignSystemShowcaseView: View {
                 foundationSection
                 navBarSection // TEMP(T6): Task 12 재작성 때 정식 구조로 흡수
                 cardListRowT8Section // TEMP(T8): Task 12 재작성 때 정식 구조로 흡수
+                tagThumbT9Section // TEMP(T9): Task 12 재작성 때 정식 구조로 흡수
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 32)
@@ -379,6 +380,57 @@ public struct DesignSystemShowcaseView: View {
     private var cardListRowT8Section: some View {
         sectionShell(title: "Card & ListRow (TEMP T8)") {
             ShowcaseCardListRow()
+        }
+    }
+
+    // MARK: - Tag & MediaThumb (TEMP(T9): Task 12 재작성 때 정식 구조로 흡수)
+
+    private var tagThumbT9Section: some View {
+        sectionShell(title: "Tag & MediaThumb (TEMP T9)") {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 8) {
+                    ChalNaTag("LIVE", variant: .live)
+                    ChalNaTag("VIDEO", variant: .video, icon: .video)
+                    ChalNaTag("8 CLIPS", variant: .neutral)
+                    ChalNaTag("선택됨", variant: .accent, icon: .check)
+                }
+
+                // 고정 크기 모드 — 필름스트립에서 쓰는 6상태 전부.
+                HStack(alignment: .bottom, spacing: 12) {
+                    MediaThumb(size: CGSize(width: 46, height: 80)) {
+                        LinearGradient(colors: [.blue.opacity(0.6), .cyan], startPoint: .top, endPoint: .bottom)
+                    }
+                    MediaThumb(state: .selected, size: CGSize(width: 46, height: 80)) {
+                        LinearGradient(colors: [Color(white: 0.97), .yellow], startPoint: .top, endPoint: .bottom)
+                    }
+                    MediaThumb(state: .playing, size: CGSize(width: 46, height: 80)) {
+                        LinearGradient(colors: [.orange, .pink], startPoint: .top, endPoint: .bottom)
+                    }
+                    MediaThumb(state: .lifted, size: CGSize(width: 46, height: 80)) {
+                        LinearGradient(colors: [.purple, .pink], startPoint: .top, endPoint: .bottom)
+                    }
+                    MediaThumb(state: .ghost, size: CGSize(width: 46, height: 80)) { Color.clear }
+                    MediaThumb(state: .dimmed, size: CGSize(width: 46, height: 80)) {
+                        LinearGradient(colors: [.green, .mint], startPoint: .top, endPoint: .bottom)
+                    }
+                }
+
+                // 그리드 모드(size 미지정) — 9:16 기하 확인용. 두 번째 셀은 흰→노랑
+                // 그라디언트(아주 밝음)로 선택 링의 이중 스트로크가 살아있는지 증명한다.
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
+                    ForEach(0..<6, id: \.self) { i in
+                        if i == 1 {
+                            MediaThumb(state: .selected) {
+                                LinearGradient(colors: [Color(white: 0.97), .yellow], startPoint: .top, endPoint: .bottom)
+                            }
+                        } else {
+                            MediaThumb(state: .normal) {
+                                LinearGradient(colors: [.gray, .black], startPoint: .top, endPoint: .bottom)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
