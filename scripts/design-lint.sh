@@ -51,10 +51,9 @@ check "Color(hex:)" 'Color\(hex:' \
 #    ChalNaRadius.md 처럼 토큰을 넘기는 경우는 숫자가 아니라 안 걸린다.
 #    구분자 앞 공백을 반드시 허용해야 한다 — `layer.cornerRadius = 16` 은
 #    cornerRadius 와 '=' 사이에 공백이 있어 'cornerRadius[:=(]' 로는 안 걸린다.
-# 예외: 아이콘 Path 기하(반지름이 아님), FilmStripCollectionView(Task 21 이 토큰화하며 이 예외를 제거)
+# 예외: 아이콘 Path 기하(반지름이 아님)
 check "cornerRadius 리터럴" 'cornerRadius *[:=(] *[0-9]' \
-  'DesignSystem/Sources/Icons/ChalNaIcon.swift' \
-  'FilmStripCollectionView.swift'
+  'DesignSystem/Sources/Icons/ChalNaIcon.swift'
 
 # 4. 흰색 하드코딩 — 영상 출력 픽셀과 일치해야 하는 곳만 예외
 #    CompositionService: CLAUDE.md 가 "CompositionService 의 비디오 텍스트 오버레이는
