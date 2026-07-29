@@ -38,6 +38,9 @@
   xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
              -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
   ```
+- **`-derivedDataPath` 는 항상 `/tmp/chalna-build` 하나만 쓴다.** 태스크마다 다른 경로를 쓰면
+  DerivedData 가 태스크당 ~2.2GB 씩 쌓여 `/tmp` 가 차고 빌드가 `lipo` 에러로 실패한다
+  (Task 7 에서 실제 발생 — 잔여물 3.8GB). 새 경로를 만들지 말고 기존 것을 재사용한다.
 - **테스트 명령 (전체):**
   ```bash
   xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa-Workspace \
@@ -919,7 +922,7 @@ xcrun simctl boot "iPhone 17 Pro" 2>/dev/null || true
 open -a Simulator
 xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-           -derivedDataPath /tmp/chalna-dd build
+           -derivedDataPath /tmp/chalna-build build
 xcrun simctl install "iPhone 17 Pro" \
   /tmp/chalna-dd/Build/Products/Debug-iphonesimulator/ChalNa.app
 xcrun simctl launch "iPhone 17 Pro" ios.inho.ChalNa
@@ -1414,7 +1417,7 @@ extension AppMode {
 ```bash
 xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-           -derivedDataPath /tmp/chalna-dd build
+           -derivedDataPath /tmp/chalna-build build
 xcrun simctl install "iPhone 17 Pro" /tmp/chalna-dd/Build/Products/Debug-iphonesimulator/ChalNa.app
 xcrun simctl terminate "iPhone 17 Pro" ios.inho.ChalNa 2>/dev/null || true
 SIMCTL_CHILD_CHALNA_APP_MODE=showcase xcrun simctl launch "iPhone 17 Pro" ios.inho.ChalNa
@@ -3854,7 +3857,7 @@ struct SplashView: View {
 ```bash
 xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-           -derivedDataPath /tmp/chalna-dd build 2>&1 | tail -5
+           -derivedDataPath /tmp/chalna-build build 2>&1 | tail -5
 xcrun simctl install "iPhone 17 Pro" /tmp/chalna-dd/Build/Products/Debug-iphonesimulator/ChalNa.app
 xcrun simctl terminate "iPhone 17 Pro" ios.inho.ChalNa 2>/dev/null || true
 xcrun simctl launch "iPhone 17 Pro" ios.inho.ChalNa
@@ -3993,7 +3996,7 @@ EOF
 ```bash
 xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-           -derivedDataPath /tmp/chalna-dd build 2>&1 | grep -E "error:" | sort -u
+           -derivedDataPath /tmp/chalna-build build 2>&1 | grep -E "error:" | sort -u
 xcrun simctl install "iPhone 17 Pro" /tmp/chalna-dd/Build/Products/Debug-iphonesimulator/ChalNa.app
 xcrun simctl terminate "iPhone 17 Pro" ios.inho.ChalNa 2>/dev/null || true
 xcrun simctl launch "iPhone 17 Pro" ios.inho.ChalNa
@@ -4272,7 +4275,7 @@ EOF
 ```bash
 xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-           -derivedDataPath /tmp/chalna-dd build 2>&1 | grep -E "error:" | sort -u
+           -derivedDataPath /tmp/chalna-build build 2>&1 | grep -E "error:" | sort -u
 xcrun simctl install "iPhone 17 Pro" /tmp/chalna-dd/Build/Products/Debug-iphonesimulator/ChalNa.app
 xcrun simctl terminate "iPhone 17 Pro" ios.inho.ChalNa 2>/dev/null || true
 xcrun simctl launch "iPhone 17 Pro" ios.inho.ChalNa
@@ -4422,7 +4425,7 @@ EOF
 ```bash
 xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-           -derivedDataPath /tmp/chalna-dd build 2>&1 | grep -E "error:" | sort -u
+           -derivedDataPath /tmp/chalna-build build 2>&1 | grep -E "error:" | sort -u
 xcrun simctl install "iPhone 17 Pro" /tmp/chalna-dd/Build/Products/Debug-iphonesimulator/ChalNa.app
 xcrun simctl terminate "iPhone 17 Pro" ios.inho.ChalNa 2>/dev/null || true
 xcrun simctl launch "iPhone 17 Pro" ios.inho.ChalNa
@@ -4680,7 +4683,7 @@ private struct FilmPosterCard: View {
 xcrun simctl uninstall "iPhone 17 Pro" ios.inho.ChalNa 2>/dev/null || true
 xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-           -derivedDataPath /tmp/chalna-dd build 2>&1 | grep -E "error:" | sort -u
+           -derivedDataPath /tmp/chalna-build build 2>&1 | grep -E "error:" | sort -u
 xcrun simctl install "iPhone 17 Pro" /tmp/chalna-dd/Build/Products/Debug-iphonesimulator/ChalNa.app
 xcrun simctl launch --console-pty "iPhone 17 Pro" ios.inho.ChalNa &
 sleep 4
@@ -5008,7 +5011,7 @@ EOF
 ```bash
 xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-           -derivedDataPath /tmp/chalna-dd build 2>&1 | grep -E "error:" | sort -u
+           -derivedDataPath /tmp/chalna-build build 2>&1 | grep -E "error:" | sort -u
 xcrun simctl install "iPhone 17 Pro" /tmp/chalna-dd/Build/Products/Debug-iphonesimulator/ChalNa.app
 xcrun simctl terminate "iPhone 17 Pro" ios.inho.ChalNa 2>/dev/null || true
 xcrun simctl launch "iPhone 17 Pro" ios.inho.ChalNa --CHALNA_APP_MODE devMock
@@ -5251,7 +5254,7 @@ EOF
 ```bash
 xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-           -derivedDataPath /tmp/chalna-dd build 2>&1 | grep -E "error:" | sort -u
+           -derivedDataPath /tmp/chalna-build build 2>&1 | grep -E "error:" | sort -u
 xcrun simctl install "iPhone 17 Pro" /tmp/chalna-dd/Build/Products/Debug-iphonesimulator/ChalNa.app
 xcrun simctl terminate "iPhone 17 Pro" ios.inho.ChalNa 2>/dev/null || true
 xcrun simctl launch "iPhone 17 Pro" ios.inho.ChalNa
@@ -5595,7 +5598,7 @@ EOF
 ```bash
 xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
            -destination 'platform=iOS Simulator,name=iPhone SE (3rd generation)' \
-           -derivedDataPath /tmp/chalna-se build 2>&1 | grep -E "error:" | sort -u
+           -derivedDataPath /tmp/chalna-build build 2>&1 | grep -E "error:" | sort -u
 xcrun simctl boot "iPhone SE (3rd generation)" 2>/dev/null || true
 xcrun simctl install "iPhone SE (3rd generation)" \
   /tmp/chalna-se/Build/Products/Debug-iphonesimulator/ChalNa.app
@@ -5780,7 +5783,7 @@ private struct SprocketLine: View {
 ```bash
 xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-           -derivedDataPath /tmp/chalna-dd build 2>&1 | grep -E "error:" | sort -u
+           -derivedDataPath /tmp/chalna-build build 2>&1 | grep -E "error:" | sort -u
 xcrun simctl install "iPhone 17 Pro" /tmp/chalna-dd/Build/Products/Debug-iphonesimulator/ChalNa.app
 xcrun simctl terminate "iPhone 17 Pro" ios.inho.ChalNa 2>/dev/null || true
 xcrun simctl launch "iPhone 17 Pro" ios.inho.ChalNa
