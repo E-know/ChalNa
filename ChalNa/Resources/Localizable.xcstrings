@@ -1660,19 +1660,19 @@
         }
       }
     },
-    "아직 만든 필름이 없어요." : {
+    "아직 만든 필름이 없어요" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No films yet."
+            "value" : "No films yet"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "まだフィルムがありません。"
+            "value" : "まだフィルムがありません"
           }
         }
       }
