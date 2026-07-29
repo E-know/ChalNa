@@ -1335,7 +1335,7 @@ EOF
 
 **Interfaces:**
 - Consumes: `ChalNaColor.bg/.surface/.border/.textPrimary/.textSecondary/.accent`, `ChalNaTypography.headline/.caption/.label`, `ChalNaIcon`, `ChalNaMotion.fast`, `ChalNaRadius.pill`.
-- Produces: `ChalNaNavAction` — `.back(action:)`, `.close(action:)`, `.icon(_:action:accessibilityLabel:)`, `.text(_:action:)`, `.empty` 정적 생성자. 모두 44×44 히트, 글리프 20pt 고정.
+- Produces: `ChalNaNavAction` — `.back(action:)`, `.close(action:)`, `.icon(_:accessibilityLabel:action:)`, `.text(_:action:)`, `.empty` 정적 생성자. 모두 44×44 히트, 글리프 20pt 고정.
 - Produces:
   ```swift
   ChalNaNavBar(
@@ -1346,7 +1346,7 @@ EOF
       showsDivider: Bool = false
   )
   ```
-  높이 52. 좌·우 슬롯 고정 56pt.
+  높이 `minHeight: 52`(고정 아님). 좌·우 슬롯 `minWidth: 56`(고정 아님).
 - Produces: `View.chalNaScrollHairline(progress: Double)`.
 
 - [ ] **Step 1: Showcase 도달 경로 추가 (P1 전체의 시각 검증 수단)**
@@ -6367,6 +6367,14 @@ git commit -m "$(cat <<'EOF'
 🐛 fix(Timeline): 세로 예산 재설계 — SE 94pt 초과 해소
 
 고정 높이 합계 741pt(SE 가용 647pt) → 320pt. 캔버스가 남는 공간을 먹는다.
+
+> **★ 헤더 52pt 는 하한이다(Task 6 리뷰 확인).** `ChalNaNavBar` 는 높이를
+> `.frame(minHeight: 52)` 로 적용한다. 이 화면은 `title: "편집"` + `caption: store.title` 을
+> **세로로 쌓기** 때문에 Dynamic Type 을 키우면 헤더가 52pt 를 넘어 캔버스 몫을 잠식한다.
+> 즉 320pt 는 기본 텍스트 크기에서의 하한 합계이고 xxxLarge 에서는 더 커진다.
+> 캔버스가 `layoutPriority(1)` 로 남는 공간을 먹으므로 헤더가 커지면 캔버스가 자동 축소된다 —
+> 파열이 아니라 축소로 흡수되는 구조다. Step 5 의 xxxLarge 실측이 이 지점을 확인하며,
+> 미달 시 1차 조정 레버는 필름스트립 96 → 80pt.
 
 - 프리뷰를 layoutPriority(1) 가변 요소로, 나머지는 고정
 - labelRow(TIMELINE · N CLIPS + 총 길이) 삭제 — 클립 수는 필름스트립,

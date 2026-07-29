@@ -288,7 +288,7 @@ SF Symbols로 가는 근거:
 고정 높이를 전부 걷고 **캔버스를 유일한 가변 요소로** 둔다.
 
 ```
-ChalNaNavBar               52  고정
+ChalNaNavBar               52  하한(minHeight) — Dynamic Type 시 증가
 ChalNaCanvas (9:16)       가변  ← 남는 공간 전부, aspectRatio(9/16, .fit)
 스크럽바                    28  고정 (캔버스에 붙임)
 TransportControls           56  고정
@@ -296,7 +296,7 @@ TransportControls           56  고정
 필름스트립                  96  고정
 EditToolbar (safeAreaInset) 64  고정
 ─────────────────────────────
-고정 합계                  320
+하한 합계                  320  (기본 텍스트 크기 기준)
 ```
 
 SE 가용 647 → 캔버스 327pt 배정 (현재 741pt / 94pt 초과에서 여유 확보).
