@@ -2840,8 +2840,20 @@ check "흰색 하드코딩" '(Color\.white|\.white\b|Color\(white:|UIColor\(whit
 #    이게 빠지면 Color.white 를 Color(white: 1.0) 으로 바꾸는 것만으로 규칙을 우회할 수 있다.
 ```
 
-**기대 결과: 흰색 카운트가 58 → 60 으로 올라간다.** 이것은 회귀가 아니라 **정직한 재집계**다
-(숨어 있던 2건이 드러난 것). Task 12 가 Showcase 를 전면 재작성하면 그 2건이 사라져 다시 내려간다.
+**그리고 같은 스텝에서 그 2건을 토큰으로 교체한다.** Task 9 리뷰가 지적한 대로,
+`Color(white: 0.97)` 자리에는 **이미 존재하는 근사 흰색 토큰 `ChalNaColor.textPrimary`(#F5F4F7)** 를
+쓰면 된다 — 시각적으로 동일한 "아주 밝은 콘텐츠" 테스트가 되고, lint 노출도 0, 새 리터럴도 0,
+예외도 필요 없다.
+
+`DesignSystemShowcaseView.swift:404,424` 두 곳:
+
+```swift
+                        LinearGradient(colors: [ChalNaColor.textPrimary, .yellow],
+                                       startPoint: .top, endPoint: .bottom)
+```
+
+**기대 결과: 흰색 카운트가 58 로 유지된다.** 패턴을 넓혀도(숨은 2건이 드러남) 같은 스텝에서
+그 2건을 토큰으로 바꾸므로 순증이 0 이다. 사각지대는 닫히고 수치는 정직해진다.
 Task 26 기준선은 여전히 "모든 규칙 0" 이다.
 
 - [ ] **Step 2: ChalNaCanvas 작성**
