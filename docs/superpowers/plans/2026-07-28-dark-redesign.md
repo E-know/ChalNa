@@ -292,6 +292,9 @@ public enum ChalNaColor {
 
     /// 파괴적 액션 · LIVE dot. 다크용으로 밝힌 레드.
     public static let danger  = Color(hex: 0xFF6B66)
+    /// `danger` 의 눌림 톤. `accentPressed` 가 `accent` 에 대해 하는 역할과 동일.
+    /// 이게 없으면 파괴적 ghost 버튼이 눌린 동안 보라(`accentPressed`)로 바뀐다.
+    public static let dangerPressed = Color(hex: 0xFF8F8B)
     public static let success = Color(hex: 0x3DD9A0)
 
     // MARK: - Brand
@@ -1416,8 +1419,13 @@ xcrun simctl install "iPhone 17 Pro" /tmp/chalna-dd/Build/Products/Debug-iphones
 xcrun simctl terminate "iPhone 17 Pro" ios.inho.ChalNa 2>/dev/null || true
 SIMCTL_CHILD_CHALNA_APP_MODE=showcase xcrun simctl launch "iPhone 17 Pro" ios.inho.ChalNa
 sleep 3
-xcrun simctl io "iPhone 17 Pro" screenshot /tmp/showcase.png
+xcrun simctl io "iPhone 17 Pro" screenshot \
+  .superpowers/sdd/2026-07-28-dark-redesign/shot-t<N>-showcase.png
 ```
+
+> **스크린샷은 반드시 위 SDD 워크스페이스 경로에 저장한다.** 세션 로컬 scratchpad 에 두면
+> 리뷰어가 열 수 없어 시각 증거가 리뷰에서 빠진다(Task 7 에서 실제로 발생 —
+> 리뷰어가 "Cannot verify from diff: 스크린샷을 열어볼 수 없음"으로 남겼다).
 
 > Showcase 는 Task 12 에서 새 인벤토리로 재작성된다. Task 6~11 동안에는 구 Showcase 가
 > 뜨므로 **새로 만든 컴포넌트는 아직 거기 없다.** 그래서 각 태스크는 자기가 만든 컴포넌트를
@@ -1866,7 +1874,11 @@ public struct ChalNaButtonStyle: ButtonStyle {
         case .secondary:
             return destructive ? ChalNaColor.danger : ChalNaColor.textPrimary
         case .ghost:
-            return pressed ? ChalNaColor.accentPressed : tint
+            // pressed 도 destructive 계열을 유지해야 한다. accentPressed 를 무조건 쓰면
+            // 파괴적 ghost 버튼이 눌린 동안 red -> 보라로 바뀐다(ChalNaMotion.fast 로 실제 보임).
+            return pressed
+                ? (destructive ? ChalNaColor.dangerPressed : ChalNaColor.accentPressed)
+                : tint
         }
     }
 
