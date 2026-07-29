@@ -4091,7 +4091,23 @@ EOF
 - Consumes: `ChalNaNavBar`, `ChalNaNavAction`, `ChalNaCard`, `ChalNaListRow`, `ChalNaListDivider`, `chalNaScreen()`.
 - Produces: 없음 (화면).
 
-- [ ] **Step 1: SettingsView 재작성**
+- [ ] **Step 1: `ChalNaCard` 에 clip 범위 경고 주석 추가 (Task 12 리뷰 Minor)**
+
+`ChalNaCard` 의 `clipShape` 는 **패딩 적용 전 `content()` 자체**에 걸린다. 지금은 무해하지만,
+`padding > 0` 인 카드에 **그림자 있는 콘텐츠**(예: 썸네일)를 직접 넣는 호출자가 생기면
+그 그림자가 잘린다. P2~P4 에서 새 호출자가 놓치기 쉬운 함정이라 주석으로 못박는다.
+
+`Modules/DesignSystem/Sources/Components/ChalNaCard.swift` 의 타입 doc 주석에 한 줄 추가:
+
+```swift
+/// surface + 1px border 컨테이너.
+///
+/// **주의: `clipShape` 는 패딩 적용 전 `content()` 에 걸린다.** 리스트 행 press 하이라이트가
+/// 카드 모서리를 넘지 않게 하려는 것이므로, 그림자가 있는 콘텐츠를 직접 넣으면 그림자가 잘린다.
+/// 그런 콘텐츠는 카드 밖에 두거나 `padding: 0` + 자체 여백으로 구성한다.
+```
+
+- [ ] **Step 2: SettingsView 재작성**
 
 `Modules/SettingsFeature/Sources/SettingsView.swift` 의 `body` 와 `menuRow` 를 교체한다
 (`init`·`store` 프로퍼티는 그대로):
@@ -4144,7 +4160,7 @@ EOF
 `.font(.system(size: 16, weight: .semibold))`(chevron)·`Image(systemName: "chevron.right")`·
 `cornerRadius: 8` 리터럴 2곳이 함께 사라진다 (감사 #13, #14).
 
-- [ ] **Step 2: LanguageView 재작성**
+- [ ] **Step 3: LanguageView 재작성**
 
 `Modules/SettingsFeature/Sources/LanguageScene/LanguageView.swift` 의 `body` 와 `languageRow` 를 교체한다:
 
@@ -4185,7 +4201,7 @@ EOF
 `languageRow(_:)` 함수 전체를 **삭제**한다. `Image(systemName: "checkmark")` 직접 사용이 함께 사라진다.
 `.background(Color.white.ignoresSafeArea())` → `.chalNaScreen()` 으로 바뀐 것도 확인한다.
 
-- [ ] **Step 3: 빌드 후 두 화면 스크린샷**
+- [ ] **Step 4: 빌드 후 두 화면 스크린샷**
 
 ```bash
 xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
@@ -4206,6 +4222,20 @@ open /tmp/p2-settings.png
 확인할 것: 카드가 `surface`(배경보다 살짝 밝음)로 보이는가, 행 구분선이 좌측 16pt 인셋인가,
 chevron 이 `textSecondary` 인가, 흰 판이 남아 있지 않은가.
 
+> **★ 여기서 카드 press 하이라이트를 반드시 한 번 캡처한다 (Task 8·12 에서 미해결).**
+> `ChalNaCard(padding: 0) { rows }` 의 **첫 행 또는 마지막 행을 누른 상태**에서 스크린샷을 찍어,
+> 사각 press 하이라이트가 카드의 14pt 둥근 모서리 **안에 갇히는지** 확인한다.
+> Task 8 이 이 bleed 를 지적하고 Task 12 가 `clipShape` 로 고쳤지만, 터치 주입 수단이 없어
+> **세 에이전트 모두 눌림 상태를 한 번도 못 잡았다.** 소스 추론상으로는 맞지만 육안 확인이 비어 있다.
+>
+> 이 화면은 실제 리스트 행이 있는 첫 화면이라 여기가 첫 기회다. 캡처 방법:
+> - `xcrun simctl` 에는 탭 주입이 없다. 대신 **`ChalNaListRow` 를 눌린 상태로 강제 렌더하는
+>   임시 `#Preview`** 를 `SettingsView.swift` 에 추가해 `RenderPreview` 로 찍는다
+>   (`ButtonStyle` 의 `configuration.isPressed` 를 직접 흉내낼 수 없으므로,
+>   `ListRowPressStyle` 의 pressed 배경색 `surfaceRaised` 를 첫 행에 직접 깐 프리뷰로 충분하다).
+> - 그것도 어려우면 **못 했다고 정직하게 보고**하고 다음 화면(Task 15)으로 넘긴다.
+>   추측으로 "확인했다"고 쓰지 말 것.
+
 > **상태바 스타일 — 이미 해결됨(조치 불필요).** Task 3 직후 컨트롤러가 Splash 화면
 > (`Purple.p900` 어두운 배경)에서 스크린샷으로 확정했다: 시계·WiFi·배터리가 **흰색**으로
 > 렌더된다. 즉 `UIUserInterfaceStyle: Dark` 는 정상 동작한다.
@@ -4217,7 +4247,7 @@ chevron 이 `textSecondary` 인가, 흰 판이 남아 있지 않은가.
 > **따라서 `preferredColorScheme` / `overrideUserInterfaceStyle` / `statusBarStyle` 오버라이드를
 > 넣지 말 것.** 넣으면 흰 배경 구간에서 흰 글자가 되어 시계가 사라진다.
 
-- [ ] **Step 4: 커밋**
+- [ ] **Step 5: 커밋**
 
 ```bash
 git add Modules/SettingsFeature/Sources/SettingsView.swift \
@@ -4553,6 +4583,15 @@ EOF
         ChalNaTextArea(placeholder: placeholder, minHeight: 180,
                        text: $store.text.sending(\.textChanged))
     }
+
+> **★ placeholder 정렬을 확인한다 (Task 12 리뷰 Important).**
+> `ChalNaTextArea` 의 placeholder 는 `.padding(.horizontal 16, .vertical 14)`, 실제 `TextEditor` 는
+> `.padding(.horizontal 12, .vertical 8)` 이다. `TextEditor` 의 UIKit 기본 내부 inset
+> (`lineFragmentPadding` 5pt + `textContainerInset` 8pt)을 보정한 값으로 보이지만,
+> Task 12 리뷰가 diff 만으로는 확정할 수 없다고 남겼다.
+> **이 화면이 유일한 실사용처이므로 여기서 확정한다** — 빈 상태 스크린샷과 한 글자 입력 후
+> 스크린샷을 각각 찍어 **첫 글자가 placeholder 와 같은 위치에서 시작하는지** 비교한다.
+> 1~2pt 차이면 수용, 눈에 띄게 튀면 `ChalNaTextArea` 의 두 padding 을 맞춘다.
 ```
 
 `body` 의 `header` 호출부에서 `.padding(.horizontal, 16).padding(.vertical, 12).chalNaHeaderBar(scrollProgress: 1)`
