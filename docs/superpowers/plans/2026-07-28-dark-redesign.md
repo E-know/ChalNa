@@ -41,8 +41,13 @@
 - **시뮬레이터가 "Invalid device state" 로 잇달아 실패하면** 다음으로 복구한다:
   ```bash
   xcrun simctl shutdown all; killall Simulator 2>/dev/null; sleep 3
-  xcrun simctl boot "iPhone 17 Pro"
+  open -a Simulator                     # ← 반드시 UI 를 띄운다
+  sleep 8
+  xcrun simctl boot "iPhone 17 Pro" 2>/dev/null || true
   ```
+  **`open -a Simulator` 가 빠지면 안 된다.** 헤드리스 `simctl boot` 만으로는 부팅 직후
+  idle-shutdown 이 반복돼 복구가 안 된다(Task 11 에서 확인). Simulator.app UI 가 떠 있어야
+  디바이스가 살아 있는다.
   Task 8·9 에서 두 번 발생했다. 원인은 `ChalNaIconTests` 가 콜드 런에서 간헐적으로 크래시하며
   `simctl diagnose` 를 트리거해 CoreSimulator 를 흔드는 것으로 보인다. 재실행하면 통과한다
   (16/16, 1초 내). **테스트 코드를 고치려 하지 말고 위 레시피로 복구한 뒤 재실행한다.**
