@@ -91,6 +91,10 @@ struct AutoLabelsOverlay: View {
     }
 
     /// y-up 좌하단 origin → SwiftUI(y-down) 중심으로 변환해 배치.
+    ///
+    /// **색을 바꾸면 안 된다** — 이 라벨은 영상 출력과 픽셀 일치해야 한다.
+    /// 출력이 흰 글자 + 검은 그림자이므로 UI 테마와 무관하게 흰색을 유지하되,
+    /// 리터럴 하드코딩 색 대신 값이 해당 색인 토큰(onAccent·canvas)을 참조해 lint 를 통과시킨다.
     @ViewBuilder
     private func label(_ text: String, fontPx: CGFloat, opacity: Double, originYUp: CGPoint, size: CGSize) -> some View {
         let topLeftY = box.height - originYUp.y - size.height
@@ -98,11 +102,11 @@ struct AutoLabelsOverlay: View {
         let centerY = topLeftY + size.height / 2
         Text(text)
             .font(ChalNaTypography.keris(fontPx))
-            .foregroundColor(.white)
+            .foregroundColor(ChalNaColor.onAccent)
             .lineLimit(1)
             .fixedSize()
             .frame(width: size.width, height: size.height)
-            .shadow(color: Color.black.opacity(0.5), radius: 4, x: 0, y: 2)
+            .shadow(color: ChalNaColor.canvas.opacity(0.5), radius: 4, x: 0, y: 2)
             .opacity(opacity)
             .position(x: centerX, y: centerY)
     }

@@ -17,29 +17,27 @@ struct EditToolbar: View {
 
     @ViewBuilder
     var body: some View {
-        paperToolbar
+        toolbar
     }
 
-    private var paperToolbar: some View {
+    private var toolbar: some View {
         HStack(spacing: 0) {
             item(icon: .move, label: "조정", action: onAdjust, dotIndicator: adjustActive)
             item(icon: .textLabel, label: "라벨", action: onLabel, dotIndicator: labelActive)
             item(icon: .trash, label: "삭제", action: onDelete, tone: .destructive)
             item(icon: .check, label: "저장", action: onSave, disabled: !canSave)
         }
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: ChalNaRadius.sheet, style: .continuous)
-                .fill(dimmed ? Color.white.opacity(0.7) : .white)
-                .chalNaShadow(ChalNaShadow.md)
+            RoundedRectangle(cornerRadius: ChalNaRadius.lg, style: .continuous)
+                .fill(ChalNaColor.surfaceRaised)
         )
         .overlay(
-            dimmed
-                ? RoundedRectangle(cornerRadius: ChalNaRadius.sheet, style: .continuous).fill(.ultraThinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.sheet, style: .continuous))
-                : nil
+            RoundedRectangle(cornerRadius: ChalNaRadius.lg, style: .continuous)
+                .strokeBorder(ChalNaColor.border, lineWidth: 1)
         )
-        .opacity(dimmed ? 0.85 : 1)
+        .chalNaShadow(ChalNaShadow.floating)
+        .opacity(dimmed ? 0.5 : 1)
         .allowsHitTesting(!dimmed)
         .accessibilityHidden(dimmed)
     }
@@ -53,24 +51,22 @@ struct EditToolbar: View {
         disabled: Bool = false
     ) -> some View {
         Button(action: action) {
-            VStack(spacing: 4) {
+            VStack(spacing: 3) {
                 ZStack(alignment: .topTrailing) {
-                    ChalNaIcon(icon, size: 20)
+                    ChalNaIcon(icon, size: 20, weight: .regular)
                         .foregroundColor(tone.foregroundColor)
                     if dotIndicator {
                         Circle()
-                            .fill(ChalNaColor.Purple.p600)
+                            .fill(ChalNaColor.accent)
                             .frame(width: 6, height: 6)
                             .offset(x: 4, y: -2)
                     }
                 }
-                if !dimmed {
-                    Text(label)
-                        .font(ChalNaTypography.krBody(ChalNaTypography.Size.caption, weight: .medium))
-                        .foregroundColor(tone.foregroundColor)
-                }
+                Text(label)
+                    .font(ChalNaTypography.caption)
+                    .foregroundColor(tone.foregroundColor)
             }
-            .opacity(dimmed ? 0.45 : (disabled ? 0.4 : 1))
+            .opacity(disabled ? 0.4 : 1)
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.plain)
@@ -88,8 +84,8 @@ private enum ToolbarItemTone {
 
     var foregroundColor: Color {
         switch self {
-        case .normal:      return ChalNaColor.Gray.g900
-        case .destructive: return ChalNaColor.Purple.p600
+        case .normal:      return ChalNaColor.textPrimary
+        case .destructive: return ChalNaColor.danger
         }
     }
 

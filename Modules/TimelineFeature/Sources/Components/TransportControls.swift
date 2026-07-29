@@ -19,8 +19,10 @@ struct TransportControls: View {
     private func sideButton(icon: ChalNaIconKind, label: LocalizedStringKey, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             ZStack {
-                Circle().fill(ChalNaColor.Gray.g50).frame(width: 36, height: 36)
-                ChalNaIcon(icon, size: 13).foregroundColor(ChalNaColor.Gray.g900)
+                Circle().fill(ChalNaColor.surface).frame(width: 40, height: 40)
+                Circle().strokeBorder(ChalNaColor.border, lineWidth: 1).frame(width: 40, height: 40)
+                ChalNaIcon(icon, size: 14, weight: .semibold)
+                    .foregroundColor(ChalNaColor.textPrimary)
             }
         }
         .buttonStyle(.plain)
@@ -31,15 +33,13 @@ struct TransportControls: View {
     private var centerButton: some View {
         Button(action: onToggle) {
             ZStack {
-                Circle().fill(ChalNaColor.Purple.p600).frame(width: 48, height: 48)
-                ChalNaIcon(isPlaying ? .pause : .play, size: 16)
-                    .foregroundColor(.white)
-                    .offset(x: isPlaying ? 0 : 2)
+                Circle().fill(ChalNaColor.accentFill).frame(width: 52, height: 52)
+                ChalNaIcon(isPlaying ? .pause : .play, size: 18, weight: .semibold)
+                    .foregroundColor(ChalNaColor.onAccent)
             }
-            .shadow(color: ChalNaColor.Purple.p600.opacity(0.6), radius: 10, x: 0, y: 5)
         }
         .buttonStyle(.plain)
-        .chalNaHitTarget(minSize: 48)
+        .chalNaHitTarget(minSize: 52)
         .accessibilityLabel(isPlaying ? LocalizedStringKey("일시정지") : LocalizedStringKey("재생"))
         .accessibilityHint("현재 클립 재생 상태를 전환합니다.")
     }
