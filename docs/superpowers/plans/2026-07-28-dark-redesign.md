@@ -2792,6 +2792,7 @@ EOF
 **Files:**
 - Create: `Modules/DesignSystem/Sources/Components/ChalNaCanvas.swift`
 - Modify: `Modules/TimelineFeature/Sources/Components/LabelBoxGeometry.swift` (DesignSystem 으로 위임)
+- Create: `Modules/DesignSystem/Tests/ChalNaCanvasGeometryTests.swift`
 
 **Interfaces:**
 - Consumes: `ChalNaColor.canvas`, `ChalNaRadius.md`.
@@ -2912,16 +2913,103 @@ enum LabelBoxGeometry {
 }
 ```
 
-- [ ] **Step 3: 빌드 + TimelineFeature 테스트 확인**
+- [ ] **Step 3: `fittedBox` 기하 테스트 작성 (현재 커버리지 0)**
+
+**사전 확인 결과 `fittedBox` 를 검사하는 테스트가 하나도 없다.** 기존 TimelineFeature 테스트는
+`LabelAnchorMathTests`(박스 크기를 *입력으로 받는다*) · `TimelinePlaybackTests` ·
+`TimelineReorderTests` 뿐이다. 따라서 "TimelineFeature 테스트가 통과하니 기하가 안 바뀌었다"는
+주장은 성립하지 않는다. 프리뷰 · 크롭 조정 · 라벨 에디터 **세 화면의 WYSIWYG 가 이 함수에
+걸려 있으므로** 잠금을 만든다.
+
+`Modules/DesignSystem/Tests/ChalNaCanvasGeometryTests.swift`:
+
+```swift
+import Testing
+import CoreGraphics
+import DesignSystem
+
+/// 9:16 캔버스 aspect-fit 기하를 잠근다.
+/// 프리뷰·크롭 조정·라벨 에디터가 같은 박스를 renderSize 로 삼으므로,
+/// 이 값이 바뀌면 세 화면의 WYSIWYG 가 동시에 어긋난다.
+struct ChalNaCanvasGeometryTests {
+
+    private let aspect: CGFloat = 9.0 / 16.0
+
+    @Test func testWideAvailableIsConstrainedByHeight() {
+        let box = ChalNaCanvasGeometry.fittedBox(aspect: aspect,
+                                                in: CGSize(width: 1000, height: 320))
+        #expect(box.height == 320)
+        #expect(abs(box.width - 320 * 9 / 16) < 0.001)
+    }
+
+    @Test func testTallAvailableIsConstrainedByWidth() {
+        let box = ChalNaCanvasGeometry.fittedBox(aspect: aspect,
+                                                in: CGSize(width: 180, height: 4000))
+        #expect(box.width == 180)
+        #expect(abs(box.height - 180 * 16 / 9) < 0.001)
+    }
+
+    @Test func testExactRatioReturnsAvailableUnchanged() {
+        let box = ChalNaCanvasGeometry.fittedBox(aspect: aspect,
+                                                in: CGSize(width: 180, height: 320))
+        #expect(abs(box.width - 180) < 0.001)
+        #expect(abs(box.height - 320) < 0.001)
+    }
+
+    /// aspect-fit 의 정의: 어느 축도 가용 영역을 넘지 않는다. 실기 크기로 확인.
+    @Test func testResultNeverExceedsAvailable() {
+        for available in [CGSize(width: 393, height: 852),
+                          CGSize(width: 375, height: 667),
+                          CGSize(width: 440, height: 956),
+                          CGSize(width: 100, height: 100)] {
+            let box = ChalNaCanvasGeometry.fittedBox(aspect: aspect, in: available)
+            #expect(box.width <= available.width + 0.001)
+            #expect(box.height <= available.height + 0.001)
+        }
+    }
+
+    @Test func testDegenerateInputsReturnZero() {
+        #expect(ChalNaCanvasGeometry.fittedBox(aspect: aspect, in: .zero) == .zero)
+        #expect(ChalNaCanvasGeometry.fittedBox(aspect: aspect,
+                                              in: CGSize(width: 100, height: 0)) == .zero)
+        #expect(ChalNaCanvasGeometry.fittedBox(aspect: 0,
+                                              in: CGSize(width: 100, height: 100)) == .zero)
+    }
+
+    /// 위임 전 `LabelBoxGeometry` 산식을 재현해 값이 바뀌지 않았음을 직접 대조한다.
+    /// TimelineFeature 는 별 모듈이라 여기서 그 타입을 호출할 수 없으므로 산식을 복제한다.
+    @Test func testMatchesPreDelegationFormula() {
+        func original(aspect: CGFloat, in available: CGSize) -> CGSize {
+            guard available.width > 0, available.height > 0 else { return .zero }
+            let byWidth = CGSize(width: available.width, height: available.width / aspect)
+            if byWidth.height <= available.height { return byWidth }
+            return CGSize(width: available.height * aspect, height: available.height)
+        }
+        for available in [CGSize(width: 393, height: 500),
+                          CGSize(width: 393, height: 852),
+                          CGSize(width: 200, height: 100)] {
+            let new = ChalNaCanvasGeometry.fittedBox(aspect: aspect, in: available)
+            let old = original(aspect: aspect, in: available)
+            #expect(abs(new.width - old.width) < 0.001)
+            #expect(abs(new.height - old.height) < 0.001)
+        }
+    }
+}
+```
+
+- [ ] **Step 4: 빌드 + 테스트 확인**
 
 ```bash
-xcodebuild -workspace ChalNa.xcworkspace -scheme TimelineFeatureTests \
+xcodebuild -workspace ChalNa.xcworkspace -scheme DesignSystem \
+           -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test 2>&1 | tail -20
+xcodebuild -workspace ChalNa.xcworkspace -scheme TimelineFeature \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test 2>&1 | tail -20
 ```
 
-Expected: 기존 TimelineFeature 테스트 전부 PASS — 기하 계산이 바뀌지 않았음을 증명한다.
+Expected: DesignSystem **22개**(기존 16 + 신규 6) PASS, TimelineFeature 기존 테스트 전부 PASS.
+TimelineFeature 쪽은 보조 증거일 뿐이고 **실제 잠금은 위 6개 테스트**다.
 
-- [ ] **Step 4: 커밋**
+- [ ] **Step 5: 커밋**
 
 ```bash
 git add Modules/DesignSystem/Sources/Components/ChalNaCanvas.swift \
@@ -6156,7 +6244,7 @@ struct PreviewPanel: View {
 ```bash
 xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build 2>&1 | grep -E "error:" | sort -u
-xcodebuild -workspace ChalNa.xcworkspace -scheme TimelineFeatureTests \
+xcodebuild -workspace ChalNa.xcworkspace -scheme TimelineFeature \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test 2>&1 | tail -20
 ```
 
@@ -6803,9 +6891,9 @@ open /tmp/p4-labeleditor-idle.png /tmp/p4-labeleditor-editing.png
 - [ ] **Step 6: 라벨 관련 테스트 전체 확인 후 커밋**
 
 ```bash
-xcodebuild -workspace ChalNa.xcworkspace -scheme CompositionServiceTests \
+xcodebuild -workspace ChalNa.xcworkspace -scheme CompositionService \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test 2>&1 | tail -20
-xcodebuild -workspace ChalNa.xcworkspace -scheme TimelineFeatureTests \
+xcodebuild -workspace ChalNa.xcworkspace -scheme TimelineFeature \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test 2>&1 | tail -20
 ```
 
