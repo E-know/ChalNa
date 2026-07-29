@@ -145,6 +145,12 @@ public struct ExportView: View {
                 } overlay: { _ in
                     coverOverlay(canPlay: canPlay)
                 }
+                // 이 두 modifier 는 여기서 상한으로만 작동한다. `cover` 는 header + safeAreaInset
+                // 사이의 이미 제한된 높이 예산 안에 있고, `ChalNaCanvas` 내부 GeometryReader 가
+                // 그 높이를 그대로 받아 9:16 을 맞추기 때문이다(넓은 기기에서는 maxWidth 300 이 폭을 제한).
+                // 높이가 무제약인 컨텍스트(예: ScrollView) 에 이 조합을 그대로 옮기면
+                // aspectRatio(.fit) 가 무한 높이로 폭을 역산해 깨진다 — Task 19 FilmDetailView 가
+                // 그 사례(240×643 로 잘못 렌더링)이므로 그대로 복사하지 말 것.
                 .frame(maxWidth: 300)
                 .aspectRatio(9.0 / 16.0, contentMode: .fit)
                 .frame(maxWidth: .infinity)
