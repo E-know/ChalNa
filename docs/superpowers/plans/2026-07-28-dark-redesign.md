@@ -6575,21 +6575,29 @@ open /tmp/p4-timeline-se.png
 
 확인할 것: 헤더 · 캔버스 · 재생 컨트롤 · 힌트 · 필름스트립 · 하단 툴바가 **모두 보인다**.
 
-Dynamic Type 확대 확인:
+**Dynamic Type 확대 확인 — `simctl ui content-size` 를 쓰지 말 것.**
 
-```bash
-xcrun simctl ui "iPhone SE (3rd generation)" content-size extra-extra-extra-large
-xcrun simctl terminate "iPhone SE (3rd generation)" ios.inho.ChalNa
-xcrun simctl launch "iPhone SE (3rd generation)" ios.inho.ChalNa
+이 환경에서 `xcrun simctl ui <device> content-size extra-extra-extra-large` 는
+**앱 프로세스에 전달되지 않는다**(Task 12 검증에서 확인: OS 설정은 `defaults read` 로 바뀐 것이
+보이는데 xxxLarge 스크린샷이 기본 스크린샷과 바이트 단위로 동일했고, 시뮬레이터 완전 재부팅 후에도
+같았다). 그 명령으로 찍은 스크린샷은 증거가 되지 않는다.
+
+대신 **코드로 환경값을 직접 거는 프리뷰**를 쓴다. `TimelineView.swift` 하단에 추가:
+
+```swift
+#Preview("Timeline · xxxLarge") {
+    TimelineView()
+        .environment(EditSession(title: SampleData.filmTitle, clips: SampleData.jejuTimeline))
+        .environment(\.dynamicTypeSize, .xxxLarge)
+}
 ```
 
-Timeline 까지 다시 진입한 뒤:
+그리고 Xcode 의 `RenderPreview` 로 이 프리뷰를 렌더해 캡처한다.
+**눈대중으로 "비슷해 보인다"고 판단하지 말 것** — Task 12 검증은 Pillow 로 픽셀 바운딩박스를
+실측해 캡션 20→29px, 글리프 31→42px, 행 타이틀 24→34px 로 확대가 실제 일어남을 증명했다.
+같은 방식으로 **하단 EditToolbar 의 y 좌표가 화면 높이 안에 있는지 픽셀로 확인**한다.
 
-```bash
-xcrun simctl io "iPhone SE (3rd generation)" screenshot /tmp/p4-timeline-se-xxxl.png
-open /tmp/p4-timeline-se-xxxl.png
-xcrun simctl ui "iPhone SE (3rd generation)" content-size large   # 원복
-```
+이 프리뷰는 커밋에 포함해도 좋다 — 이후 태스크가 같은 검증을 반복할 수 있다.
 
 확인할 것: 툴바 라벨이 커져도 하단 툴바가 화면 안에 있는가 (캔버스가 줄어드는 것이 정상).
 
