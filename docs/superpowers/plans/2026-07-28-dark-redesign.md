@@ -2068,7 +2068,26 @@ EOF
 - Produces: `ChalNaListDivider` — 행 사이 구분선 (좌측 16pt 인셋).
 - Produces: `ChalNaSlider(value: Binding<Double>, range: ClosedRange<Double> = 0...1, step: Double? = nil, onEditingChanged: @escaping (Bool) -> Void = { _ in })`.
 
-- [ ] **Step 1: ChalNaCard 작성**
+- [ ] **Step 1: 구 Showcase 배경을 다크로 전환 (P1 검증 정확도 수정)**
+
+`Modules/DesignSystem/Sources/Showcase/DesignSystemShowcaseView.swift:23` 이 아직
+`.background(Color.white.ignoresSafeArea())` 다. 이 상태로는 **다크 컴포넌트를 흰 페이지 위에서
+판정**하게 되어, 이 리디자인의 핵심 판단이 무효가 된다 — `ChalNaCard` 의 `surface #16151D` 는
+흰 배경에서는 "검은 박스"로 보이지만 `bg #0B0A10` 위에서는 의도한 미묘한 단계로 보인다.
+정반대의 결론이 나온다.
+
+한 줄 교체:
+
+```swift
+        .chalNaScreen()
+```
+
+> **부수 효과(수용).** 구 Showcase 자체의 섹션 제목·스와치 라벨은 아직 `Gray.g900`(거의 검정)
+> 이라 다크 배경에서 흐려진다. Task 12 가 전면 재작성으로 정리한다. 우리가 스크린샷으로 보는 것은
+> **TEMP 섹션의 새 컴포넌트**이므로, 라벨 가독성보다 대비 판정의 유효성이 우선이다.
+> 이 교체로 lint 흰색 카운트도 1 줄어든다(59 → 58).
+
+- [ ] **Step 2: ChalNaCard 작성**
 
 `Modules/DesignSystem/Sources/Components/ChalNaCard.swift`:
 
@@ -2130,7 +2149,7 @@ public struct ChalNaCard<Content: View>: View {
 }
 ```
 
-- [ ] **Step 2: ChalNaListRow 작성**
+- [ ] **Step 3: ChalNaListRow 작성**
 
 `Modules/DesignSystem/Sources/Components/ChalNaListRow.swift`:
 
@@ -2370,7 +2389,7 @@ public struct ChalNaListDivider: View {
 }
 ```
 
-- [ ] **Step 3: ChalNaSlider 작성 (ListRow.slider 가 이걸 쓴다)**
+- [ ] **Step 4: ChalNaSlider 작성 (ListRow.slider 가 이걸 쓴다)**
 
 `Modules/DesignSystem/Sources/Components/ChalNaSlider.swift`:
 
@@ -2416,7 +2435,7 @@ public struct ChalNaSlider: View {
 > `ChalNaListRow.slider` 는 `step` 을 `Double`(non-optional)로 받아 그대로 넘긴다.
 > 연속 조절이 필요한 곳(LabelEditor 라벨 크기)은 `ChalNaSlider` 를 직접 쓰고 `step: nil` 로 둔다.
 
-- [ ] **Step 4: 빌드 확인 후 프리뷰 점검**
+- [ ] **Step 5: 빌드 확인 후 프리뷰 점검**
 
 ```bash
 xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
@@ -2425,7 +2444,7 @@ xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
 
 Expected: 에러 없음. Xcode Canvas 에서 `ChalNaCard` 프리뷰 확인.
 
-- [ ] **Step 5: 커밋**
+- [ ] **Step 6: 커밋**
 
 ```bash
 git add Modules/DesignSystem/Sources/Components/ChalNaCard.swift \
