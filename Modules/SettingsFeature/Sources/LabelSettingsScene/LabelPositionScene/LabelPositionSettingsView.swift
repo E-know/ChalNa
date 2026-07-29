@@ -24,11 +24,11 @@ public struct LabelPositionSettingsView: View {
             ScrollView {
                 VStack(spacing: 24) {
                     preview
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, 20)
                         .padding(.top, 16)
 
                     grid
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, 20)
                 }
                 .padding(.bottom, 64)
             }
@@ -104,7 +104,7 @@ public struct LabelPositionSettingsView: View {
             ForEach(0..<3, id: \.self) { row in
                 HStack(spacing: 3) {
                     ForEach(0..<3, id: \.self) { column in
-                        RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                        RoundedRectangle(cornerRadius: ChalNaRadius.xxs, style: .continuous)
                             .fill(cellFill(pos, row: row, column: column, isSelected: isSelected))
                             .frame(width: 10, height: 6)
                     }
