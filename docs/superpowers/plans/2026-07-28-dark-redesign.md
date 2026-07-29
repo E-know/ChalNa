@@ -2072,11 +2072,10 @@ EOF
   ChalNaListRow.toggle(title:subtitle:isOn:onChange:)
   ChalNaListRow.slider(title:value:range:step:enabled:trailingText:onChange:)
   ChalNaListRow.check(verbatimTitle:isChecked:action:)
-  ChalNaListRow.plain(title:subtitle:trailing:)
   ```
   모두 `minHeight: 56` (고정 높이 아님 — Dynamic Type 확대 시 밀려 커진다).
-- Produces: **verbatim 변형 2종** — `ChalNaListRow.navigateVerbatim(title:subtitle:value:enabled:action:)`,
-  `ChalNaListRow.toggleVerbatim(title:subtitle:isOn:onChange:)`. 둘 다 `title`/`subtitle` 을 `String` 으로 받는다.
+- Produces: **verbatim 변형 1종** — `ChalNaListRow.toggleVerbatim(title:subtitle:isOn:onChange:)`.
+  `title`/`subtitle` 을 `String` 으로 받는다.
   **필요한 이유:** `LabelKind.title`·`.subtitle` 은 `String(localized:)` 로 **이미 해석된 `String`** 이다
   (`Models/Sources/LabelSettings.swift:86,93` 확인됨). 이를 `LocalizedStringKey` 로 넘기면 이중 조회가 되어
   번역 테이블에서 다시 찾다가 키 자체를 반환하는, 조용히 잘못된 동작이 된다.
@@ -2187,7 +2186,6 @@ public struct ChalNaListRow: View {
         case slider(value: Double, range: ClosedRange<Double>, step: Double,
                     trailingText: String?, onChange: (Double) -> Void)
         case check(isChecked: Bool, action: () -> Void)
-        case plain(trailing: AnyView?)
     }
 
     private let titleText: Text
@@ -2232,22 +2230,10 @@ public struct ChalNaListRow: View {
 
     // MARK: - verbatim 변형
     //
-    // `LabelKind.title` 처럼 `String(localized:)` 로 **이미 해석된 String** 을 받는 경우용.
+    // `LabelKind.title`/`.subtitle` 처럼 `String(localized:)` 로 **이미 해석된 String** 을 받는 경우용.
+    // Task 15 의 라벨 토글 행이 유일한 사용처다.
     // 이를 LocalizedStringKey 로 넘기면 번역 테이블에서 다시 찾는 이중 조회가 되어
     // 조용히 잘못된 동작이 된다.
-
-    public static func navigateVerbatim(
-        title: String,
-        subtitle: String? = nil,
-        value: String? = nil,
-        enabled: Bool = true,
-        action: @escaping () -> Void
-    ) -> ChalNaListRow {
-        .init(titleText: Text(verbatim: title),
-              subtitleText: subtitle.map { Text(verbatim: $0) },
-              enabled: enabled,
-              kind: .navigate(value: value, action: action))
-    }
 
     public static func toggleVerbatim(
         title: String,
@@ -2285,17 +2271,6 @@ public struct ChalNaListRow: View {
               kind: .check(isChecked: isChecked, action: action))
     }
 
-    public static func plain<Trailing: View>(
-        title: LocalizedStringKey,
-        subtitle: LocalizedStringKey? = nil,
-        @ViewBuilder trailing: () -> Trailing
-    ) -> ChalNaListRow {
-        .init(titleText: Text(title),
-              subtitleText: subtitle.map { Text($0) },
-              enabled: true,
-              kind: .plain(trailing: AnyView(trailing())))
-    }
-
     // MARK: - Body
 
     public var body: some View {
@@ -2307,7 +2282,7 @@ public struct ChalNaListRow: View {
         case .check(_, let action):
             Button(action: action) { rowContent.contentShape(Rectangle()) }
                 .buttonStyle(ListRowPressStyle())
-        case .toggle, .slider, .plain:
+        case .toggle, .slider:
             rowContent
         }
     }
@@ -2378,8 +2353,6 @@ public struct ChalNaListRow: View {
                 .foregroundColor(ChalNaColor.accent)
                 .opacity(isChecked ? 1 : 0)
 
-        case .plain(let trailing):
-            if let trailing { trailing }
         }
     }
 }
