@@ -804,6 +804,12 @@
         }
       }
     },
+    "닫기" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Close" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "閉じる" } }
+      }
+    },
     "뒤로" : {
       "extractionState" : "stale",
       "localizations" : {

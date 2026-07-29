@@ -14,6 +14,7 @@ public struct DesignSystemShowcaseView: View {
                 chipSection
                 textFieldSection
                 foundationSection
+                navBarSection // TEMP(T6): Task 12 재작성 때 정식 구조로 흡수
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 32)
@@ -292,6 +293,33 @@ public struct DesignSystemShowcaseView: View {
                 .foregroundColor(ChalNaColor.Gray.g500)
         }
         .frame(width: 36)
+    }
+
+    // MARK: - NavBar (TEMP(T6): Task 12 에서 정식 구조로 흡수)
+
+    // TEMP(T6): ChalNaNavBar 는 아직 이 Showcase 의 정식 섹션이 아니다.
+    // 4가지 상태를 임시로 보여준다 — 특히 3번은 감사 #20(긴 타이틀-액션 겹침) 회귀 확인용.
+    private var navBarSection: some View {
+        sectionShell(title: "NavBar (TEMP T6)") {
+            VStack(spacing: 1) {
+                ChalNaNavBar(verbatimTitle: "타이틀만")
+                ChalNaNavBar(
+                    verbatimTitle: "저장 완료 화면",
+                    caption: "캡션 텍스트",
+                    leading: .back {},
+                    trailing: .text("저장") {}
+                )
+                ChalNaNavBar(
+                    verbatimTitle: "제주도에서 보낸 아주 길고 긴 제목의 어느 봄날의 기록 전체",
+                    leading: .back {},
+                    trailing: .text("저장") {}
+                )
+                ChalNaNavBar(
+                    verbatimTitle: "ChalNa",
+                    trailing: .icon(.settings, accessibilityLabel: "설정") {}
+                )
+            }
+        }
     }
 
     // MARK: - Helpers
