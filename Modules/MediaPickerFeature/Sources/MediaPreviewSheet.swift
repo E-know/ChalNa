@@ -20,7 +20,7 @@ struct MediaPreviewSheet: View {
 
     var body: some View {
         ZStack {
-            Color.white.ignoresSafeArea()
+            ChalNaColor.surfaceRaised.ignoresSafeArea()
 
             VStack(alignment: .leading, spacing: 16) {
                 metaRow
@@ -28,14 +28,15 @@ struct MediaPreviewSheet: View {
                 hint
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 20)
             .padding(.top, 24)
             .padding(.bottom, 24)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
-        .presentationCornerRadius(ChalNaRadius.sheet)
+        .presentationCornerRadius(ChalNaRadius.lg)
+        .presentationBackground(ChalNaColor.surfaceRaised)
         .onAppear { startIfPossible() }
         .onDisappear { controller.stop() }
         .onChange(of: media.videoURL) { _, _ in startIfPossible() }
@@ -46,15 +47,15 @@ struct MediaPreviewSheet: View {
     private var metaRow: some View {
         HStack(spacing: 8) {
             switch media.kind {
-            case .livePhoto: ChalNaChip("LIVE", variant: .live)
-            case .video:     ChalNaChip("VIDEO", variant: .video, icon: .film)
+            case .livePhoto: ChalNaTag("LIVE", variant: .live)
+            case .video:     ChalNaTag("VIDEO", variant: .video, icon: .video)
             case .image, .unknown: EmptyView()
             }
 
             if let duration = media.duration, duration > 0 {
                 Text(String(format: String(localized: "%.1f초"), duration))
-                    .font(ChalNaTypography.monoFallback(13, weight: .medium))
-                    .foregroundColor(ChalNaColor.Gray.g500)
+                    .font(ChalNaTypography.mono())
+                    .foregroundColor(ChalNaColor.textSecondary)
             }
 
             Spacer()
@@ -65,7 +66,7 @@ struct MediaPreviewSheet: View {
 
     private var stage: some View {
         ZStack {
-            ChalNaColor.Gray.g900
+            ChalNaColor.canvas
 
             if media.videoURL != nil {
                 PreviewPlayerLayerView(player: controller.player)
@@ -80,7 +81,7 @@ struct MediaPreviewSheet: View {
         }
         .aspectRatio(stageAspectRatio, contentMode: .fit)
         .frame(maxWidth: .infinity, maxHeight: 380)
-        .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.md, style: .continuous))
         .contentShape(Rectangle())
         .onTapGesture {
             guard media.videoURL != nil else { return }
@@ -92,17 +93,17 @@ struct MediaPreviewSheet: View {
 
     private var pausedOverlay: some View {
         Circle()
-            .fill(Color.white.opacity(0.92))
+            .fill(ChalNaColor.surfaceRaised.opacity(0.92))
             .frame(width: 64, height: 64)
-            .overlay(ChalNaIcon(.play, size: 26).foregroundColor(ChalNaColor.Gray.g900).offset(x: 2))
+            .overlay(ChalNaIcon(.play, size: 26).foregroundColor(ChalNaColor.textPrimary).offset(x: 2))
     }
 
     private var failureContent: some View {
         VStack(spacing: 10) {
             thumbnailImage
             Text("영상을 불러오지 못했어요")
-                .font(ChalNaTypography.krBody(13, weight: .medium))
-                .foregroundColor(.white)
+                .font(ChalNaTypography.label)
+                .foregroundColor(ChalNaColor.textPrimary)
         }
         .padding(16)
     }
@@ -110,7 +111,7 @@ struct MediaPreviewSheet: View {
     private var loadingContent: some View {
         ZStack {
             thumbnailImage
-            ProgressView().tint(ChalNaColor.Purple.p600)
+            ProgressView().tint(ChalNaColor.accent)
         }
     }
 
@@ -119,14 +120,14 @@ struct MediaPreviewSheet: View {
         if let data = media.thumbnail, let ui = UIImage(data: data) {
             Image(uiImage: ui).resizable().scaledToFit()
         } else {
-            ChalNaColor.Gray.g50.opacity(0.2)
+            ChalNaColor.surface
         }
     }
 
     private var hint: some View {
         Text(media.videoURL != nil ? LocalizedStringKey("영상을 탭하면 재생/일시정지돼요.") : LocalizedStringKey("원본 영상이 없는 미디어예요."))
-            .font(ChalNaTypography.krBody(12))
-            .foregroundColor(ChalNaColor.Gray.g500)
+            .font(ChalNaTypography.caption)
+            .foregroundColor(ChalNaColor.textSecondary)
     }
 
     // MARK: - Derived
