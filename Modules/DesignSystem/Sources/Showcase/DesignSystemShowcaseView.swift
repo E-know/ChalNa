@@ -11,6 +11,7 @@ public struct DesignSystemShowcaseView: View {
                 colorSection
                 typographySection
                 buttonSection
+                buttonT7Section // TEMP(T7): 스크린샷 확인용, Task 12 재작성 때 buttonSection 에 흡수
                 chipSection
                 textFieldSection
                 foundationSection
@@ -162,6 +163,36 @@ public struct DesignSystemShowcaseView: View {
                     Button("S") {}.buttonStyle(.chalNa(.filled, size: .sm))
                 }
                 Button("Text 버튼 →") {}.buttonStyle(.chalNaText)
+            }
+        }
+    }
+
+    // MARK: - Button T7 (TEMP(T7): Task 12 재작성 때 buttonSection 에 흡수)
+
+    private var buttonT7Section: some View {
+        sectionShell(title: "Button (T7)") {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 12) {
+                    Button("Primary") {}.buttonStyle(.chalNa(.primary, size: .lg))
+                    Button("Secondary") {}.buttonStyle(.chalNa(.secondary, size: .lg))
+                    Button("Ghost") {}.buttonStyle(.chalNa(.ghost, size: .lg))
+                }
+                HStack(spacing: 12) {
+                    Button("Secondary destructive") {}.buttonStyle(.chalNa(.secondary, size: .lg, destructive: true))
+                    Button("Ghost destructive") {}.buttonStyle(.chalNa(.ghost, size: .lg, destructive: true))
+                }
+                HStack(spacing: 12) {
+                    Button("LG") {}.buttonStyle(.chalNa(.primary, size: .lg))
+                    Button("MD") {}.buttonStyle(.chalNa(.primary, size: .md))
+                    Button("SM") {}.buttonStyle(.chalNa(.primary, size: .sm))
+                }
+                Button("비활성 Primary") {}.buttonStyle(.chalNa(.primary, size: .lg, fillWidth: true)).disabled(true)
+                ChalNaBottomBar {
+                    HStack(spacing: 10) {
+                        Button("취소") {}.buttonStyle(.chalNa(.secondary, size: .lg, fillWidth: true))
+                        Button("다음") {}.buttonStyle(.chalNa(.primary, size: .lg, fillWidth: true))
+                    }
+                }
             }
         }
     }
