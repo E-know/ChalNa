@@ -4713,7 +4713,38 @@ EOF
 - Consumes: `ChalNaNavBar`, `ChalNaNavAction`, `ChalNaCard`, `ChalNaEmptyState`, `ChalNaTag`, `ChalNaButton`, `ChalNaColor`, `ChalNaTypography`, `ChalNaRadius`, `MediaThumb`.
 - Produces: 없음 (화면). `HomeFeature` 액션(`onAppear`/`newVlogButtonTapped`/`settingsButtonTapped`/`filmTapped(filmID:)`)은 변경하지 않는다.
 
-- [ ] **Step 1: HomeView 전체 재작성**
+- [ ] **Step 1: Splash 글로우 반경을 화면 비례로 (Task 13 리뷰 Minor)**
+
+`SplashView` 의 `RadialGradient(endRadius: 320)` 이 고정값이라 기기마다 인상이 달라진다.
+리뷰어 계산: SE(375×667)에서 320 은 half-height 의 **0.96배** — 글로우가 화면 가장자리까지
+거의 다 차서 사실상 풀블리드 워시가 된다. Pro Max(440×956)에서는 0.67배로 또렷한 포인트 글로우다.
+
+**이게 단순 취향 차이가 아닌 이유:** 글로우로 바꾼 목적 자체가 "가장자리를 `bg` 로 두어
+스플래시→홈 밝기 연속성을 만드는 것"이었다. SE 에서 글로우가 가장자리까지 닿으면
+**가장 작은 기기에서 그 의도가 사라진다.**
+
+`ChalNa/Sources/App/SplashView.swift` 의 `RadialGradient` 를 `GeometryReader` 로 감싸
+짧은 변 기준으로 반경을 산출한다:
+
+```swift
+            GeometryReader { proxy in
+                RadialGradient(
+                    colors: [ChalNaColor.brandDeep.opacity(0.55), ChalNaColor.bg],
+                    center: .center,
+                    startRadius: 0,
+                    endRadius: min(proxy.size.width, proxy.size.height) * 0.62
+                )
+                .ignoresSafeArea()
+            }
+```
+
+> `0.62` 근거: 스크린샷을 찍은 기기(약 402×874)에서 잘 보인 320 을 짧은 변 402 로 나눈 값
+> (320/402 ≈ 0.80)이 아니라, **짧은 변 기준으로 가장자리에 `bg` 가 남도록** 0.62 를 쓴다.
+> SE 는 375×0.62 ≈ 233(기존 320 보다 작아져 가장자리가 어두워짐),
+> Pro Max 는 440×0.62 ≈ 273 으로, 두 기기 모두 "중앙 글로우 + 어두운 가장자리"가 유지된다.
+> 이 태스크에서 홈 화면도 다크로 바뀌므로 **스플래시→홈 연속성을 두 프레임으로 다시 확인**한다.
+
+- [ ] **Step 2: HomeView 전체 재작성**
 
 `Modules/HomeFeature/Sources/HomeView.swift` 전체를 교체한다:
 
@@ -4907,7 +4938,7 @@ private struct FilmPosterCard: View {
 > `Image(systemName: "plus")` 가 함께 사라진다.
 > `frame(height: 40)` 헤더(감사 #3)도 `ChalNaNavBar` 로 교체돼 사라진다.
 
-- [ ] **Step 2: 빈 상태와 채워진 상태를 둘 다 스크린샷**
+- [ ] **Step 3: 빈 상태와 채워진 상태를 둘 다 스크린샷**
 
 `ChalNa Dev` 스킴으로 실행하면 fixture 로 필름을 만들 수 있다.
 먼저 빈 상태(앱 삭제 후 첫 실행):
@@ -4927,7 +4958,7 @@ open /tmp/p3-home-empty.png
 확인할 것: 빈 상태 문구가 중앙 정렬로 읽히는가, CTA 가 하단에 고정돼 있는가,
 CTA 위 hairline 이 보이는가.
 
-- [ ] **Step 3: 필름 1편 이상 만들고 그리드 확인**
+- [ ] **Step 4: 필름 1편 이상 만들고 그리드 확인**
 
 `ChalNa Dev` 스킴(devMock)으로 홈 → 새 Vlog → fixture 2개 선택 → Timeline → 저장 →
 Export 완료까지 진행한 뒤 홈으로 돌아온다. 그 다음:
@@ -4943,7 +4974,7 @@ open /tmp/p3-home-grid.png
 3. 2열 그리드 간격이 균일한가
 4. 제목이 2줄까지 늘어나도 카드 높이가 어긋나지 않는가
 
-- [ ] **Step 4: 커밋**
+- [ ] **Step 5: 커밋**
 
 ```bash
 git add Modules/HomeFeature/Sources/HomeView.swift
