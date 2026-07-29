@@ -3488,7 +3488,40 @@ EOF
 > `ChalNaCard(padding: 0) { rows }` 패턴을 쓴다. Task 12 는 P2 보다 먼저 실행되므로
 > 여기서 고치면 P2 스크린샷 4번에서 같은 지적이 반복되지 않는다.
 
-- [ ] **Step 2: ChalNaTextField 다크 재스타일**
+- [ ] **Step 2: DS 프리미티브 견고성 2건 (Task 11 리뷰 지적)**
+
+둘 다 한 줄이고, **화면 코드가 아니라 디자인 시스템 프리미티브**라서 지금 고친다 —
+방치하면 앞으로 모든 호출자가 물려받는다.
+
+**(a) `ChalNaToast` 의 dismiss 경쟁 상태.** `View.chalNaToast` 의 `.task(id: message)` 안에서
+`try? await Task.sleep(...)` 이 `CancellationError` 를 삼키기 때문에, 메시지가 교체되며 이전
+task 가 취소돼도 그 task 가 곧바로 `onDismiss()` 를 실행한다. 2.2초 안에 다른 토스트가 뜨면
+**새 토스트가 0초 만에 사라진다.** `onDismiss()` 앞에 취소 확인을 넣는다:
+
+```swift
+                    .task(id: message) {
+                        try? await Task.sleep(nanoseconds: 2_200_000_000)
+                        guard !Task.isCancelled else { return }
+                        onDismiss()
+                    }
+```
+
+> 이 패턴은 `ExportView.swift:80-83` 에서 그대로 추출된 것이라 Task 11 의 잘못이 아니지만,
+> Task 20 이 ExportView 를 마이그레이션할 때 이 컴포넌트를 쓰므로 그전에 고쳐 둔다.
+
+**(b) `ChalNaProgressBar` 의 NaN.** `max(0, min(1, progress))` 는 `progress` 가 `.nan` 일 때
+**1.0 을 반환**한다(NaN 비교가 항상 false 라 `min(1, .nan)` 이 `1` 을 돌려준다). 즉 NaN 진행률이
+"가득 찬 바"로 그려진다. 현재 호출부(`AVAssetExportSession.progress`)는 나눗셈이 없어 무해하지만
+범용 프리미티브로서 방어가 없다:
+
+```swift
+    private var clamped: Double {
+        guard progress.isFinite else { return 0 }
+        return max(0, min(1, progress))
+    }
+```
+
+- [ ] **Step 3: ChalNaTextField 다크 재스타일**
 
 `Modules/DesignSystem/Sources/Components/ChalNaTextField.swift` 에서 다음 값만 교체한다
 (시그니처·구조는 유지):
@@ -3512,7 +3545,7 @@ EOF
                 .tint(ChalNaColor.accent)
 ```
 
-- [ ] **Step 3: ChalNaTextArea 작성**
+- [ ] **Step 4: ChalNaTextArea 작성**
 
 ```swift
 // Modules/DesignSystem/Sources/Components/ChalNaTextArea.swift
@@ -3574,7 +3607,7 @@ public struct ChalNaTextArea: View {
 }
 ```
 
-- [ ] **Step 4: dead code 삭제**
+- [ ] **Step 5: dead code 삭제**
 
 ```bash
 git rm Modules/DesignSystem/Sources/Components/ChalNaBottomSheet.swift
@@ -3583,7 +3616,7 @@ git rm Modules/DesignSystem/Sources/Components/ChalNaBottomSheet.swift
 실사용 0곳으로 확인됐다. `LiveBadge`·`ChalNaChip`·`ClipThumbCard`·`ChalNaNavigationBar`·
 `ChalNaHeaderActionButtonStyle`·`View+ChalNaTopBar` 는 아직 호출처가 남아 있어 **Task 26 에서** 삭제한다.
 
-- [ ] **Step 5: Showcase 전면 재작성**
+- [ ] **Step 6: Showcase 전면 재작성**
 
 `Modules/DesignSystem/Sources/Showcase/DesignSystemShowcaseView.swift` 전체를 교체한다:
 
@@ -3824,7 +3857,7 @@ public struct DesignSystemShowcaseView: View {
 }
 ```
 
-- [ ] **Step 6: 빌드 확인 + TEMP 섹션 전멸 확인**
+- [ ] **Step 7: 빌드 확인 + TEMP 섹션 전멸 확인**
 
 ```bash
 xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
@@ -3840,7 +3873,7 @@ Expected: 에러 없음. `ChalNaBottomSheet` 를 삭제했는데 에러가 나�
 임시 섹션이 전부 사라지는 것이 정상이다. 하나라도 남아 있으면 전체 교체가 아니라 부분 편집을
 한 것이므로, Step 4 의 코드로 파일을 다시 통째로 덮어쓴다.
 
-- [ ] **Step 7: Showcase 프리뷰를 두 크기로 확인 — 이 태스크의 핵심 검증**
+- [ ] **Step 8: Showcase 프리뷰를 두 크기로 확인 — 이 태스크의 핵심 검증**
 
 Xcode 에서 `DesignSystemShowcaseView.swift` Canvas 를 열고 **두 프리뷰 모두** 확인한다.
 
@@ -3852,7 +3885,7 @@ Xcode 에서 `DesignSystemShowcaseView.swift` Canvas 를 열고 **두 프리뷰 
 5. **`xxxLarge` 프리뷰에서 리스트 행·버튼이 잘리지 않는가** (행이 밀려 커져야 정상)
 6. MediaThumb 6상태가 구별되는가
 
-- [ ] **Step 8: 커밋**
+- [ ] **Step 9: 커밋**
 
 ```bash
 git add Modules/DesignSystem/Sources/Components/ChalNaTextField.swift \
