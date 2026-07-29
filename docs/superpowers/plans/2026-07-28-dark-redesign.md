@@ -3629,15 +3629,21 @@ public struct DesignSystemShowcaseView: View {
 }
 ```
 
-- [ ] **Step 5: 빌드 확인**
+- [ ] **Step 5: 빌드 확인 + TEMP 섹션 전멸 확인**
 
 ```bash
 xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build 2>&1 | grep -E "error:" | sort -u
+grep -c "TEMP(T" Modules/DesignSystem/Sources/Showcase/DesignSystemShowcaseView.swift || echo "0 ✓"
 ```
 
 Expected: 에러 없음. `ChalNaBottomSheet` 를 삭제했는데 에러가 나면 어딘가 호출처가 있다는 뜻 —
 그 경우 삭제를 되돌리고 Task 26 으로 미룬다.
+
+**`TEMP(T` 는 반드시 0건이어야 한다.** Task 6~11 이 각자 만든 컴포넌트를 구 Showcase 하단에
+`// TEMP(T<N>):` 임시 섹션으로 덧붙여 왔다(최대 6개). 이 태스크는 파일을 **전체 교체**하므로
+임시 섹션이 전부 사라지는 것이 정상이다. 하나라도 남아 있으면 전체 교체가 아니라 부분 편집을
+한 것이므로, Step 4 의 코드로 파일을 다시 통째로 덮어쓴다.
 
 - [ ] **Step 6: Showcase 프리뷰를 두 크기로 확인 — 이 태스크의 핵심 검증**
 
