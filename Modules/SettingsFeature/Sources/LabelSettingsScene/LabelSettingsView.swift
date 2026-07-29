@@ -12,16 +12,15 @@ public struct LabelSettingsView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            ChalNaNavigationBar(titleKey: "라벨") {
-                ChalNaHeaderBackButton { store.send(.backTapped) }
-            } trailing: {
-                EmptyView()
-            }
-            .chalNaHeaderBar(scrollProgress: 1)
+            ChalNaNavBar(
+                title: "라벨",
+                leading: .back { store.send(.backTapped) },
+                showsDivider: true
+            )
             .zIndex(1)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
+                ChalNaCard(padding: 0) {
                     VStack(spacing: 0) {
                         labelRows(
                             kind: .time,
@@ -32,7 +31,9 @@ public struct LabelSettingsView: View {
                             onPositionTap: { store.send(.timePositionRowTapped) },
                             onOpacityChange: { store.send(.timeOpacityChanged($0)) }
                         )
-                        Divider().overlay(ChalNaColor.Gray.g100)
+
+                        ChalNaListDivider()
+
                         labelRows(
                             kind: .date,
                             isOn: store.dateEnabled,
@@ -43,18 +44,10 @@ public struct LabelSettingsView: View {
                             onOpacityChange: { store.send(.dateOpacityChanged($0)) }
                         )
                     }
-                    .background(
-                        RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                            .fill(Color.white)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                            .strokeBorder(ChalNaColor.Gray.g100, lineWidth: 1)
-                    )
-                    .padding(.horizontal, 24)
                 }
+                .padding(.horizontal, 20)
                 .padding(.top, 16)
-                .padding(.bottom, 64)
+                .padding(.bottom, 32)
             }
         }
         .chalNaScreen()
@@ -72,59 +65,33 @@ public struct LabelSettingsView: View {
         onPositionTap: @escaping () -> Void,
         onOpacityChange: @escaping (Double) -> Void
     ) -> some View {
-        // 토글 행
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(kind.title)
-                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.body, weight: .semibold))
-                    .foregroundColor(ChalNaColor.Gray.g900)
-                Text(kind.subtitle)
-                    .font(ChalNaTypography.monoFallback(ChalNaTypography.Size.caption))
-                    .foregroundColor(ChalNaColor.Gray.g500)
-            }
-            Spacer()
-            Toggle("", isOn: Binding(get: { isOn }, set: onToggle))
-                .labelsHidden()
-                .tint(ChalNaColor.Purple.p600)
-        }
-        .padding(.horizontal, 16)
-        .frame(minHeight: 56)
+        // LabelKind.title/.subtitle 은 String(localized:) 로 이미 해석된 String 이다
+        // (Models/Sources/LabelSettings.swift:86,93). verbatim 변형을 써야 이중 조회를 피한다.
+        ChalNaListRow.toggleVerbatim(
+            title: kind.title,
+            subtitle: kind.subtitle,
+            isOn: isOn,
+            onChange: onToggle
+        )
 
-        // 위치 행 (OFF 면 비활성)
-        Button(action: onPositionTap) {
-            HStack(spacing: 12) {
-                Text("위치")
-                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
-                    .foregroundColor(isOn ? ChalNaColor.Gray.g900 : ChalNaColor.Gray.g300)
-                Spacer()
-                Text(position.koreanName)
-                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
-                    .foregroundColor(isOn ? ChalNaColor.Gray.g500 : ChalNaColor.Gray.g300)
-                ChalNaIcon(.chevronRight, size: 16)
-                    .foregroundColor(isOn ? ChalNaColor.Gray.g400 : ChalNaColor.Gray.g300)
-            }
-            .padding(.horizontal, 16)
-            .frame(minHeight: 48)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(!isOn)
-        
-        // 투명도 행 (OFF 면 비활성)
-        HStack(spacing: 12) {
-            Text("투명도")
-                .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
-                .foregroundColor(isOn ? ChalNaColor.Gray.g900 : ChalNaColor.Gray.g300)
-            Slider(value: Binding(get: { opacity }, set: onOpacityChange), in: 0...1, step: 0.05)
-                .tint(ChalNaColor.Purple.p600)
-            Text("\(Int((opacity * 100).rounded()))%")
-                .font(ChalNaTypography.monoFallback(ChalNaTypography.Size.caption))
-                .foregroundColor(isOn ? ChalNaColor.Gray.g500 : ChalNaColor.Gray.g300)
-                .frame(width: 44, alignment: .trailing)
-        }
-        .padding(.horizontal, 16)
-        .frame(minHeight: 48)
-        .disabled(!isOn)
+        ChalNaListDivider()
+
+        ChalNaListRow.navigate(
+            title: "위치",
+            value: position.koreanName,
+            enabled: isOn,
+            action: onPositionTap
+        )
+
+        ChalNaListDivider()
+
+        ChalNaListRow.slider(
+            title: "투명도",
+            value: opacity,
+            enabled: isOn,
+            trailingText: "\(Int((opacity * 100).rounded()))%",
+            onChange: onOpacityChange
+        )
     }
 }
 
