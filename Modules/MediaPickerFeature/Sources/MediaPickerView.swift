@@ -421,7 +421,7 @@ public struct MediaPickerView: View {
             if state.videoFailed && state.thumbnail != nil {
                 Text("영상 X")
                     .font(ChalNaTypography.caption)
-                    .foregroundColor(ChalNaColor.textPrimary)
+                    .foregroundColor(ChalNaColor.danger)
                     .padding(.horizontal, 5).padding(.vertical, 2)
                     .background(Capsule().fill(ChalNaColor.surfaceRaised.opacity(0.92)))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
