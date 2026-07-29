@@ -187,6 +187,13 @@ public struct DesignSystemShowcaseView: View {
                     Button("SM") {}.buttonStyle(.chalNa(.primary, size: .sm))
                 }
                 Button("비활성 Primary") {}.buttonStyle(.chalNa(.primary, size: .lg, fillWidth: true)).disabled(true)
+                // TEMP(T7 fix1): ghost pressed 색이 destructive 를 반영하는지 스와치로 증명.
+                // 시뮬레이터에서 버튼을 누른 상태를 스크린샷으로 잡기 어려워, foreground(pressed:) 가
+                // 실제로 반환하는 두 색(accentPressed vs dangerPressed)을 그대로 노출한다.
+                HStack(spacing: 12) {
+                    pressedSwatch("ghost pressed\n(normal)", color: ChalNaColor.accentPressed)
+                    pressedSwatch("ghost pressed\n(destructive)", color: ChalNaColor.dangerPressed)
+                }
                 ChalNaBottomBar {
                     HStack(spacing: 10) {
                         Button("취소") {}.buttonStyle(.chalNa(.secondary, size: .lg, fillWidth: true))
@@ -194,6 +201,19 @@ public struct DesignSystemShowcaseView: View {
                     }
                 }
             }
+        }
+    }
+
+    // TEMP(T7 fix1): pressed 색 스와치 헬퍼. fix round 1 검증 후 buttonT7Section 과 함께 제거.
+    private func pressedSwatch(_ label: String, color: Color) -> some View {
+        VStack(spacing: 4) {
+            RoundedRectangle(cornerRadius: ChalNaRadius.sm, style: .continuous)
+                .fill(color)
+                .frame(width: 140, height: 40)
+            Text(label)
+                .font(ChalNaTypography.caption)
+                .foregroundColor(ChalNaColor.Gray.g500)
+                .multilineTextAlignment(.center)
         }
     }
 

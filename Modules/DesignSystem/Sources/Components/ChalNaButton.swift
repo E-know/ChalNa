@@ -105,7 +105,11 @@ public struct ChalNaButtonStyle: ButtonStyle {
         case .secondary:
             return destructive ? ChalNaColor.danger : ChalNaColor.textPrimary
         case .ghost:
-            return pressed ? ChalNaColor.accentPressed : tint
+            // pressed 도 destructive 계열을 유지해야 한다. accentPressed 를 무조건 쓰면
+            // 파괴적 ghost 버튼이 눌린 동안 red -> 보라로 바뀐다(ChalNaMotion.fast 로 실제 보임).
+            return pressed
+                ? (destructive ? ChalNaColor.dangerPressed : ChalNaColor.accentPressed)
+                : tint
         }
     }
 

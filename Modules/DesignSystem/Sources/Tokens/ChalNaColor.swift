@@ -50,6 +50,9 @@ public enum ChalNaColor {
 
     /// 파괴적 액션 · LIVE dot. 다크용으로 밝힌 레드.
     public static let danger  = Color(hex: 0xFF6B66)
+    /// `danger` 의 눌림 톤. `accentPressed` 가 `accent` 에 대해 하는 역할과 동일.
+    /// 이게 없으면 파괴적 ghost 버튼이 눌린 동안 보라(`accentPressed`)로 바뀐다.
+    public static let dangerPressed = Color(hex: 0xFF8F8B)
     public static let success = Color(hex: 0x3DD9A0)
 
     // MARK: - Brand
