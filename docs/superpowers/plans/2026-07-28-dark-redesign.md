@@ -7021,6 +7021,27 @@ open /tmp/p4-labeleditor-idle.png /tmp/p4-labeleditor-editing.png
 ```
 
 확인할 것 (**이 태스크의 핵심**):
+0. **★ Dynamic Type 상한이 이 화면까지 전파되는지 실측한다 (Task 13 에서 남긴 미해결 질문).**
+   Task 13 이 `RootView` 에 `.dynamicTypeSize(...DynamicTypeSize.accessibility1)` 를 앱 전역으로
+   걸었지만, **SwiftUI 환경값이 presentation 경계를 항상 넘는다는 보장이 없다.**
+   `LabelEditorView` 는 `fullScreenCover` 로 뜨므로, 만약 상한이 전파되지 않으면 이 화면만
+   무제한 확대가 되어 84pt 슬라이더 영역과 캔버스가 파열된다.
+   확인 방법: 이 파일에 아래 프리뷰를 추가하고 `RenderPreview` 로 렌더해
+   **accessibility5(상한보다 큰 값)를 걸었을 때 실제로 accessibility1 로 잘리는지** 본다.
+   ```swift
+   #Preview("LabelEditor · 상한 초과 시도") {
+       LabelEditorView(
+           clip: SampleData.jejuTimeline[0], rotation: .r0,
+           initialLabel: ClipLabel(text: "제주 바다"),
+           onCommit: { _ in }, onCancel: {}
+       )
+       .dynamicTypeSize(.accessibility5)
+   }
+   ```
+   상한이 먹으면 accessibility1 수준으로만 커진다. 그보다 크게 커지면 **전파되지 않는 것**이므로
+   `LabelEditorView` 를 띄우는 `TimelineView` 의 `.fullScreenCover` 콘텐츠에 상한을 직접 한 번 더
+   걸어야 한다. 어느 쪽이었는지 리포트에 명시한다 — 같은 문제가 `MediaPreviewSheet`(sheet)에도
+   적용되므로 Task 18 이 이 답을 재사용한다.
 1. **닫기(X) 아이콘이 back chevron 과 같은 크기**다 (기존 33pt 짜리가 아님)
 2. 캔버스가 84pt 예약 없이 가용 공간을 채운다 — idle 에서 사진이 더 크게 보인다
 3. 편집 중 슬라이더가 키보드 바로 위에 있다
