@@ -61,7 +61,9 @@ check "cornerRadius 리터럴" 'cornerRadius *[:=(] *[0-9]' \
 #    불가피한 예외" 라고 명시하고, 스펙 §10 비범위에도 들어 있어 손댈 수 없다.
 #    (UIColor.white 2곳: CompositionService.swift:488 라벨 전경, :566 배경 레이어)
 #    이 예외가 없으면 규칙 4 는 Task 26 에서 결코 0 이 될 수 없다.
-check "흰색 하드코딩" '(Color\.white|\.white\b)' \
+#    회색조 이니셜라이저 형태(Color(white:) / UIColor(white:))도 반드시 포함한다.
+#    이게 빠지면 Color.white 를 Color(white: 1.0) 으로 바꾸는 것만으로 규칙을 우회할 수 있다.
+check "흰색 하드코딩" '(Color\.white|\.white\b|Color\(white:|UIColor\(white:)' \
   'DesignSystem/Sources/Tokens/' \
   'CompositionService/Sources/CompositionService.swift' \
   'TimelineFeature/Sources/Components/ClipLabelText.swift' \

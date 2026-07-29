@@ -401,7 +401,7 @@ public struct DesignSystemShowcaseView: View {
                         LinearGradient(colors: [.blue.opacity(0.6), .cyan], startPoint: .top, endPoint: .bottom)
                     }
                     MediaThumb(state: .selected, size: CGSize(width: 46, height: 80)) {
-                        LinearGradient(colors: [Color(white: 0.97), .yellow], startPoint: .top, endPoint: .bottom)
+                        LinearGradient(colors: [ChalNaColor.textPrimary, .yellow], startPoint: .top, endPoint: .bottom)
                     }
                     MediaThumb(state: .playing, size: CGSize(width: 46, height: 80)) {
                         LinearGradient(colors: [.orange, .pink], startPoint: .top, endPoint: .bottom)
@@ -421,7 +421,7 @@ public struct DesignSystemShowcaseView: View {
                     ForEach(0..<6, id: \.self) { i in
                         if i == 1 {
                             MediaThumb(state: .selected) {
-                                LinearGradient(colors: [Color(white: 0.97), .yellow], startPoint: .top, endPoint: .bottom)
+                                LinearGradient(colors: [ChalNaColor.textPrimary, .yellow], startPoint: .top, endPoint: .bottom)
                             }
                         } else {
                             MediaThumb(state: .normal) {
