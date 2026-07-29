@@ -5,7 +5,11 @@ import Models
 import DesignSystem
 import SwiftData
 
-/// 앱 루트 화면. Vlog 만들기 CTA + 최근 필름 라이브러리.
+/// 앱 루트 화면.
+///
+/// 재방문 사용자에게 가치 있는 것은 **만든 필름**이므로 라이브러리를 주역으로 둔다.
+/// 앱 설명은 빈 상태에서만 필요하다.
+/// CTA 는 `safeAreaInset` 하단 고정 — 스크롤 안에 두면 필름이 늘수록 화면 밖으로 밀린다.
 public struct HomeView: View {
     @Environment(AppLanguageStore.self) private var languageStore
     let store: StoreOf<HomeFeature>
@@ -19,195 +23,137 @@ public struct HomeView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            header
-                .zIndex(1)
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 32) {
-                    hero
-                        .padding(.horizontal, 24)
-                        .padding(.top, 16)
-
-                    primaryAction
-                        .padding(.horizontal, 24)
-
-                    recentFilmsSection
-                        .padding(.bottom, 64)
+            ChalNaNavBar(
+                verbatimTitle: "ChalNa",
+                trailing: .icon(.settings, accessibilityLabel: "설정") {
+                    store.send(.settingsButtonTapped)
                 }
+            )
+            .zIndex(1)
+
+            if films.isEmpty {
+                emptyLibrary
+            } else {
+                libraryGrid
             }
         }
         .chalNaScreen()
+        .safeAreaInset(edge: .bottom) { primaryAction }
         .onAppear { store.send(.onAppear) }
     }
 
-    // MARK: - Header
+    // MARK: - Empty state
 
-    private var header: some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .center) {
-                Text(verbatim: "ChalNa")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(ChalNaColor.Gray.g900)
-                Spacer()
-                Button {
-                    store.send(.settingsButtonTapped)
-                } label: {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 20))
-                        .foregroundColor(ChalNaColor.Gray.g900)
+    private var emptyLibrary: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                ChalNaEmptyState(
+                    icon: .film,
+                    title: "아직 만든 필름이 없어요",
+                    message: "Live Photo와 짧은 영상을 촬영일 순서로 이어붙여\n한 편의 필름처럼 기록해요."
+                )
+
+                // 비한국어 UI 에서만 앱 이름 뜻풀이를 덧붙인다. 빈 상태 한정 —
+                // 라이브러리가 채워진 뒤에는 설명이 화면을 차지할 이유가 없다.
+                if !languageStore.isKoreanUI {
+                    ChalNaCard {
+                        Text("'찰나'는 아주 짧은 순간이라는 뜻이에요.")
+                            .font(ChalNaTypography.label)
+                            .foregroundColor(ChalNaColor.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
-                .buttonStyle(.chalNaHeaderAction)
-                .accessibilityLabel("설정")
             }
-            .padding(.horizontal, 16)
-
-            Spacer()
-
-            Divider()
-                .overlay(ChalNaColor.Purple.p400)
-        }
-        .frame(height: 40)
-        .background(Color.white)
-        .padding(.bottom, 4)
-    }
-
-    // MARK: - Hero
-
-    private var hero: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("오늘 찰나의 순간들")
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(ChalNaColor.Gray.g900)
-            Text("Live Photo와 짧은 영상을 촬영일 순서로 이어붙여\n한 편의 필름처럼 기록해요.")
-                .font(.system(size: 16))
-                .foregroundColor(ChalNaColor.Gray.g500)
-                .lineSpacing(4)
-            // 비한국어 UI 에서만 앱 이름 '찰나(ChalNa)' 뜻풀이를 옅은 surface 박스로 구분해 덧붙인다.
-            if !languageStore.isKoreanUI {
-                Text("'찰나'는 아주 짧은 순간이라는 뜻이에요.")
-                    .font(.system(size: 14))
-                    .foregroundColor(ChalNaColor.Gray.g500)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                            .fill(ChalNaColor.Gray.g50)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                            .strokeBorder(ChalNaColor.Gray.g200, lineWidth: 1)
-                    )
-                    .padding(.top, 2)
-            }
+            .padding(.horizontal, 20)
+            .padding(.top, 32)
+            .padding(.bottom, 24)
         }
     }
 
-    // MARK: - Primary CTA
+    // MARK: - Library
+
+    private var libraryGrid: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("최근 필름")
+                        .font(ChalNaTypography.title)
+                        .foregroundColor(ChalNaColor.textPrimary)
+                    Spacer()
+                    ChalNaTag(String(localized: "\(films.count)편"), variant: .neutral)
+                }
+
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2),
+                    spacing: 16
+                ) {
+                    ForEach(Array(films.enumerated()), id: \.element.id) { index, film in
+                        Button {
+                            store.send(.filmTapped(filmID: film.id))
+                        } label: {
+                            FilmPosterCard(film: film, fallbackIndex: index)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(Text(verbatim: "\(film.title), \(film.metaLabel)"))
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 24)
+        }
+    }
+
+    // MARK: - Primary CTA (하단 고정)
 
     private var primaryAction: some View {
         Button {
             store.send(.newVlogButtonTapped)
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: "plus")
+                ChalNaIcon(.plus, size: 18, weight: .semibold)
                 Text("새 Vlog 만들기")
             }
         }
-        .buttonStyle(.chalNa(.filled, size: .xl, fillWidth: true))
+        .buttonStyle(.chalNa(.primary, size: .lg, fillWidth: true))
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 12)
+        .background(ChalNaColor.bg.ignoresSafeArea(edges: .bottom))
+        .overlay(alignment: .top) {
+            Rectangle().fill(ChalNaColor.border).frame(height: 1)
+        }
         .accessibilityLabel("새 Vlog 만들기")
-    }
-
-    // MARK: - Recent films
-
-    private var recentFilmsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("최근 필름")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(ChalNaColor.Gray.g900)
-                Spacer()
-                Text("\(films.count)편")
-                    .font(.system(size: 14))
-                    .foregroundColor(ChalNaColor.Gray.g500)
-            }
-            .padding(.horizontal, 24)
-
-            if films.isEmpty {
-                emptyState
-                    .padding(.horizontal, 24)
-            } else {
-                LazyVStack(spacing: 12) {
-                    ForEach(Array(films.enumerated()), id: \.element.id) { idx, film in
-                        Button {
-                            store.send(.filmTapped(filmID: film.id))
-                        } label: {
-                            FilmRow(film: film, fallbackIndex: idx)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, 24)
-            }
-        }
-    }
-
-    private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("아직 만든 필름이 없어요.")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(ChalNaColor.Gray.g900)
-            Text("첫 Vlog를 시작해보세요.")
-                .font(.system(size: 15))
-                .foregroundColor(ChalNaColor.Gray.g500)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                .fill(ChalNaColor.Gray.g50)
-        )
     }
 }
 
-/// 라이브러리 필름 1행 (다나와 list item 패턴: 좌측 16:9 썸네일 · 중앙 텍스트 · 우측 chevron).
-private struct FilmRow: View {
+/// 라이브러리 필름 카드.
+///
+/// 썸네일 비율을 **9:16 으로 맞춘다** — 실제 출력물과 FilmDetail 이 9:16 인데
+/// 기존 Home 만 96×54(16:9)라 여기서만 결과물과 다르게 잘려 보였다.
+private struct FilmPosterCard: View {
     let film: Film
     let fallbackIndex: Int
 
     var body: some View {
-        HStack(spacing: 16) {
-            thumbnail
-                .frame(width: 96, height: 54)
-                .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.film, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: ChalNaRadius.film, style: .continuous)
-                        .strokeBorder(ChalNaColor.Gray.g100, lineWidth: 0.5)
-                )
+        VStack(alignment: .leading, spacing: 8) {
+            MediaThumb(state: .normal) {
+                thumbnail
+            }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(film.title)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(ChalNaColor.Gray.g900)
-                    .lineLimit(1)
-                Text(film.metaLabel)
-                    .font(.system(size: 14))
-                    .foregroundColor(ChalNaColor.Gray.g500)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: film.title)
+                    .font(ChalNaTypography.headline)
+                    .foregroundColor(ChalNaColor.textPrimary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                Text(verbatim: film.metaLabel)
+                    .font(ChalNaTypography.caption)
+                    .foregroundColor(ChalNaColor.textSecondary)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-
-            ChalNaIcon(.chevronRight, size: 16)
-                .foregroundColor(ChalNaColor.Gray.g400)
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                .fill(Color.white)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                .strokeBorder(ChalNaColor.Gray.g100, lineWidth: 1)
-        )
     }
 
     @ViewBuilder
@@ -221,13 +167,14 @@ private struct FilmRow: View {
         }
     }
 
+    /// 폴백 프리셋을 12종 전부에서 고른다 (기존에는 6종만 썼다).
     private var fallbackPreset: ThumbnailPreset {
-        let pool: [ThumbnailPreset] = [.jejuOrange, .seoulSun, .field, .forest, .sunset, .cafe]
+        let pool = ThumbnailPreset.allCases
         return pool[fallbackIndex % pool.count]
     }
 }
 
-#Preview("Home") {
+#Preview("Home — 빈 상태") {
     HomeView()
         .environment(EditSession())
         .environment(AppLanguageStore())

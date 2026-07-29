@@ -13,13 +13,17 @@ struct SplashView: View {
     var body: some View {
         ZStack {
             // 브랜드 색 라디얼 글로우 — 스플래시가 이미 본문의 어둠 위에 있게 한다.
-            RadialGradient(
-                colors: [ChalNaColor.brandDeep.opacity(0.55), ChalNaColor.bg],
-                center: .center,
-                startRadius: 0,
-                endRadius: 320
-            )
-            .ignoresSafeArea()
+            // 반경은 짧은 변 기준 비례(0.62)로 잡아 기기 크기와 무관하게
+            // 가장자리에 `bg` 가 남도록 한다(고정값 320은 SE 에서 풀블리드 워시가 됨).
+            GeometryReader { proxy in
+                RadialGradient(
+                    colors: [ChalNaColor.brandDeep.opacity(0.55), ChalNaColor.bg],
+                    center: .center,
+                    startRadius: 0,
+                    endRadius: min(proxy.size.width, proxy.size.height) * 0.62
+                )
+                .ignoresSafeArea()
+            }
 
             VStack(spacing: 16) {
                 Image("splash_icon")
