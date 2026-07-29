@@ -3319,7 +3319,29 @@ EOF
 - Produces: `ChalNaTextArea(placeholder: String, minHeight: CGFloat = 180, text: Binding<String>)`.
 - Produces: `DesignSystemShowcaseView()` — 토큰·컴포넌트 전수 확인 화면.
 
-- [ ] **Step 1: ChalNaTextField 다크 재스타일**
+- [ ] **Step 1: `ChalNaCard` 콘텐츠 clip 추가 (Task 8 리뷰 지적)**
+
+`ChalNaCard` 가 `content()` 를 카드 모양으로 clip 하지 않는다. `ChalNaListRow` 의 press
+하이라이트(`ListRowPressStyle`)는 사각 `Rectangle` 배경이라, 정식 패턴인
+`ChalNaCard(padding: 0) { rows }` 에서 **첫/마지막 행을 누르는 동안 사각 하이라이트가
+카드의 `md`(14pt) 둥근 모서리 밖으로 삐져나온다.**
+
+`Modules/DesignSystem/Sources/Components/ChalNaCard.swift` 의 `body` 에서 `content()` 다음,
+`.padding(padding)` **앞**에 한 줄 추가:
+
+```swift
+            .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.md, style: .continuous))
+```
+
+> 순서가 중요하다. `padding` 뒤에 붙이면 패딩까지 clip 되어 내용이 잘린다.
+> `content()` 직후에 붙여 **행 배경만** 카드 모양으로 가둔다.
+>
+> **왜 Task 12 인가.** 순수 코스메틱(150ms 프레스 중 14pt 영역)이라 Task 8 에 fix 라운드를
+> 태울 값은 없지만, P2 화면 4개(Settings · Language · LabelSettings · LabelPosition)가 전부
+> `ChalNaCard(padding: 0) { rows }` 패턴을 쓴다. Task 12 는 P2 보다 먼저 실행되므로
+> 여기서 고치면 P2 스크린샷 4번에서 같은 지적이 반복되지 않는다.
+
+- [ ] **Step 2: ChalNaTextField 다크 재스타일**
 
 `Modules/DesignSystem/Sources/Components/ChalNaTextField.swift` 에서 다음 값만 교체한다
 (시그니처·구조는 유지):
@@ -3343,7 +3365,7 @@ EOF
                 .tint(ChalNaColor.accent)
 ```
 
-- [ ] **Step 2: ChalNaTextArea 작성**
+- [ ] **Step 3: ChalNaTextArea 작성**
 
 ```swift
 // Modules/DesignSystem/Sources/Components/ChalNaTextArea.swift
@@ -3405,7 +3427,7 @@ public struct ChalNaTextArea: View {
 }
 ```
 
-- [ ] **Step 3: dead code 삭제**
+- [ ] **Step 4: dead code 삭제**
 
 ```bash
 git rm Modules/DesignSystem/Sources/Components/ChalNaBottomSheet.swift
@@ -3414,7 +3436,7 @@ git rm Modules/DesignSystem/Sources/Components/ChalNaBottomSheet.swift
 실사용 0곳으로 확인됐다. `LiveBadge`·`ChalNaChip`·`ClipThumbCard`·`ChalNaNavigationBar`·
 `ChalNaHeaderActionButtonStyle`·`View+ChalNaTopBar` 는 아직 호출처가 남아 있어 **Task 26 에서** 삭제한다.
 
-- [ ] **Step 4: Showcase 전면 재작성**
+- [ ] **Step 5: Showcase 전면 재작성**
 
 `Modules/DesignSystem/Sources/Showcase/DesignSystemShowcaseView.swift` 전체를 교체한다:
 
@@ -3655,7 +3677,7 @@ public struct DesignSystemShowcaseView: View {
 }
 ```
 
-- [ ] **Step 5: 빌드 확인 + TEMP 섹션 전멸 확인**
+- [ ] **Step 6: 빌드 확인 + TEMP 섹션 전멸 확인**
 
 ```bash
 xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
@@ -3671,7 +3693,7 @@ Expected: 에러 없음. `ChalNaBottomSheet` 를 삭제했는데 에러가 나�
 임시 섹션이 전부 사라지는 것이 정상이다. 하나라도 남아 있으면 전체 교체가 아니라 부분 편집을
 한 것이므로, Step 4 의 코드로 파일을 다시 통째로 덮어쓴다.
 
-- [ ] **Step 6: Showcase 프리뷰를 두 크기로 확인 — 이 태스크의 핵심 검증**
+- [ ] **Step 7: Showcase 프리뷰를 두 크기로 확인 — 이 태스크의 핵심 검증**
 
 Xcode 에서 `DesignSystemShowcaseView.swift` Canvas 를 열고 **두 프리뷰 모두** 확인한다.
 
@@ -3683,7 +3705,7 @@ Xcode 에서 `DesignSystemShowcaseView.swift` Canvas 를 열고 **두 프리뷰 
 5. **`xxxLarge` 프리뷰에서 리스트 행·버튼이 잘리지 않는가** (행이 밀려 커져야 정상)
 6. MediaThumb 6상태가 구별되는가
 
-- [ ] **Step 7: 커밋**
+- [ ] **Step 8: 커밋**
 
 ```bash
 git add Modules/DesignSystem/Sources/Components/ChalNaTextField.swift \
