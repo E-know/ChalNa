@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Live Photo와 동영상을 촬영일 순서로 이어붙여 Vlog를 만드는 iOS 앱.
 
-> **네이밍**: Tuist 타겟·Xcode 프로젝트·번들 ID·디자인 시스템 brand prefix 모두 `ChalNa`(`ios.inho.ChalNa`, `ChalNaColor`, `ChalNaTypography`, `ChalNaButton` 등)로 통일. 단 **디자인 토큰의 실제 값은 "Danawa DDS Mobile v2.0"** 으로 교체돼 있다 (식별자명만 ChalNa, 값은 다나와 톤 — 아래 디자인 시스템 참고).
+> **네이밍**: Tuist 타겟·Xcode 프로젝트·번들 ID·디자인 시스템 brand prefix 모두 `ChalNa`(`ios.inho.ChalNa`, `ChalNaColor`, `ChalNaTypography`, `ChalNaButton` 등)로 통일. **디자인 토큰 값은 2026-07-28 다크 리디자인으로 전면 교체됐다** — 과거엔 식별자만 ChalNa, 값은 라이트 톤의 "Danawa DDS Mobile v2.0"였으나 지금은 값도 자체 다크 시맨틱 팔레트다 (근거: `docs/superpowers/specs/2026-07-28-app-redesign-design.md`). 앱은 **다크 전용**이며 `Project.swift` 의 `infoPlist` 에 박아넣은 `UIUserInterfaceStyle: "Dark"` 가 라이트 모드 전환을 막는다 — 아래 디자인 시스템 참고.
 
 ## 빌드 / 실행 / 테스트
 
@@ -38,7 +38,9 @@ xcodebuild ... test \
 - 단일 모듈만 빌드/포커스: `tuist focus <Module>` (예: `tuist focus DesignSystem`).
 - 의존성 그래프: `tuist graph` → `docs/architecture-graph.png`.
 - iOS 빌드/시뮬레이터 실행은 가능하면 `ios-build-run` 서브에이전트에 위임한다 (매번 fresh build → 설치/실행으로 시각 검증).
-- 테스트 타겟: `AppCoreTests` · `CompositionServiceTests` · `PhotosServiceTests` · `TimelineFeatureTests`. 케이스는 SwiftUI Preview 보조용 `SampleData`를 적극 활용한다.
+- **유닛 테스트 타겟은 8개** (`Project.swift`의 `Module.unitTests(for:)` 8회 호출): `AppCoreTests` · `ExportFeatureTests` · `CompositionServiceTests` · `PhotosServiceTests` · `TimelineFeatureTests` · `MediaPickerFeatureTests` · `SettingsFeatureTests` · `DesignSystemTests`. 케이스는 SwiftUI Preview 보조용 `SampleData`를 적극 활용한다.
+- **Tuist 는 테스트 타겟을 위한 별도 스킴을 만들지 않는다.** `<Module>Tests` 타겟은 베이스 모듈(`<Module>`) 이 자동 생성하는 스킴에 Test 액션으로 붙는다. 즉 `-scheme DesignSystemTests` 는 존재하지 않고, `-scheme DesignSystem` · `-scheme SettingsFeature` · `-scheme TimelineFeature` 처럼 **베이스 모듈명**으로 실행해야 한다 (`-only-testing:` 의 대상은 타겟명 `<모듈>Tests` 그대로 맞다).
+- **UI 테스트**는 별도로 `ChalNaUITests` 타겟(`ChalNa` 앱 타겟에 의존, `-scheme ChalNa`로 실행)에 있다 — `CropAdjustUITests` · `LabelEditorUITests`(키보드 도달성 + Dynamic Type 상한 2케이스) · `TimelineLayoutUITests`. 여기가 **XCTest 의 유일한 예외 대상**(devMock 시각 검증용, 아래 "기술 스택" 참고).
 
 ## 기술 스택 (엄수)
 - **Swift 6.0+, iOS 18+** (`AVAssetExportSession` async API 등으로 deployment 18 고정).
@@ -138,75 +140,110 @@ External(SPM): ComposableArchitecture(TCA) · FirebaseAnalytics
 - **Spacing/padding 은 토큰 없이 리터럴 숫자**(`.padding(16)`, `HStack(spacing: 8)`). 색/타이포/라디우스/섀도우는 토큰 사용.
 - 한국어 주석 OK, 식별자는 영어. 한 파일 = 한 타입 (긴밀히 결합된 small helper 는 예외).
 
-## 디자인 시스템 (ChalNa 식별자 / Danawa DDS Mobile v2.0 값)
+## 디자인 시스템 (ChalNa 식별자 / 다크 전용 시맨틱 값)
 
-모든 UI 는 `Modules/DesignSystem/Sources/` 토큰·컴포넌트를 사용한다 (**spacing/padding 만 리터럴 숫자**). **리터럴 HEX·시스템 폰트 직접 호출 금지**. 새 컴포넌트 전에 기존 것 재사용.
+모든 UI 는 `Modules/DesignSystem/Sources/` 토큰·컴포넌트를 사용한다 (**spacing/padding 만 리터럴 숫자**). **리터럴 HEX·시스템 폰트 직접 호출 금지**. 새 컴포넌트 전에 기존 것 재사용. 앱은 다크 전용이다 — 라이트 모드 분기를 만들지 않는다. 이 절의 금지 사항은 프로즈로만 끝나지 않고 `scripts/design-lint.sh` 가 정적 검사로 강제한다 (아래 "금지 사항" 참고).
 
 ### 파일 레이아웃
 ```
 DesignSystem/Sources/
-├─ Tokens/      ChalNaColor · ChalNaTypography · ChalNaRadius · ChalNaShadow
-├─ Components/  ChalNaButton · ChalNaChip · ChalNaTextField · ChalNaBottomSheet
-│               ClipThumbCard · LiveBadge · ChalNaHeaderActionButtonStyle
-├─ Modifiers/   View+ChalNaScreen · +ChalNaTopBar · +ChalNaSwipeBack
+├─ Tokens/      ChalNaColor · ChalNaTypography · ChalNaRadius · ChalNaShadow · ChalNaMotion
+├─ Components/  ChalNaButton · ChalNaBottomBar · ChalNaCanvas · ChalNaCard · ChalNaListRow(+Divider)
+│               ChalNaNavBar · ChalNaNavAction · ChalNaTag · MediaThumb · ChalNaTextField
+│               ChalNaTextArea · ChalNaSlider · ChalNaEmptyState · ChalNaNotice
+│               ChalNaProgressBar · ChalNaToast · ChalNaBlockingOverlay  (17개)
+├─ Modifiers/   View+ChalNaScreen · +ChalNaScrollHairline · +ChalNaSwipeBack
 │               +ChalNaHitTarget · +ScrollProgress
-├─ Icons/       ChalNaIcon (Lucide 스타일 라인 아이콘 20종)
+├─ Icons/       ChalNaIcon (SF Symbols 24종 — 구 Lucide 커스텀 패스는 Task 5 에서 제거)
 └─ Showcase/    DesignSystemShowcaseView
 ```
 
-### Colors — `ChalNaColor` (Asset Catalog `Assets.xcassets/Colors/ChalNa*.colorset`)
-| API | 톤 | 용도 |
+### Colors — `ChalNaColor` (다크 전용 시맨틱 토큰, `Modules/DesignSystem/Sources/Tokens/ChalNaColor.swift`)
+| API | 값 | 용도 |
 |---|---|---|
-| `.cream` | White `#FFFFFF` | Background |
-| `.ivory` | Gray-50 `#F8F8F8` | Surface |
-| `.coral` | **Purple-600 `#8B38E5`** | **Primary / CTA** |
-| `.sage`  | Cyan `#02B8D3` | Success / Info accent |
-| `.denim` | Blue-500 `#2070EB` | Link / Secondary |
-| `.ink`   | Gray-900 `#1A1A1A` | Text Primary |
-| `.taupe` | Gray-500 `#919191` | Text Sub |
+| `.bg` | `#0B0A10` | 화면 배경 (무채색이 아니라 옅은 인디고 캐스트) |
+| `.surface` | `#16151D` | 카드 · 리스트 행 |
+| `.surfaceRaised` | `#201F29` | 바텀시트 · 플로팅 툴바 |
+| `.canvas` | `Color.black` | 영상 · 크롭 캔버스 (출력과 동일한 진짜 검정 — `bg` 와 밝기가 비슷해 '검은 섬'으로 뜨지 않음) |
+| `.border` / `.borderStrong` | `#2C2A38` / `#3D3A4D` | 1px hairline / 입력 필드·강조 경계 |
+| `.textPrimary` / `.textSecondary` | `#F5F4F7` / `#A3A0AE` | 본문(순백 아님 — 다크에서 순백은 헐레이션) / 보조 텍스트 |
+| `.textTertiary` | `#6B6878` | **disabled 전용.** `bg` 대비 3.7:1 로 본문 기준(4.5:1) 미달 — 활성 텍스트에 쓰지 않는다 |
+| `.accent` / `.accentFill` / `.accentPressed` | `#8B7BFF` / `#5B45E8` / `#A091FF` | 텍스트·아이콘·스트로크 액센트 / 면형 버튼 배경 / 눌림 톤 |
+| `.onAccent` | `Color.white` | `accentFill` 위 라벨 |
+| `.danger` / `.dangerPressed` | `#FF6B66` / `#FF8F8B` | 파괴적 액션·LIVE dot / 그 눌림 톤(없으면 파괴적 ghost 버튼이 눌리는 동안 보라로 바뀜) |
+| `.success` | `#3DD9A0` | 성공 |
+| `.brandDeep` | `#462DE2` | 앱 아이콘 색 그 자체. `bg` 대비 **2.4:1** — **인터랙션(버튼·텍스트)에 절대 쓰지 않는다.** Splash·브랜드 면 전용 |
+| `.scrim` | `Color.black.opacity(0.6)` | 오버레이 |
 
-- 스케일 enum: `ChalNaColor.Purple.p100…p900`(p600=coral=Primary), `.Blue.b50…b900`(b500=denim), `.Gray.g50…g900`(g50=ivory·g500=taupe·g900=ink).
-- 상태: `.success #06B87F` · `.danger #E53B38`(Live/Error) · `.info #02B8D3`.
-- `.Chip.{live,video,film}Background/Foreground` — LIVE=Red 톤, Video=Purple 톤, Film=Blue 톤.
+- 대비 근거: `docs/superpowers/specs/2026-07-28-app-redesign-design.md` §4.1. 정확한 hex 는 위 표보다 `ChalNaColor.swift` 를 단일 출처로 본다.
+- 과거의 `Purple/Blue/Gray` 수치 스케일과 `.cream/.ivory/.coral/.sage/.denim/.ink/.taupe`, `.Chip.*` 는 Task 26 에서 전부 삭제됐다 — 화면은 역할 이름(시맨틱 토큰)만 쓴다.
 
-### Typography — `ChalNaTypography` (시스템 폰트 + SF Mono)
-- KR 본문/제목은 **시스템 폰트**: `.krBody(size, weight:)` · `.krSemibold(size)` · `.displayKR(size, weight:)` · `.title(size, weight:)`.
-- Mono(스펙/숫자): `.mono(size, weight:)` / `.monoFallback(...)` = SF Mono.
-- **Legacy stub**(빌드 호환용, 신규 사용 자제): `displayEN`/`serifFallback`/`hand`/`handFallback` 는 전부 `krBody`로 매핑됨 (과거 Fraunces/Caveat/BradleyHand 의존 제거).
-- 스케일 `Size`: `tag(12)·caption(12)·small(14)·body2(15)·body(16)·bodyLg(18)·header(19)·h2(20)·big(22)·h1(24)·displayS(28)·displayL(32)`. (다나와 가이드: 11px 이하 컨텐츠 금지, 14px 이하 사용 제한)
-- `Tracking`: `titleKR(-0.20)·bodyKR(-0.30)·priceKR(-0.40)`.
-- tag label 은 `Text("...").tagLabel()`.
+### Typography — `ChalNaTypography` (표준 iOS 텍스트 스타일 기반 역할 토큰)
+- **6개 역할 토큰**이 표준 텍스트 스타일에 그대로 대응해서, 별도 스케일링 코드 없이 Dynamic Type 을 따른다: `.display`(28pt bold, `.title`) · `.title`(22pt semibold, `.title2`) · `.headline`(17pt semibold, `.headline`) · `.body`(16pt, `.callout`) · `.label`(13pt medium, `.footnote`) · `.caption`(12pt, `.caption`).
+- `.mono(_:weight:)` — SF Mono. 타임코드·퍼센트 등 순수 숫자 전용. **한글에 쓰지 않는다**(한글 글리프가 없어 폴백되며 자간이 어긋남).
+- `.keris(_:weight:)` — Splash 브랜드 라벨과 영상 오버레이 미리보기 전용. 합성 영상(`CATextLayer`)의 `UIFont` 측정값과 **픽셀 단위로 일치**해야 해서 여기만 Dynamic Type 없이 pt 를 직접 받는다 — 지울 대상이 아니라 존재 이유가 있는 토큰이다(아래 "비디오 합성 원칙" 참고).
+- `Tracking`: `.title(-0.20)` · `.body(-0.30)`.
+- 과거의 12단계 `Size` 스케일(`tag(12)…displayL(32)`)과 legacy stub(`displayEN`/`serifFallback`/`hand`/`handFallback`)은 Task 26 에서 전부 삭제됐다.
+- 앱 전역 Dynamic Type 상한은 `RootView` 의 `.dynamicTypeSize(...DynamicTypeSize.accessibility1)` — 단 **`.sheet`/`.fullScreenCover` 경계를 넘지 않는다.** 아래 "접근성" 참고.
 
-### Radius — `ChalNaRadius` (4px 단위)
-`.film 4` · `.button 4` · `.card 8` · `.sheet 16` · `.pill 999`.
+### Radius — `ChalNaRadius`
+`.xxs 2`(10×6pt 급 초소형 인디케이터 전용 — `.xs` 이상은 이 크기에서 캡슐이 되어버린다) · `.xs 6`(태그·작은 썸네일) · `.sm 10`(버튼·입력 필드) · `.md 14`(카드·프리뷰 캔버스) · `.lg 20`(바텀시트·플로팅 툴바) · `.pill 999`(칩·토글).
+- 과거 4px 단위 스케일(`.film 4`·`.button 4`·`.card 8`·`.sheet 16`, `.card` 포함)은 Task 26 에서 삭제됐다.
+
+### Motion — `ChalNaMotion`
+`.fast`(easeOut 0.15s — 선택·눌림·표시/숨김 같은 상태 토글) · `.standard`(easeInOut 0.24s — 레이아웃 이동·페이드) · `.spring`(response 0.35 / damping 0.85 — 크롭 러버밴드 스냅백, 오버슛 없는 기존 검증값 유지).
 
 ### Shadow — `ChalNaShadow` + `View.chalNaShadow(_:)`
-`.sm`(black10, blur2) · `.md`(black20, blur6 — 탭바 표준) · `.lg`(2단 중첩).
+다크에서는 그림자가 거의 안 보여서 깊이는 `bg → surface → surfaceRaised` 3단 밝기 + 1px hairline 으로 표현하고, 그림자는 **`.floating` 하나만** 남았다(`Color.black.opacity(0.5)`, radius 24, y 8). 원래 플로팅 툴바(`EditToolbar`) 전용이었지만 지금은 `ChalNaToast`·`ChalNaBlockingOverlay` 도 같이 쓴다.
 
 ### Core Components
 | 컴포넌트 | 사용 예 |
 |---|---|
-| 버튼 | `Button{}.buttonStyle(.chalNa(.filled, size: .lg, fillWidth: true))` — variant `filled/outlined/standardFilled/standardOutlined/text`, size `xl/lg/md/sm`. 축약 `.chalNaFilled/.chalNaOutlined/.chalNaText` (구 alias `.chalNaCoral/.chalNaOutline` 호환) |
-| 칩 | `ChalNaChip("LIVE", variant: .live, icon: .film)` |
-| 입력 | `ChalNaTextField(...)` |
-| 시트 | `ChalNaBottomSheet(...)` |
-| 클립 카드 | `ClipThumbCard(...)` · `LiveBadge()` |
-| 아이콘 | `ChalNaIcon(.play, size: 24)` — 20종(play/pause/plus/share/download/heart/calendar/film/chevronLeft/chevronRight/close/check/skipBack/skipForward/scissors/reorderLines/trash/music/move/rotate) |
-| 화면 배경 | `someView.chalNaScreen()` — 배경 `ChalNaColor.cream` 풀블리드. (구버전 paperGrain/vignette 오버레이는 **제거됨**) |
-| 상단바 | `.chalNaTopBar(...)` modifier |
+| 버튼 | `Button{}.buttonStyle(.chalNa(.primary, size: .lg, fillWidth: true, destructive: false))` — variant `primary/secondary/ghost`, size `lg(52)/md(44)/sm(36)`, `destructive: Bool` 하나로 파괴적 색(danger)까지 컴포넌트가 결정. 축약 `.chalNaPrimary/.chalNaSecondary/.chalNaGhost` |
+| 헤더 | `ChalNaNavBar(title:caption:leading:trailing:showsDivider:)` + `ChalNaNavAction(.icon(.close)) { ... }` — 좌우 슬롯 **최소** 56pt, 글리프 크기(20pt)는 호출처가 못 바꾼다 |
+| 캔버스 | `ChalNaCanvas(aspect: 9/16) { size in ... } overlay: { size in ... }` — Timeline 프리뷰·ClipAdjust·LabelEditor 가 공유하는 WYSIWYG aspect-fit 박스. **내부에서 이미 fit 하므로 바깥에서 `.aspectRatio` 로 다시 감싸지 않는다**(무한 높이 컨테이너에서 오동작) |
+| 카드 / 리스트 | `ChalNaCard(padding:showsBorder:) { ... }` · `ChalNaListRow(...)` + `ChalNaListDivider()` |
+| 태그 / 썸네일 | `ChalNaTag("LIVE", variant: .live, icon: .film)`(구 `ChalNaChip` 대체) · `MediaThumb(state:size:aspect:) { ... }`(구 `ClipThumbCard`/`LiveBadge` 대체, 6개 상태) |
+| 상태 표시 | `ChalNaEmptyState(icon:title:message:actionTitle:action:)` · `ChalNaNotice(icon:title:message:)` · `ChalNaProgressBar(progress:tint:height:)` · `ChalNaToast(message:)` · `ChalNaBlockingOverlay(...)` — 뒤 세 개는 `ChalNaShadow.floating` 을 공유 |
+| 입력 | `ChalNaTextField(...)` · `ChalNaTextArea(placeholder:minHeight:text:)` · `ChalNaSlider(...)` |
+| 하단바 / 화면 | `ChalNaBottomBar { ... }`(`safeAreaInset(edge: .bottom)` 에 넣어 쓴다) · `someView.chalNaScreen()`(배경 `ChalNaColor.bg` 풀블리드) · `.chalNaScrollHairline(progress:)`(구 `chalNaHeaderBar`·`+ChalNaTopBar` 대체 — 헤더 hairline 만 남고 배경 페이드는 제거됨) |
+| 아이콘 | `ChalNaIcon(.play, size: 24)` — 24종. 내부 구현이 **SF Symbols 로 통일**(Task 5, 구 Lucide 커스텀 패스 제거) — optical sizing·weight 가 옆 텍스트·Dynamic Type 을 자동으로 따라간다 |
 
-### 금지 사항
-- `Color(hex:)`/`Color(red:green:blue:)` **직접 호출 금지** — `ChalNaColor.*` 사용 (hex 이니셜라이저는 토큰 정의 내부 전용).
-- `.font(.system(...))` 직접 호출 금지 — `ChalNaTypography.*` 경유.
-- `.cornerRadius(15)` 같은 리터럴 금지 — `ChalNaRadius.*`.
+**Task 26 에서 삭제된 컴포넌트/토큰**(문서·코드 어디서도 새로 참조하지 않는다): `ChalNaChip` · `ClipThumbCard`/`ClipThumbState` · `ChalNaNavigationBar` · `ChalNaHeaderActionButtonStyle` · `View+ChalNaTopBar`. `ChalNaBottomSheet` 는 그보다 앞선 Task 12 에서 이미 삭제됐다.
+
+### 금지 사항 — `scripts/design-lint.sh` 가 5개 규칙으로 정적 검사한다
+- `Color(hex:)`/`Color(red:green:blue:)` **직접 호출 금지** — `ChalNaColor.*` 사용 (hex 이니셜라이저는 토큰 정의 내부 전용. `Models/Sources/ColorHex.swift`·`ThumbnailPreset.swift` 는 예외).
+- `.font(.system(...))` 직접 호출 금지 — `ChalNaTypography.*` 경유. **예외 2건**: `ClipLabelText.swift`·`LabelEditorView.swift` — 화면 라벨이 합성 `CATextLayer` 의 `UIFont` 측정값과 픽셀 단위로 일치해야 해서 Dynamic Type 이 붙는 역할 토큰을 쓸 수 없다(위 "비디오 합성 원칙" 참고). `ChalNaIcon.swift` 도 글리프 크기 지정 때문에 예외.
+- `.cornerRadius(15)` 같은 리터럴 금지(콜론형·UIKit 대입형·베어 모디파이어 전부 포함) — `ChalNaRadius.*`.
+- `Color.white`/`.white`/`Color(white:)`/`UIColor(white:)` 하드코딩 금지 — `CompositionService` 의 비디오 텍스트 오버레이(출력 픽셀 일치 필요, 스펙 §10 비범위)와 위 라벨 박스 예외 2건만 허용.
+- `UIColor(named:)` 금지(번들 조회가 조용히 실패) — 예외 없음.
 - `UIColor`/`UIFont` 직접 참조 금지 (CompositionService 의 비디오 텍스트 오버레이는 불가피한 예외).
+
+**5개 규칙 전부 현재 0건**이지만 전부가 순수 코드 정리의 결과는 아니다 — 규칙 1(`.font(.system(`)의 0 은 코드 정리 + 위 **정당한 파일 예외 2건** 덕분이고, 나머지 4개 규칙의 0 은 코드 정리만의 결과다. 스크립트는 주석 인식(comment-aware)이라 주석 전용 줄은 제외하지만 코드 뒤 trailing 주석은 계속 검사한다 — 반대로 위반 줄 전체를 주석으로 감싸면(그 시점엔 죽은 코드) 스킵되는 건 알려진 한계다. 예외 목록의 근거는 문서가 아니라 스크립트 자체(`scripts/design-lint.sh:40-85`)를 단일 출처로 본다.
+
+### 접근성 — Dynamic Type 상한
+`RootView` 의 전역 상한(`.dynamicTypeSize(...DynamicTypeSize.accessibility1)`)은 **`.sheet`/`.fullScreenCover` 경계를 넘어 전달되지 않는다** — SwiftUI 환경값이 프레젠테이션 경계에서 다시 시작되기 때문이다(Task 25 실측: 기본 16.0pt에서 상한 미적용 시 AX1 27.5pt를 지나 AX5 53.0pt까지 커짐, 상한 적용 후 34pt 미만). 개발 언어·기본 텍스트 크기로 테스트하면 이 누락은 전혀 보이지 않는다.
+
+**그래서 `.sheet`/`.fullScreenCover` 로 뜨는 화면마다 그 안에서 상한을 다시 걸어야 한다.** 현재 7곳 전부 걸려 있다: `MediaPickerView`(포토 피커 시트·프리뷰 시트, 2곳) · `ExportView` · `TimelineView`(LabelEditor fullScreenCover) · `FilmDetailView`(재생 fullScreenCover·공유 시트, 2곳) · `SupportView`. **새 `.sheet`/`.fullScreenCover` 를 추가할 때마다 반드시 같은 상한을 붙인다** — 잊으면 조용히 새는 버그가 된다.
 
 ## 테스트
 - 서비스/모델은 **Swift Testing**(`@Test`/`#expect`)으로 작성, `SampleData` 활용. actor/Client 는 프로토콜 + `testValue` 로 격리.
 - 모델·서비스를 직접(예: `TimelineModel`, `AVFoundationCompositionService().export(...)`) 테스트하거나, 필요 시 TCA `TestStore` 사용 가능.
 - UI 는 스냅샷 대신 `#Preview` 적극 활용 (각 뷰 상태별).
+- 2026-07-30 기준 8개 유닛 스위트 전부 그린(SE·17 Pro 양쪽 확인): `DesignSystem` 22 · `TimelineFeature` 18 · `SettingsFeature` 28 · `MediaPickerFeature` 2 · `ExportFeature` 2 · `CompositionService` 51 · `AppCore` 24 · `PhotosService` 4. 이후 태스크가 이 수치를 크게 벗어나면 회귀를 의심한다.
+
+## 검증 방법 (시뮬레이터 / UI 테스트 노하우)
+다크 리디자인 사이클에서 실제로 시간을 잡아먹은 함정들이다. 다음 사람이 또 반복하지 않도록 적어둔다.
+
+- **`simctl` 은 탭·타이핑을 못 한다.** 화면 조작이 필요한 검증은 XCUITest 로만 가능하다(합성 터치·키보드 둘 다 있음). 버튼 없이 특정 화면을 스크린샷하려면 `ContentView` 의 `AppMode.isShowcase` 분기를 그 화면에 맞춰 임시로 바꾸고 `SIMCTL_CHILD_CHALNA_APP_MODE=showcase xcrun simctl launch <device> ios.inho.ChalNa` 로 실행한 뒤 되돌린다.
+- **`simctl launch` 에 환경변수를 넘길 땐 `SIMCTL_CHILD_` 접두사가 필요하다.** `--CHALNA_APP_MODE devMock` 같은 인자는 조용히 무시된다(`AppMode` 가 `ProcessInfo.processInfo.environment` 를 읽으므로). XCUITest 에선 `app.launchEnvironment["CHALNA_APP_MODE"] = "devMock"` 을 쓴다.
+- **`xcrun simctl ui <device> content-size` 는 이 앱엔 적용되지 않는다** — 강제한 xxxLarge 스크린샷이 기본값과 바이트 단위로 동일하게 나온 적이 있다(재부팅 후에도). 코드에서 `.environment(\.dynamicTypeSize, ...)` 로 강제해야 한다.
+- **`print()` 는 UI 테스트 중 `xcodebuild` stdout 도 unified log 도 타지 않는다** — 매 렌더링마다 찍는 무조건 print 로 확인해도 매치 0건이었다. 대신 앱 컨테이너에 파일로 쓰고 호스트에서 `xcrun simctl get_app_container <device> ios.inho.ChalNa data` 로 읽는다. (Task 25 는 이 채널의 침묵을 "증거 없음"으로 잘못 해석해 결론을 철회한 적이 있다 — 침묵을 증거로 쓰지 않는다.)
+- **`LocalizedStringKey` 에 카탈로그 항목이 없으면 한국어 키를 그대로 렌더링한다** — 개발 언어(한국어)로 테스트하면 안 보인다. `-AppleLanguages "(en)"` 로 한 번은 꼭 실행한다.
+- **`RenderPreview` 캔버스에서 점(pt) 측정을 하지 않는다**(~0.583 pt/px 스케일 차이 관측) — 시뮬레이터에 설치 후 스크린샷하고, 표시 좌표 → 원본 좌표 환산을 거쳐서 계산한다.
+- **`.aspectRatio(.fit)` 는 높이 제안이 무한(예: `ScrollView` 내부)이면 무한 높이로부터 너비를 유도해 오동작한다** — 높이가 유한한 컨테이너에선 상한으로만 작동해 무해하다. `ChalNaCanvas` 는 내부에서 이미 fit 하므로 절대 바깥에서 다시 `aspectRatio` 로 감싸지 않는다.
 
 ## 커밋 / PR
 - 단계가 끝나면 커밋, 메시지 한국어 OK. Claude 가 커밋할 땐 변경 파일 요약을 한국어로.
 
-> **참고**: 루트의 `AGENTS.md` 는 이 문서의 미러본(앞부분 Codex workflow 노트만 추가)이다. CLAUDE.md 를 고치면 AGENTS.md 도 함께 동기화한다.
+> **참고**: 루트의 `AGENTS.md` 는 커밋 `062e8bb`(dark-redesign 사이클 시작 전, 2026-07-09)에서 "agent skill·임시 문서 등 불필요 파일 제거"의 일부로 **삭제됐다** — 이 브랜치에는 존재하지 않는다. 과거엔 이 문서의 미러본(앞부분 Codex workflow 노트만 추가)이었다. `main` 브랜치는 그 삭제 커밋을 포함하지 않는 별도 이력이라 아직 파일이 남아 있다.
