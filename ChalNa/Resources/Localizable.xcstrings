@@ -3245,6 +3245,40 @@
         }
       }
     },
+    "초기화" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リセット"
+          }
+        }
+      }
+    },
+    "드래그로 보이는 부분을 옮기고, 핀치로 확대해요. 더블탭 = 초기화" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drag to reposition, pinch to zoom. Double-tap to reset."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ドラッグで位置を調整、ピンチで拡大。ダブルタップでリセット。"
+          }
+        }
+      }
+    },
     "손가락으로 확대·이동하고, 회전으로 방향을 맞춰요." : {
       "extractionState" : "manual",
       "localizations" : {
