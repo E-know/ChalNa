@@ -44,7 +44,7 @@ public struct TimelineView: View {
                 session: session,
                 onTapClip: { store.send(.clipTapped(index: $0)) }
             )
-            .frame(height: 96)
+            .frame(height: 92)
             .padding(.horizontal, 20)
             .padding(.top, 8)
         }
