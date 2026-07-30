@@ -93,6 +93,12 @@ struct LabelEditorView: View {
 
     private var canvas: some View {
         GeometryReader { proxy in
+            // ChalNaCanvas 는 내부적으로 박스를 .center 정렬한다(공유 컴포넌트의 의도된 기본값 —
+            // ClipAdjustView 등 다른 소비자는 그 정렬에 의존한다). 이 화면만 boxTopGlobalY 가
+            // 박스의 실제 상단과 일치해야 하므로(displayCornerY·dragGesture 의 전제),
+            // 박스 크기를 미리 계산해 ChalNaCanvas 를 그 크기로 딱 맞게 제한한 뒤(슬랙 0 →
+            // 정렬 무관), 바깥에서 직접 상단 정렬한다 — 공유 컴포넌트의 기본 정렬은 바꾸지 않는다.
+            let box = LabelBoxGeometry.fittedBox(aspect: 9.0 / 16.0, in: proxy.size)
             let boxTopGlobalY = proxy.frame(in: .global).minY
             ChalNaCanvas { box in
                 clipContent(box: box)
@@ -106,7 +112,8 @@ struct LabelEditorView: View {
                 .onAppear { reflow(from: .zero, to: box) }
                 .onChange(of: box) { oldBox, newBox in reflow(from: oldBox, to: newBox) }
             }
-            .frame(width: proxy.size.width, height: proxy.size.height)
+            .frame(width: box.width, height: box.height)
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
         }
     }
 
