@@ -152,7 +152,7 @@ final class FilmStripVC: UIViewController,
                     }
                 }
                 Text(clip.durationSecondsLabel)
-                    .font(ChalNaTypography.monoFallback(9, weight: .medium))
+                    .font(ChalNaTypography.mono(.caption, weight: .medium))
                     .foregroundColor(visualState == .selected || visualState == .playing
                         ? ChalNaColor.accent
                         : ChalNaColor.textSecondary)

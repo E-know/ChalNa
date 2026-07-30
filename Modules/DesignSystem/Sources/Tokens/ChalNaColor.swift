@@ -64,62 +64,6 @@ public enum ChalNaColor {
     // MARK: - Overlay
 
     public static let scrim = Color.black.opacity(0.6)
-
-    // MARK: - Deprecated: 커머스 DDS 수치 스케일 (P5 에서 삭제)
-
-    @available(*, deprecated, message: "시맨틱 토큰을 사용하세요 (accent/accentFill/textPrimary 등). P5 에서 삭제됩니다.")
-    public enum Purple {
-        public static let p100 = Color(hex: 0xE0D1FF)
-        public static let p200 = Color(hex: 0xBFA0FF)
-        public static let p300 = Color(hex: 0xAA82FF)
-        public static let p400 = Color(hex: 0x9868FC)
-        public static let p500 = Color(hex: 0x9849FD)
-        public static let p600 = Color(hex: 0x8B38E5)
-        public static let p700 = Color(hex: 0x693DE8)
-        public static let p800 = Color(hex: 0x553DE8)
-        public static let p900 = Color(hex: 0x462DE2)
-    }
-
-    @available(*, deprecated, message: "시맨틱 토큰을 사용하세요. P5 에서 삭제됩니다.")
-    public enum Blue {
-        public static let b50  = Color(hex: 0xF7FAFF)
-        public static let b100 = Color(hex: 0xEBF3FF)
-        public static let b200 = Color(hex: 0xDDEBFF)
-        public static let b300 = Color(hex: 0x7EB2FF)
-        public static let b400 = Color(hex: 0x448FFF)
-        public static let b500 = Color(hex: 0x2070EB)
-        public static let b600 = Color(hex: 0x0E68F0)
-        public static let b700 = Color(hex: 0x005BE4)
-        public static let b800 = Color(hex: 0x094FE5)
-        public static let b900 = Color(hex: 0x0B3EAB)
-    }
-
-    @available(*, deprecated, message: "시맨틱 토큰을 사용하세요 (bg/surface/textPrimary 등). P5 에서 삭제됩니다.")
-    public enum Gray {
-        public static let g50  = Color(hex: 0xF8F8F8)
-        public static let g100 = Color(hex: 0xEFEFEF)
-        public static let g200 = Color(hex: 0xD9D9D9)
-        public static let g300 = Color(hex: 0xBDBDBD)
-        public static let g400 = Color(hex: 0xA0A0A0)
-        public static let g500 = Color(hex: 0x919191)
-        public static let g600 = Color(hex: 0x6E6E6E)
-        public static let g700 = Color(hex: 0x4F4F4F)
-        public static let g800 = Color(hex: 0x2C2C2C)
-        public static let g900 = Color(hex: 0x1A1A1A)
-    }
-
-    @available(*, deprecated, message: "ChalNaTag 를 사용하세요. P5 에서 삭제됩니다.")
-    public enum Chip {
-        public static let liveBackground  = Color(hex: 0xFADAD9)
-        public static let liveForeground  = Color(hex: 0xE53B38)
-        public static let videoBackground = Color(hex: 0xE0D1FF)
-        public static let videoForeground = Color(hex: 0x8B38E5)
-        public static let filmBackground  = Color(hex: 0xDDEBFF)
-        public static let filmForeground  = Color(hex: 0x2070EB)
-    }
-
-    @available(*, deprecated, renamed: "danger", message: "P5 에서 삭제됩니다.")
-    public static let info = Color(hex: 0x02B8D3)
 }
 
 extension Color {

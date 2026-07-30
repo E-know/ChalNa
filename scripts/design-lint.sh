@@ -15,6 +15,11 @@ check() {
   local name="$1" pattern="$2"; shift 2
   local hits
   hits=$(grep -rnE "$pattern" --include='*.swift' "${SCAN_DIRS[@]}" 2>/dev/null | grep -v '/Tests/')
+  # 주석 전용 줄(공백 뒤 // 또는 ///로 시작) 은 실제 코드가 아니므로 제외한다.
+  # 코드 뒤에 붙은 trailing 주석은 앞쪽에 실제 코드가 있으므로 그대로 걸린다 —
+  # 즉 "코드를 주석으로 감싸 규칙을 우회"하는 것과 "주석 안 프로즈가 규칙을 오탐"하는
+  # 것을 동시에 해결하려면 반드시 '줄이 //로 시작하는가'만 봐야 한다.
+  hits=$(printf '%s\n' "$hits" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//')
   for skip in "$@"; do
     hits=$(printf '%s\n' "$hits" | grep -v "$skip")
   done
@@ -32,10 +37,14 @@ check() {
 
 echo "── ChalNa design lint ──"
 
-# 1. 시스템 폰트 직접 호출 — ChalNaIcon 은 글리프 크기 지정에 필요하므로 예외
+# 1. 시스템 폰트 직접 호출 — ChalNaIcon 은 글리프 크기 지정에 필요하므로 예외.
+#    ClipLabelText·LabelEditorView 는 라벨 박스를 합성(CATextLayer)의 UIFont 측정값과
+#    픽셀 일치시켜야 해서 Dynamic Type 이 붙는 역할 토큰(krBody, 삭제됨)을 쓸 수 없다.
 check ".font(.system(" '\.font\(\.system\(' \
   'DesignSystem/Sources/Icons/ChalNaIcon.swift' \
-  'DesignSystem/Sources/Tokens/'
+  'DesignSystem/Sources/Tokens/' \
+  'TimelineFeature/Sources/Components/ClipLabelText.swift' \
+  'TimelineFeature/Sources/LabelEditorView.swift'
 
 # 2. hex 리터럴 색 — 토큰 정의와 콘텐츠 그라디언트만 예외
 check "Color(hex:)" 'Color\(hex:' \

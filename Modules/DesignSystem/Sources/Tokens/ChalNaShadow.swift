@@ -27,15 +27,6 @@ public enum ChalNaShadow {
     public static let floating: [ChalNaShadowLayer] = [
         .init(Color.black.opacity(0.5), radius: 24, y: 8),
     ]
-
-    // MARK: - Deprecated (P5 에서 삭제)
-
-    @available(*, deprecated, message: "다크에서는 밝기 단계로 깊이를 표현합니다. 필요하면 .floating 만 쓰세요.")
-    public static let sm: [ChalNaShadowLayer] = []
-    @available(*, deprecated, message: "다크에서는 밝기 단계로 깊이를 표현합니다. 필요하면 .floating 만 쓰세요.")
-    public static let md: [ChalNaShadowLayer] = [.init(Color.black.opacity(0.5), radius: 24, y: 8)]
-    @available(*, deprecated, message: "다크에서는 밝기 단계로 깊이를 표현합니다. 필요하면 .floating 만 쓰세요.")
-    public static let lg: [ChalNaShadowLayer] = [.init(Color.black.opacity(0.5), radius: 24, y: 8)]
 }
 
 public extension View {

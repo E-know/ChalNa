@@ -199,7 +199,8 @@ struct LabelEditorView: View {
         let textWidth = LabelAnchorMath.textSize(text: label.text, fontPx: fontPx).width
         let isEmpty = label.text.isEmpty
         return TextField("", text: $label.text)
-            .font(ChalNaTypography.krBody(fontPx, weight: .light))
+            // 역할 토큰(krBody 삭제됨) 대신 직접 시스템 폰트 — 위 함수 doc 참고: 영상 출력과 픽셀 일치 필요.
+            .font(.system(size: fontPx, weight: .light))
             .tracking(ClipLabel.BoxStyle.letterSpacing(for: fontPx))
             .foregroundColor(.black)
             .tint(ChalNaColor.accentFill)
@@ -210,7 +211,7 @@ struct LabelEditorView: View {
             .overlay(alignment: .leading) {
                 if isEmpty {
                     Text("자막 입력")
-                        .font(ChalNaTypography.krBody(fontPx, weight: .light))
+                        .font(.system(size: fontPx, weight: .light))
                         .tracking(ClipLabel.BoxStyle.letterSpacing(for: fontPx))
                         .foregroundColor(.black.opacity(0.5))
                         .lineLimit(1)

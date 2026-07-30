@@ -14,27 +14,12 @@ public enum ChalNaButtonVariant {
     case secondary
     /// 텍스트만.
     case ghost
-
-    // MARK: - Deprecated 별칭 (P5 삭제)
-    @available(*, deprecated, renamed: "primary")
-    public static var filled: ChalNaButtonVariant { .primary }
-    @available(*, deprecated, renamed: "secondary")
-    public static var outlined: ChalNaButtonVariant { .secondary }
-    @available(*, deprecated, renamed: "primary")
-    public static var standardFilled: ChalNaButtonVariant { .primary }
-    @available(*, deprecated, renamed: "secondary")
-    public static var standardOutlined: ChalNaButtonVariant { .secondary }
-    @available(*, deprecated, renamed: "ghost")
-    public static var text: ChalNaButtonVariant { .ghost }
 }
 
 public enum ChalNaButtonSize {
     case lg   // 52pt
     case md   // 44pt
     case sm   // 36pt
-
-    @available(*, deprecated, renamed: "lg")
-    public static var xl: ChalNaButtonSize { .lg }
 
     fileprivate var height: CGFloat {
         switch self {
@@ -156,18 +141,6 @@ public extension ButtonStyle where Self == ChalNaButtonStyle {
     ) -> ChalNaButtonStyle {
         .init(variant, size: size, fillWidth: fillWidth, destructive: destructive)
     }
-
-    // MARK: - Deprecated 별칭 (P5 삭제)
-    @available(*, deprecated, renamed: "chalNaPrimary")
-    static var chalNaFilled: ChalNaButtonStyle { .init(.primary) }
-    @available(*, deprecated, renamed: "chalNaSecondary")
-    static var chalNaOutlined: ChalNaButtonStyle { .init(.secondary) }
-    @available(*, deprecated, renamed: "chalNaGhost")
-    static var chalNaText: ChalNaButtonStyle { .init(.ghost) }
-    @available(*, deprecated, renamed: "chalNaPrimary")
-    static var chalNaCoral: ChalNaButtonStyle { .init(.primary) }
-    @available(*, deprecated, renamed: "chalNaSecondary")
-    static var chalNaOutline: ChalNaButtonStyle { .init(.secondary) }
 }
 
 #Preview {

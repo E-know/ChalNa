@@ -278,7 +278,9 @@ public struct MediaPickerView: View {
     private var photoGrid: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
-                Text("선택한 미디어 · \(selectedAssets.count)").tagLabel()
+                Text("선택한 미디어 · \(selectedAssets.count)")
+                    .font(ChalNaTypography.label)
+                    .foregroundColor(ChalNaColor.textSecondary)
                 Spacer()
                 if selectedLiveCount > 0 {
                     ChalNaTag("\(selectedLiveCount) LIVE", variant: .live)
@@ -356,7 +358,9 @@ public struct MediaPickerView: View {
     private var devGrid: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
-                Text("DEV FIXTURES · \(store.selectedDevAssetIDs.count)").tagLabel()
+                Text("DEV FIXTURES · \(store.selectedDevAssetIDs.count)")
+                    .font(ChalNaTypography.label)
+                    .foregroundColor(ChalNaColor.textSecondary)
                 Spacer()
                 if devLiveCount > 0 {
                     ChalNaTag("\(devLiveCount) LIVE", variant: .live)
