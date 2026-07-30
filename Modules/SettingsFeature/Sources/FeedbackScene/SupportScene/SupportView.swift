@@ -57,6 +57,9 @@ public struct SupportView: View {
                 .presentationDetents([.height(280)])
                 .presentationDragIndicator(.visible)
                 .presentationBackground(ChalNaColor.surfaceRaised)
+                // RootView 의 전역 Dynamic Type 상한(.dynamicTypeSize(...accessibility1))은
+                // sheet 경계를 넘어 전달되지 않는다(실측 확인) — 여기서 다시 건다.
+                .dynamicTypeSize(...DynamicTypeSize.accessibility1)
         }
     }
 
