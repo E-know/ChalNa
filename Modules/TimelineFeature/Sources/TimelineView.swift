@@ -20,13 +20,12 @@ public struct TimelineView: View {
     public var body: some View {
         VStack(spacing: 0) {
             header
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .chalNaHeaderBar(scrollProgress: 1)
 
-            preview
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
+            // 프리뷰가 유일한 가변 요소다. 남는 공간을 전부 먹는다.
+            PreviewPanel(store: store, playback: playback)
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .layoutPriority(1)
 
             TransportControls(
                 isPlaying: store.isPlaying,
@@ -36,27 +35,26 @@ public struct TimelineView: View {
             )
             .padding(.top, 12)
 
-            labelRow
+            hintRow
                 .padding(.horizontal, 20)
-                .padding(.top, 20)
+                .padding(.top, 10)
 
             FilmStripCollectionView(
                 store: store,
                 session: session,
                 onTapClip: { store.send(.clipTapped(index: $0)) }
             )
-            .frame(height: 104)
-            .padding(.horizontal, 16)
+            .frame(height: 96)
+            .padding(.horizontal, 20)
             .padding(.top, 8)
-
-            hintRow
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-
-            Spacer(minLength: 0)
         }
         .chalNaScreen()
-        .safeAreaInset(edge: .bottom) { bottomBar.padding(.horizontal, 16) }
+        .safeAreaInset(edge: .bottom) {
+            bottomBar
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 8)
+        }
         .onAppear {
             syncFromSessionIfNeeded()
             wirePlaybackControllerIfNeeded()
@@ -133,71 +131,36 @@ public struct TimelineView: View {
     // MARK: - Header
 
     private var header: some View {
-        ChalNaNavigationBar(
-            title: headerTitle,
-            subtitle: headerSubtitle
-        ) {
-            ChalNaHeaderBackButton {
-                store.send(.dismissTapped)
-            }
-        } trailing: {
-            EmptyView()
-        }
+        ChalNaNavBar(
+            title: "편집",
+            caption: store.title.isEmpty ? nil : store.title,
+            leading: .back { store.send(.dismissTapped) },
+            showsDivider: true
+        )
     }
 
     private var canSave: Bool { !store.clips.isEmpty }
 
-    private var headerTitle: String { String(localized: "편집") }
-
-    private var headerSubtitle: String { store.title }
-
-    // MARK: - Preview
-
-    private var preview: some View {
-        PreviewPanel(store: store, playback: playback)
-    }
-
-    // MARK: - Label row
-
-    private var labelRow: some View {
-        HStack {
-            Text(labelLeft).tagLabel(color: labelLeftColor)
-            Spacer()
-            labelRight
-        }
-    }
-
-    private var labelLeft: String {
-        store.isPlaying
-            ? "▶ NOW PLAYING · CLIP \(store.currentIndex + 1)"
-            : "TIMELINE · \(store.clips.count) CLIPS"
-    }
-
-    private var labelLeftColor: Color {
-        store.isPlaying ? ChalNaColor.Purple.p600 : ChalNaColor.Gray.g500
-    }
-
-    @ViewBuilder
-    private var labelRight: some View {
-        if store.isPlaying {
-            Text("\(store.playheadLabel) / \(store.totalClockLabel)").tagLabel()
-        } else {
-            (Text("총 ").tagLabel(color: ChalNaColor.Gray.g500)
-             + Text(store.totalDurationLabel)
-                .font(ChalNaTypography.krBody(13, weight: .medium))
-                .foregroundColor(ChalNaColor.Gray.g900))
-        }
-    }
-
     // MARK: - Hint row
 
+    /// 힌트 1줄. 재생 중에는 숨긴다.
+    ///
+    /// 기존에는 이 위에 `labelRow`(TIMELINE · N CLIPS + 총 길이)가 따로 있었지만
+    /// 클립 수는 필름스트립이, 총 길이는 스크럽바가, 현재 인덱스는 캔버스 배지가
+    /// 이미 말하고 있었다. 같은 정보를 35pt 더 써서 두 번 말하던 것을 지웠다.
     @ViewBuilder
     private var hintRow: some View {
-        if !store.isPlaying {
+        if store.isPlaying {
+            // 자리를 유지해 재생/정지 전환 시 레이아웃이 튀지 않게 한다.
+            Color.clear.frame(height: 16)
+        } else {
             Text("클립을 탭해 편집 · 길게 눌러서 끌어 이동")
-                .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
-                .foregroundColor(ChalNaColor.Gray.g500)
+                .font(ChalNaTypography.caption)
+                .foregroundColor(ChalNaColor.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
                 .frame(maxWidth: .infinity, alignment: .center)
+                .frame(height: 16)
         }
     }
 
@@ -207,7 +170,6 @@ public struct TimelineView: View {
     private var bottomBar: some View {
         if store.isPlaying {
             EditToolbar(dimmed: true, adjustActive: currentAdjustActive, canSave: canSave)
-                .padding(.bottom, 16)
         } else {
             EditToolbar(
                 adjustActive: currentAdjustActive,
@@ -218,7 +180,6 @@ public struct TimelineView: View {
                 onDelete: { store.send(.deleteCurrentRequested) },
                 onSave: { store.send(.saveTapped) }
             )
-            .padding(.bottom, 16)
         }
     }
 
@@ -262,4 +223,10 @@ public struct TimelineView: View {
         }
     )
     .environment(EditSession())
+}
+
+#Preview("Timeline · xxxLarge") {
+    TimelineView()
+        .environment(EditSession(title: SampleData.filmTitle, clips: SampleData.jejuTimeline))
+        .environment(\.dynamicTypeSize, .xxxLarge)
 }
