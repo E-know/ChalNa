@@ -175,7 +175,9 @@ public struct ExportView: View {
                         .foregroundColor(ChalNaColor.textSecondary)
                     Text(statusLine)
                         .font(ChalNaTypography.label)
-                        .foregroundColor(ChalNaColor.textSecondary)
+                        // 실패 상태의 문구는 오류다 — 진행률 바(:220)가 이미 danger 로 바뀌는데
+                        // 설명 텍스트만 textSecondary 로 남아 둘이 어긋났다.
+                        .foregroundColor(store.phase == .failed ? ChalNaColor.danger : ChalNaColor.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: 300, alignment: .leading)

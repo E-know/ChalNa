@@ -265,7 +265,7 @@ public struct MediaPickerView: View {
             if let devErrorMessage = store.devErrorMessage {
                 Text(devErrorMessage)
                     .font(ChalNaTypography.caption)
-                    .foregroundColor(ChalNaColor.accent)
+                    .foregroundColor(ChalNaColor.danger)
             }
         }
     }
@@ -585,8 +585,10 @@ public struct MediaPickerView: View {
     }
 
     private var photoStatusColor: Color {
+        // 불러오기 실패·권한 거부는 오류 상태다. accent 는 primary/CTA 색이라
+        // 오류가 강조와 구별되지 않았다 — 같은 파일 :434("영상 X")가 이미 danger 를 쓴다.
         if hasUnavailableMedia || store.photoAuthorizationStatus == .denied || store.photoAuthorizationStatus == .restricted {
-            return ChalNaColor.accent
+            return ChalNaColor.danger
         }
         return ChalNaColor.textSecondary
     }
