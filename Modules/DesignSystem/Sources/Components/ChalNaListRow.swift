@@ -183,9 +183,9 @@ public struct ChalNaListRow: View {
             .disabled(!enabled)
 
         case .check(let isChecked, _):
-            // 체크 표시는 순전히 시각적이다. VoiceOver 용 선택 상태는 위 `rowButton` 의
-            // Button 에 `.isSelected` 로 실린다 — 여기(accessibilityHidden 된 글리프)에
-            // 걸면 무효다.
+            // 체크 표시는 순전히 시각적이다. VoiceOver 용 선택 상태는 `body` 의
+            // `case .check` 에서 Button 에 `.isSelected` 로 실린다 —
+            // 여기(accessibilityHidden 된 글리프)에 걸면 무효다.
             ChalNaIcon(.check, size: 16, weight: .semibold)
                 .foregroundColor(ChalNaColor.accent)
                 .opacity(isChecked ? 1 : 0)
