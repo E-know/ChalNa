@@ -109,9 +109,13 @@ public struct ChalNaListRow: View {
             Button(action: action) { rowContent.contentShape(Rectangle()) }
                 .buttonStyle(ListRowPressStyle())
                 .disabled(!enabled)
-        case .check(_, let action):
+        case .check(let isChecked, let action):
+            // 선택 상태는 이 Button(실제 접근성 요소)에 실어야 한다. 체크 글리프에 걸면
+            // 무효다 — `ChalNaIcon` 은 body 끝에서 `.accessibilityHidden(true)` 로
+            // 접근성 트리에서 빠지므로, 그 위의 trait 은 붙을 요소가 없다.
             Button(action: action) { rowContent.contentShape(Rectangle()) }
                 .buttonStyle(ListRowPressStyle())
+                .accessibilityAddTraits(isChecked ? [.isSelected] : [])
         case .toggle, .slider:
             rowContent
         }
@@ -179,13 +183,12 @@ public struct ChalNaListRow: View {
             .disabled(!enabled)
 
         case .check(let isChecked, _):
-            // 체크 표시를 opacity 로만 감추면 VoiceOver 는 선택된 행과 안 된 행을
-            // 똑같이 읽는다(언어 선택 화면이 그 경우였다). 선택 상태를 접근성 트리에
-            // 명시적으로 싣는다.
+            // 체크 표시는 순전히 시각적이다. VoiceOver 용 선택 상태는 위 `rowButton` 의
+            // Button 에 `.isSelected` 로 실린다 — 여기(accessibilityHidden 된 글리프)에
+            // 걸면 무효다.
             ChalNaIcon(.check, size: 16, weight: .semibold)
                 .foregroundColor(ChalNaColor.accent)
                 .opacity(isChecked ? 1 : 0)
-                .accessibilityAddTraits(isChecked ? [.isSelected] : [])
 
         }
     }
