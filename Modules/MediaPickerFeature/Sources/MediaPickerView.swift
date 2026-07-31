@@ -459,7 +459,7 @@ public struct MediaPickerView: View {
                 .foregroundColor(ChalNaColor.onAccent)
                 .frame(width: 24, height: 24)
                 .background(Circle().fill(ChalNaColor.accentFill))
-                .overlay(Circle().strokeBorder(ChalNaColor.canvas.opacity(0.4), lineWidth: 1))
+                .overlay(Circle().strokeBorder(ChalNaColor.onMediaDark.opacity(0.4), lineWidth: 1))
                 .frame(width: 44, height: 44, alignment: .topTrailing)
                 .contentShape(Rectangle())
         }
@@ -777,7 +777,7 @@ private struct DevMediaAssetCard: View {
                 ZStack {
                     asset.preset.view()
                     LinearGradient(
-                        colors: [.clear, ChalNaColor.canvas.opacity(0.5)],
+                        colors: [.clear, ChalNaColor.onMediaDark.opacity(0.5)],
                         startPoint: .center,
                         endPoint: .bottom
                     )

@@ -13,6 +13,4 @@ public enum ChalNaRadius {
     public static let md: CGFloat = 14
     /// 바텀시트 · 플로팅 툴바.
     public static let lg: CGFloat = 20
-    /// 칩 · 토글.
-    public static let pill: CGFloat = 999
 }

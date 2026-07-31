@@ -72,7 +72,7 @@ public struct MediaThumb<Content: View>: View {
         case .selected, .playing:
             ZStack {
                 RoundedRectangle(cornerRadius: ChalNaRadius.xs, style: .continuous)
-                    .strokeBorder(ChalNaColor.canvas.opacity(0.55), lineWidth: 3)
+                    .strokeBorder(ChalNaColor.onMediaDark.opacity(0.55), lineWidth: 3)
                 RoundedRectangle(cornerRadius: ChalNaRadius.xs, style: .continuous)
                     .strokeBorder(ChalNaColor.accent, lineWidth: 2)
             }
@@ -124,7 +124,7 @@ private struct ThumbFrame: ViewModifier {
                 LinearGradient(colors: [.blue.opacity(0.6), .cyan], startPoint: .top, endPoint: .bottom)
             }
             MediaThumb(state: .selected, size: CGSize(width: 46, height: 80)) {
-                LinearGradient(colors: [.white, .yellow], startPoint: .top, endPoint: .bottom)
+                LinearGradient(colors: [.teal, .yellow], startPoint: .top, endPoint: .bottom)
             }
             MediaThumb(state: .playing, size: CGSize(width: 46, height: 80)) {
                 LinearGradient(colors: [.orange, .pink], startPoint: .top, endPoint: .bottom)
@@ -141,7 +141,7 @@ private struct ThumbFrame: ViewModifier {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
             ForEach(0..<3, id: \.self) { i in
                 MediaThumb(state: i == 1 ? .selected : .normal) {
-                    LinearGradient(colors: [.gray, .black], startPoint: .top, endPoint: .bottom)
+                    LinearGradient(colors: [.gray, .indigo], startPoint: .top, endPoint: .bottom)
                 }
             }
         }

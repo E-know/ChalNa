@@ -72,7 +72,7 @@ public struct ChalNaCanvas<Content: View, Overlay: View>: View {
 #Preview {
     VStack(spacing: 16) {
         ChalNaCanvas { box in
-            LinearGradient(colors: [.indigo, .black], startPoint: .top, endPoint: .bottom)
+            LinearGradient(colors: [.indigo, .purple], startPoint: .top, endPoint: .bottom)
                 .frame(width: box.width, height: box.height)
         } overlay: { _ in
             ChalNaTag("3 / 8", variant: .neutral)

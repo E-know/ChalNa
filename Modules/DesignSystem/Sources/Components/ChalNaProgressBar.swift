@@ -37,7 +37,6 @@ public struct ChalNaProgressBar: View {
     VStack(spacing: 20) {
         ChalNaProgressBar(progress: 0.0)
         ChalNaProgressBar(progress: 0.62)
-        ChalNaProgressBar(progress: 1.0, tint: ChalNaColor.success)
         ChalNaProgressBar(progress: 0.4, tint: ChalNaColor.danger)
     }
     .padding(20)

@@ -213,22 +213,25 @@ DesignSystem/Sources/
 
 **Task 26 에서 삭제된 컴포넌트/토큰**(문서·코드 어디서도 새로 참조하지 않는다): `ChalNaChip` · `ClipThumbCard`/`ClipThumbState` · `ChalNaNavigationBar` · `ChalNaHeaderActionButtonStyle` · `View+ChalNaTopBar`. `ChalNaBottomSheet` 는 그보다 앞선 Task 12 에서 이미 삭제됐다.
 
-### 금지 사항 — `scripts/design-lint.sh` 가 5개 규칙으로 정적 검사한다
+### 금지 사항 — `scripts/design-lint.sh` 가 6개 규칙으로 정적 검사한다
 - `Color(hex:)`/`Color(red:green:blue:)` **직접 호출 금지** — `ChalNaColor.*` 사용 (hex 이니셜라이저는 토큰 정의 내부 전용).
 - `.font(.system(...))` 직접 호출 금지 — `ChalNaTypography.*` 경유. (`ChalNaIcon.swift` 만 예외 — 글리프 크기 지정 때문.)
 - `.cornerRadius(15)` 같은 리터럴 금지(콜론형·UIKit 대입형·베어 모디파이어 전부 포함) — `ChalNaRadius.*`.
 - `Color.white`/`.white` 하드코딩 금지 — `ChalNaColor.textPrimary` 또는 `.onAccent` 사용.
+- `Color.black`/`.black` 하드코딩 금지 — `ChalNaColor.canvas`/`.scrim`/`.onMediaDark` 등 역할 토큰 사용. 흰색 규칙의 대칭 규칙: 값이 검정인 토큰(`canvas` 등)을 역할과 무관하게 범용 검정으로 갖다 쓰는 것도 이 규칙을 우회하진 못한다 — grep 은 토큰 이름이 아니라 최종 리터럴 값을 보지 않으므로, 하드코딩 자체가 없어야 규칙을 통과한다.
 - `UIColor(named:)` 금지 — 번들 조회가 조용히 실패한다(과거에 검은 띠 버그를 만들었다). UIKit 에서 색이 필요하면 `UIColor(ChalNaColor.bg)` 처럼 SwiftUI `Color` 를 감싼다.
 - `UIFont` 직접 참조 금지 — `ChalNaTypography.kerisUIFont` 경유(CompositionService 의 비디오 텍스트 오버레이는 불가피한 예외).
-- **`scripts/design-lint.sh` 가 위 5종을 정적 검사한다. 커밋 전에 실행한다.**
+- **`scripts/design-lint.sh` 가 위 6종을 정적 검사한다. 커밋 전에 실행한다.**
 
-**5개 규칙 전부 현재 0건**이지만 전부가 순수 코드 정리의 결과는 아니다 — 규칙 1(`.font(.system(`)의 0 은 코드 정리 + 아래 "다크 토큰 적용 예외"의 **정당한 파일 예외 2건**(`ClipLabelText.swift`·`LabelEditorView.swift`) 덕분이고, 나머지 4개 규칙의 0 은 코드 정리만의 결과다. 스크립트는 주석 인식(comment-aware)이라 주석 전용 줄은 제외하지만 코드 뒤 trailing 주석은 계속 검사한다 — 반대로 위반 줄 전체를 주석으로 감싸면(그 시점엔 죽은 코드) 스킵되는 건 알려진 한계다. 예외 목록의 근거는 문서가 아니라 스크립트 자체(`scripts/design-lint.sh:40-85`)를 단일 출처로 본다.
+**6개 규칙 전부 현재 0건**이지만 전부가 순수 코드 정리의 결과는 아니다 — 규칙 1(`.font(.system(`)의 0 은 코드 정리 + 아래 "다크 토큰 적용 예외"의 **정당한 파일 예외 2건**(`ClipLabelText.swift`·`LabelEditorView.swift`) 덕분이고, 나머지 규칙의 0 은 대부분 코드 정리만의 결과다. 스크립트는 주석 인식(comment-aware)이라 주석 전용 줄은 제외하지만 코드 뒤 trailing 주석은 계속 검사한다 — 반대로 위반 줄 전체를 주석으로 감싸면(그 시점엔 죽은 코드) 스킵되는 건 알려진 한계다. 예외 목록의 근거는 문서가 아니라 스크립트 자체(`scripts/design-lint.sh`)를 단일 출처로 본다. **파일 단위 예외는 그 파일에 실제 매치가 있을 때만 등록한다** — 매치가 없는 예외(죽은 예외)는 그 파일에 새로 들어오는 진짜 위반을 영구히 가리는 눈가림용 구멍이 된다(과거 `LabelEditorView.swift`·`ClipLabel.swift`·`ThumbnailPreset.swift`가 흰색 규칙에 죽은 예외로 남아 있다가 제거된 사례).
 
 ### 다크 토큰 적용 예외 (근거 있는 리터럴)
-`design-lint.sh` 의 하드코딩 관련 규칙들(`Color(hex:)`·흰색 하드코딩, 라벨 박스 파일 2건은 `.font(.system(` 도)이 파일 단위로 예외 처리하는 대상이다. 셋 다 "토큰 규율 위반"이 아니라 "토큰으로 표현할 수 없는 것"이라 예외다:
-- **라벨 박스 픽셀 일치** — `ClipLabel.swift`(Models) · `ClipLabelText.swift`·`LabelEditorView.swift`(TimelineFeature). 화면 라벨이 합성(`CATextLayer`)의 `UIFont` 측정값과 픽셀 단위로 일치해야 해서, Dynamic Type 에 따라 스케일되는 역할 토큰을 쓸 수 없다(위 "비디오 합성 원칙" 참고).
-- **다크 위 반투명 오버레이** — `ChalNaTag.swift`(필 배경 `Color.white.opacity(0.08~0.10)`) · `MediaThumb.swift`(고스트 슬롯 그라디언트). 토큰으로 표현할 수 없는 합성 연산이다.
-- **콘텐츠 그라디언트** — `ThumbnailPreset.swift`(12종 여행 톤 그라디언트) · `ColorHex.swift`(그 hex 헬퍼). 둘 다 Models. UI 크롬이 아니라 콘텐츠이므로 다크 팔레트 규율 밖이다.
+`design-lint.sh` 의 하드코딩 관련 규칙들(`Color(hex:)`·흰색/검정 하드코딩, 라벨 박스 파일 2건은 `.font(.system(` 도)이 파일 단위로 예외 처리하는 대상이다:
+- **라벨 박스 픽셀 일치** — `ClipLabelText.swift`·`LabelEditorView.swift`(TimelineFeature). 화면 라벨이 합성(`CATextLayer`)의 `UIFont` 측정값·색과 픽셀 단위로 일치해야 해서, Dynamic Type 에 따라 스케일되는 역할 토큰을 쓸 수 없다(위 "비디오 합성 원칙" 참고). 흰색·검정 두 규칙 모두 이 이유로 예외다.
+- **미디어 위 마크의 컴포넌트 고유 상수** — `ChalNaTag.swift`(필 배경/보더 `Color.white.opacity(0.08~0.10)`). LIVE/VIDEO 배지처럼 미디어 위에도, 카드·진행률 바처럼 UI 크롬 위에도 동일하게 올라가는 범용 컴포넌트라 "미디어 위 마크"(`onMedia`) 역할로 좁혀 쓸 수 없고, `scrim`(0.6, 어둡게 덮는 용도)과도 강도·목적이 다르다. **주의**: 과거 이 예외를 "토큰으로 표현할 수 없는 합성 연산"이라 적었으나 틀렸다 — 같은 파일의 `scrim = Color.black.opacity(0.6)` 자체가 반투명 오버레이도 토큰으로 표현 가능하다는 반증이다. 실제 이유는 이 상수가 ChalNaTag 하나만 쓰는 단일 소비자 값이라 아직 전용 토큰으로 승격되지 않았을 뿐이라는 것.
+- **콘텐츠 그라디언트** — `ThumbnailPreset.swift`(12종 여행 톤 그라디언트) · `ColorHex.swift`(그 hex 헬퍼). 둘 다 Models, `Color(hex:)` 규칙의 예외. UI 크롬이 아니라 콘텐츠이므로 다크 팔레트 규율 밖이다.
+
+`MediaThumb.swift` 는 과거 흰색 규칙에 예외로 있었으나, 실제 매치는 프로덕션 코드(고스트 슬롯 그라디언트)가 아니라 `#Preview` 데코 샘플 색이었다 — 문서 근거 자체가 틀렸던 죽은 예외라 Preview 색을 바꿔 매치를 없애고 예외를 뗐다.
 
 ### 접근성 — Dynamic Type 상한
 `RootView` 의 전역 상한(`.dynamicTypeSize(...DynamicTypeSize.accessibility1)`)은 **`.sheet`/`.fullScreenCover` 경계를 넘어 전달되지 않는다** — SwiftUI 환경값이 프레젠테이션 경계에서 다시 시작되기 때문이다(Task 25 실측: 기본 16.0pt에서 상한 미적용 시 AX1 27.5pt를 지나 AX5 53.0pt까지 커짐, 상한 적용 후 34pt 미만). 개발 언어·기본 텍스트 크기로 테스트하면 이 누락은 전혀 보이지 않는다.

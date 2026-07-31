@@ -59,7 +59,7 @@ public struct DesignSystemShowcaseView: View {
             ("textPrimary", ChalNaColor.textPrimary), ("textSecondary", ChalNaColor.textSecondary),
             ("textTertiary", ChalNaColor.textTertiary), ("accent", ChalNaColor.accent),
             ("accentFill", ChalNaColor.accentFill), ("accentPressed", ChalNaColor.accentPressed),
-            ("danger", ChalNaColor.danger), ("success", ChalNaColor.success),
+            ("danger", ChalNaColor.danger),
             ("brandDeep", ChalNaColor.brandDeep),
         ]
         return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {

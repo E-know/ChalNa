@@ -53,7 +53,6 @@ public enum ChalNaColor {
     /// `danger` 의 눌림 톤. `accentPressed` 가 `accent` 에 대해 하는 역할과 동일.
     /// 이게 없으면 파괴적 ghost 버튼이 눌린 동안 보라(`accentPressed`)로 바뀐다.
     public static let dangerPressed = Color(hex: 0xFF8F8B)
-    public static let success = Color(hex: 0x3DD9A0)
 
     // MARK: - Brand
 
@@ -64,6 +63,14 @@ public enum ChalNaColor {
     // MARK: - Overlay
 
     public static let scrim = Color.black.opacity(0.6)
+
+    // MARK: - Media overlay
+    // 임의의 사용자 미디어 위에 놓이는 마크. 테마와 무관하게 고정이다 —
+    // 아래 픽셀이 사진/영상이라 배경 밝기를 가정할 수 없다.
+    /// 가이드선 · 라벨 등 밝은 마크.
+    public static let onMedia     = Color.white
+    /// 외곽선 · 스크림 등 어두운 마크.
+    public static let onMediaDark = Color.black
 }
 
 extension Color {

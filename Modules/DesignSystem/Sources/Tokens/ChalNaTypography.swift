@@ -43,8 +43,6 @@ public enum ChalNaTypography {
     public enum Tracking {
         /// 제목류 자간.
         public static let title: CGFloat = -0.20
-        /// 본문류 자간.
-        public static let body: CGFloat  = -0.30
     }
 
     // MARK: - KERISKEDU (브랜드 순간 · 영상 라벨 WYSIWYG 전용)

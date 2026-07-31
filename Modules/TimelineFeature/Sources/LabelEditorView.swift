@@ -193,8 +193,8 @@ struct LabelEditorView: View {
     ///
     /// **다크 토큰 적용 예외.** 라벨 박스(흰 배경 · 검은 글자)는 영상 출력과
     /// 픽셀 일치해야 하므로 UI 테마와 무관하다. `ClipLabel.BoxStyle` 이 SSOT 다.
-    /// 여기서 `.black` / `.white` 리터럴을 쓰는 것은 의도된 것이며
-    /// `scripts/design-lint.sh` 의 예외 경로에 이 파일이 등록돼 있다.
+    /// 여기서 `.black` 리터럴을 쓰는 것은 의도된 것이며
+    /// `scripts/design-lint.sh` 의 검정 하드코딩 규칙 예외 경로에 이 파일이 등록돼 있다.
     private func inlineEditor(fontPx: CGFloat) -> some View {
         let textWidth = LabelAnchorMath.textSize(text: label.text, fontPx: fontPx).width
         let isEmpty = label.text.isEmpty

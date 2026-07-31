@@ -133,8 +133,8 @@ public struct ClipAdjustView: View {
                 path.move(to: CGPoint(x: 0, y: y))
                 path.addLine(to: CGPoint(x: size.width, y: y))
             }
-            context.stroke(path, with: .color(ChalNaColor.canvas.opacity(0.35)), lineWidth: 2.5)
-            context.stroke(path, with: .color(ChalNaColor.onAccent.opacity(0.85)), lineWidth: 1)
+            context.stroke(path, with: .color(ChalNaColor.onMediaDark.opacity(0.35)), lineWidth: 2.5)
+            context.stroke(path, with: .color(ChalNaColor.onMedia.opacity(0.85)), lineWidth: 1)
         }
         .frame(width: box.width, height: box.height)
         .allowsHitTesting(false)
