@@ -23,9 +23,16 @@ open ChalNa.xcworkspace
 xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
 
-# 전체 테스트
-xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
+# 전체 테스트 — 반드시 ChalNa-Workspace 스킴이어야 한다.
+# `-scheme ChalNa` 의 test 액션은 앱 타겟에 의존하는 ChalNaUITests 만 포함하고
+# 8개 유닛 스위트는 들어있지 않다 — 그걸로 돌리면 유닛 테스트가 조용히 빠진다.
+xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa-Workspace \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test
+
+# UI 테스트만
+xcodebuild -workspace ChalNa.xcworkspace -scheme ChalNa \
+           -destination 'platform=iOS Simulator,name=iPhone SE (3rd generation)' \
+           -only-testing:ChalNaUITests test
 
 # 단일 테스트 (Swift Testing 파일/케이스 단위). 테스트 타겟명은 `<모듈>Tests`.
 xcodebuild ... test \
