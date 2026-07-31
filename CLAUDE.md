@@ -233,7 +233,16 @@ DesignSystem/Sources/
 ### 접근성 — Dynamic Type 상한
 `RootView` 의 전역 상한(`.dynamicTypeSize(...DynamicTypeSize.accessibility1)`)은 **`.sheet`/`.fullScreenCover` 경계를 넘어 전달되지 않는다** — SwiftUI 환경값이 프레젠테이션 경계에서 다시 시작되기 때문이다(Task 25 실측: 기본 16.0pt에서 상한 미적용 시 AX1 27.5pt를 지나 AX5 53.0pt까지 커짐, 상한 적용 후 34pt 미만). 개발 언어·기본 텍스트 크기로 테스트하면 이 누락은 전혀 보이지 않는다.
 
-**그래서 `.sheet`/`.fullScreenCover` 로 뜨는 화면마다 그 안에서 상한을 다시 걸어야 한다.** 현재 7곳 전부 걸려 있다: `MediaPickerView`(포토 피커 시트·프리뷰 시트, 2곳) · `ExportView` · `TimelineView`(LabelEditor fullScreenCover) · `FilmDetailView`(재생 fullScreenCover·공유 시트, 2곳) · `SupportView`. **새 `.sheet`/`.fullScreenCover` 를 추가할 때마다 반드시 같은 상한을 붙인다** — 잊으면 조용히 새는 버그가 된다.
+**그래서 `.sheet`/`.fullScreenCover` 로 뜨는 화면마다 그 안에서 상한을 다시 걸어야 한다.** 현재 7곳 전부 걸려 있다: `MediaPickerView`(포토 피커 시트·프리뷰 시트, 2곳) · `ExportView` · `TimelineView`(LabelEditor fullScreenCover) · `FilmDetailView`(재생 시트·공유 시트, 2곳) · `SupportView`. **새 `.sheet`/`.fullScreenCover` 를 추가할 때마다 반드시 같은 상한을 붙인다** — 잊으면 조용히 새는 버그가 된다.
+
+> **상한은 프레젠테이션 *콘텐츠* 에 걸어야 한다 — 띄우는 쪽 뷰에 걸면 안 된다.** 즉
+> `.sheet { Foo().dynamicTypeSize(...) }` 이지 `.sheet { Foo() }.dynamicTypeSize(...)` 가 아니다.
+> 후자는 컴파일도 되고 경고도 없지만 경계를 넘지 못하므로 아무 효과가 없다 — 이 규칙에서
+> 실수하기 가장 쉬운 지점이고, 기본 텍스트 크기 테스트로는 구별되지 않는다.
+>
+> `UIActivityViewController`·`PHPickerViewController`·`ShareLink` 처럼 프로세스 밖에서 뜨는
+> 시스템 UI 는 상한 대상이 아니다(걸어도 무효). `.alert`·`.confirmationDialog` 도 제외 —
+> 상한을 걸 수 없고 시스템이 자체 스크롤을 제공한다.
 
 ## 테스트
 - 서비스/모델은 **Swift Testing**(`@Test`/`#expect`)으로 작성, `SampleData` 활용. actor/Client 는 프로토콜 + `testValue` 로 격리.
