@@ -53,8 +53,12 @@ struct MediaPreviewSheet: View {
             }
 
             if let duration = media.duration, duration > 0 {
+                // 문자열에 한글 '초'(ja 는 '秒')가 들어가므로 mono 를 쓸 수 없다 —
+                // SF Mono 에 해당 글리프가 없어 폴백되며 자간·베이스라인이 어긋난다.
+                // 이것이 감사 #11 이 지적한 바로 그 증상이고, mono 토큰의 문서 계약도
+                // "한글에 쓰지 않는다" 로 못박고 있다.
                 Text(String(format: String(localized: "%.1f초"), duration))
-                    .font(ChalNaTypography.mono())
+                    .font(ChalNaTypography.label)
                     .foregroundColor(ChalNaColor.textSecondary)
             }
 

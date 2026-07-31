@@ -98,7 +98,7 @@ struct LabelEditorView: View {
             // 박스의 실제 상단과 일치해야 하므로(displayCornerY·dragGesture 의 전제),
             // 박스 크기를 미리 계산해 ChalNaCanvas 를 그 크기로 딱 맞게 제한한 뒤(슬랙 0 →
             // 정렬 무관), 바깥에서 직접 상단 정렬한다 — 공유 컴포넌트의 기본 정렬은 바꾸지 않는다.
-            let box = LabelBoxGeometry.fittedBox(aspect: 9.0 / 16.0, in: proxy.size)
+            let box = LabelBoxGeometry.fittedBox(aspect: ChalNaCanvasGeometry.defaultAspect, in: proxy.size)
             let boxTopGlobalY = proxy.frame(in: .global).minY
             ChalNaCanvas { box in
                 clipContent(box: box)

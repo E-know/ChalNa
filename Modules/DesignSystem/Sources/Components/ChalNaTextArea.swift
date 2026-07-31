@@ -16,9 +16,11 @@ public struct ChalNaTextArea: View {
     public var body: some View {
         ZStack(alignment: .topLeading) {
             if text.isEmpty {
+                // ChalNaTextField 와 같은 이유로 textSecondary — placeholder 는 활성 내용이고
+                // surface 배경에서 textTertiary 는 3.34:1 로 AA 미달이다.
                 Text(verbatim: placeholder)
                     .font(ChalNaTypography.body)
-                    .foregroundColor(ChalNaColor.textTertiary)
+                    .foregroundColor(ChalNaColor.textSecondary)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
                     .allowsHitTesting(false)
@@ -30,6 +32,10 @@ public struct ChalNaTextArea: View {
                 .foregroundColor(ChalNaColor.textPrimary)
                 .tint(ChalNaColor.accent)
                 .focused($isFocused)
+                // TextEditor 는 placeholder 프로퍼티가 없어서 VoiceOver 가 읽을 이름이 없다.
+                // 위 placeholder Text 는 입력이 시작되면 사라지므로 대체물이 못 된다 —
+                // 결과적으로 라벨 없는 텍스트 필드가 된다.
+                .accessibilityLabel(Text(verbatim: placeholder))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .frame(minHeight: minHeight)

@@ -2,8 +2,8 @@ import SwiftUI
 
 /// 다크 전용 시맨틱 색 토큰.
 ///
-/// 화면은 **역할 이름만** 쓴다. 수치 스케일(`Purple`/`Blue`/`Gray`)은 마이그레이션
-/// 기간 동안만 deprecated 로 남아 있고 P5 에서 삭제된다.
+/// 화면은 **역할 이름만** 쓴다. 과거의 수치 스케일(`Purple`/`Blue`/`Gray`)은
+/// Task 26 에서 삭제됐다.
 ///
 /// 값·대비 근거: `docs/superpowers/specs/2026-07-28-app-redesign-design.md` §4.1
 public enum ChalNaColor {

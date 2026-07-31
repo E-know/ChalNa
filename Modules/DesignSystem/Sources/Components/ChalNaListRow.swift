@@ -179,9 +179,13 @@ public struct ChalNaListRow: View {
             .disabled(!enabled)
 
         case .check(let isChecked, _):
+            // 체크 표시를 opacity 로만 감추면 VoiceOver 는 선택된 행과 안 된 행을
+            // 똑같이 읽는다(언어 선택 화면이 그 경우였다). 선택 상태를 접근성 트리에
+            // 명시적으로 싣는다.
             ChalNaIcon(.check, size: 16, weight: .semibold)
                 .foregroundColor(ChalNaColor.accent)
                 .opacity(isChecked ? 1 : 0)
+                .accessibilityAddTraits(isChecked ? [.isSelected] : [])
 
         }
     }

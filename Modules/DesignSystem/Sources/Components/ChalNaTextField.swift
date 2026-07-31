@@ -31,8 +31,12 @@ public struct ChalNaTextField: View {
                     .foregroundColor(ChalNaColor.textPrimary)
             }
 
+            // placeholder 는 활성 필드의 읽어야 하는 내용이므로 textTertiary 를 쓸 수 없다.
+            // textTertiary 는 토큰 정의상 disabled 전용이고, 이 컴포넌트가 자기 배경을
+            // surface 로 채우기 때문에 실제 대비는 스펙의 3.7:1(vs bg)이 아니라 3.34:1 —
+            // WCAG AA 4.5 미달이다. textSecondary 는 같은 배경에서 7.07:1.
             TextField("", text: $text, prompt: Text(verbatim: placeholder)
-                .foregroundColor(ChalNaColor.textTertiary))
+                .foregroundColor(ChalNaColor.textSecondary))
                 .tint(ChalNaColor.accent)
                 .focused($isFocused)
                 .font(ChalNaTypography.body)

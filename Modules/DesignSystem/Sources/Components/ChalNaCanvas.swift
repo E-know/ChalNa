@@ -5,6 +5,12 @@ import SwiftUI
 /// Timeline 프리뷰 · ClipAdjust · LabelEditor 세 곳이 거의 똑같이 재구현하던
 /// aspect-fit 계산을 한 곳으로 모은다. WYSIWYG(프리뷰 = 출력) 의 토대다.
 public enum ChalNaCanvasGeometry {
+    /// 출력(1080×1920) 비율. `ChalNaCanvas` 의 기본값이자, 바깥에서 박스를 미리 계산해
+    /// 캔버스를 그 크기로 묶는 호출자(LabelEditorView)가 참조해야 하는 단일 상수다.
+    /// 리터럴을 양쪽에 각각 적으면 이 값을 바꿀 때 한쪽만 바뀌어 여백이 되살아난다 —
+    /// 그 여백의 절반이 Task 25 의 라벨 좌표 오정렬 버그였다.
+    public static let defaultAspect: CGFloat = 9.0 / 16.0
+
     /// 주어진 비율을 가용 영역 안에 aspect-fit 시킨 박스 크기.
     public static func fittedBox(aspect: CGFloat, in available: CGSize) -> CGSize {
         guard available.width > 0, available.height > 0, aspect > 0 else { return .zero }
@@ -28,7 +34,7 @@ public struct ChalNaCanvas<Content: View, Overlay: View>: View {
     private let overlay: (CGSize) -> Overlay
 
     public init(
-        aspect: CGFloat = 9.0 / 16.0,
+        aspect: CGFloat = ChalNaCanvasGeometry.defaultAspect,
         cornerRadius: CGFloat = ChalNaRadius.md,
         @ViewBuilder content: @escaping (CGSize) -> Content,
         @ViewBuilder overlay: @escaping (CGSize) -> Overlay
@@ -40,7 +46,7 @@ public struct ChalNaCanvas<Content: View, Overlay: View>: View {
     }
 
     public init(
-        aspect: CGFloat = 9.0 / 16.0,
+        aspect: CGFloat = ChalNaCanvasGeometry.defaultAspect,
         cornerRadius: CGFloat = ChalNaRadius.md,
         @ViewBuilder content: @escaping (CGSize) -> Content
     ) where Overlay == EmptyView {
