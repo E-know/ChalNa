@@ -36,16 +36,13 @@ public struct MediaPickerView: View {
                         .trackScrollOffset(in: "media-picker-scroll")
                         .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
 
+                    titleField
+
                     pickerLauncher
                         .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
 
                     selectionGrid
                         .simultaneousGesture(TapGesture().onEnded { dismissTitleKeyboard() })
-
-                    // 제목은 고른 뒤에 붙인다. 선택이 0개면 물을 이유가 없다.
-                    if selectedCount > 0 {
-                        titleField
-                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
@@ -410,7 +407,13 @@ public struct MediaPickerView: View {
         ZStack {
             let thumbnail = state.thumbnail ?? store.assetThumbnails[asset.id]
             if let data = thumbnail, let ui = UIImage(data: data) {
-                Image(uiImage: ui).resizable().scaledToFill()
+                // 원본을 자르지 않고 전체 표시(fit). 원본 비율이 셀(9:16)과 다르면
+                // 남는 공간은 출력 캔버스와 같은 검정 레터박스로 채운다 —
+                // 여기 썸네일은 출력 미리보기가 아니라 "고를 재료"라 잘림 없이 보여야 한다.
+                ZStack {
+                    ChalNaColor.canvas
+                    Image(uiImage: ui).resizable().scaledToFit()
+                }
             } else if state.thumbnailFailed {
                 ZStack {
                     ChalNaColor.surface
