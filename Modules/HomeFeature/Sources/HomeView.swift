@@ -12,6 +12,7 @@ import SwiftData
 /// CTA 는 `safeAreaInset` 하단 고정 — 스크롤 안에 두면 필름이 늘수록 화면 밖으로 밀린다.
 public struct HomeView: View {
     @Environment(AppLanguageStore.self) private var languageStore
+    @Environment(\.modelContext) private var modelContext
     let store: StoreOf<HomeFeature>
 
     @Query(sort: [SortDescriptor(\Film.createdAt, order: .reverse)])
@@ -40,6 +41,22 @@ public struct HomeView: View {
         .chalNaScreen()
         .safeAreaInset(edge: .bottom) { primaryAction }
         .onAppear { store.send(.onAppear) }
+        .task { await regenerateStaleCovers() }
+    }
+
+    /// 구(원본 클립 비율) 표지의 자가 치유. 표지가 결과물 프레임으로 바뀌기 전에
+    /// 만들어진 필름은 16:9·4:3 썸네일이 표지라 9:16 포스터에서 좌우가 잘린다 —
+    /// 영상 파일이 살아 있으면 결과물 첫 프레임으로 한 번 재생성한다.
+    private func regenerateStaleCovers() async {
+        for film in films {
+            guard let movieURL = film.movieURL,
+                  FilmCover.needsRegeneration(thumbnailData: film.thumbnailData)
+            else { continue }
+            if let cover = await FilmCover.firstFrameJPEG(fromMovieAt: movieURL) {
+                film.thumbnailData = cover
+            }
+        }
+        try? modelContext.save()
     }
 
     // MARK: - Empty state

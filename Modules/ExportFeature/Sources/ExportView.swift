@@ -104,20 +104,31 @@ public struct ExportView: View {
         let liveCount = clips.filter { $0.kind == .live }.count
         let totalDuration = clips.reduce(0) { $0 + $1.duration }
         let title = session.title.isEmpty ? "ChalNa" : session.title
-        let thumbnail = clips.first?.thumbnailData
 
         let film = Film(
             id: filmID,
             title: title,
             createdAt: .now,
             movieFilename: movieFilename,
-            thumbnailData: thumbnail,
+            thumbnailData: clips.first?.thumbnailData,
             clipCount: clips.count,
             liveCount: liveCount,
             totalDurationSeconds: totalDuration
         )
         modelContext.insert(film)
         try? modelContext.save()
+
+        // 표지를 결과물(합성 mp4) 첫 프레임으로 승격한다. 첫 클립 원본 썸네일(16:9·4:3 등)을
+        // 표지로 두면 홈/상세의 9:16 포스터가 scaledToFill 로 좌우를 잘라낸다.
+        // 추출 실패 시에는 위에서 넣은 첫 클립 썸네일이 폴백으로 남는다.
+        if let movieURL = film.movieURL {
+            Task {
+                if let cover = await FilmCover.firstFrameJPEG(fromMovieAt: movieURL) {
+                    film.thumbnailData = cover
+                    try? modelContext.save()
+                }
+            }
+        }
     }
 
     // MARK: - Header
