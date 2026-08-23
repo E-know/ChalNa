@@ -4,28 +4,26 @@ import AppCore
 import Models
 import DesignSystem
 
-/// 클립 1개를 9:16 캔버스 안에서 핀치 줌·드래그·회전으로 프레이밍(센터 크롭 조정)하는 풀스크린 화면.
+/// 클립 1개를 9:16 캔버스 안에서 핀치 줌·드래그·회전으로 프레이밍하는 풀스크린 화면.
 /// 전경은 aspectFill(센터 크롭) 기준 + ClipFraming.resolvedRect 배치 → export 와 픽셀 일치(WYSIWYG).
 /// 편집은 EditSession 에 live 반영(회전 기존 동작과 동일, 별도 취소 없음).
 ///
-/// 인터랙션(UX 리서치 반영):
-/// - 드래그가 크롭 한계를 넘으면 UIScrollView 러버밴드(c=0.55)로 저항, 손을 떼면 오버슛 없는 스프링 스냅백.
-/// - 한계에 닿는 순간 1회 rigid 햅틱(상태-diff, 스팸 금지).
-/// - 드래그 중에만 3분할 그리드 표시(Apple Photos 패턴).
-/// - 더블탭 = 기본 프레이밍(센터 크롭) 리셋.
+/// 인터랙션:
+/// - 확대·축소·이동에 **제약이 없다.** 캔버스보다 작게 줄이거나 캔버스 밖으로 밀어낼 수 있고,
+///   드러나는 여백은 검정(`ChalNaColor.canvas`)이다 — export 도 동일(컴포지터의 검정 베이스).
+///   따라서 러버밴드 저항·스프링 스냅백·한계 도달 햅틱은 없다(저항할 경계가 없다).
+///   배율은 `ClipTransform.sanitized` 의 산술 안전 가드([0.1, 10])만 통과한다.
+/// - 드래그/핀치 중에만 3분할 그리드 표시(Apple Photos 패턴).
+/// - 더블탭 = 기본 프레이밍(센터 크롭) 리셋. 스프링 애니메이션은 이 리셋에만 남는다.
 public struct ClipAdjustView: View {
     @Environment(EditSession.self) private var session
 
     let store: StoreOf<ClipAdjustFeature>
     @State private var playback = ClipPlaybackController()
-    /// 제스처 중 무한 누적되는 원시 변환(러버밴드 미적용). nil = 제스처 없음.
-    @State private var raw: ClipTransform? = nil
-    /// 화면 표시 변환(러버밴드 적용). nil = committed 그대로.
-    @State private var working: ClipTransform? = nil
+    /// 제스처 중 누적되는 표시 변환(안전 가드만 적용). nil = 제스처 없음 → committed 그대로.
+    @State private var live: ClipTransform? = nil
     /// 드래그/핀치 진행 중 여부 — 3분할 그리드 표시 조건.
     @State private var isAdjusting = false
-    /// 한계 도달 상태 — false→true 전이 때만 햅틱 1회.
-    @State private var atEdge = false
 
     public init(store: StoreOf<ClipAdjustFeature>) {
         self.store = store
@@ -68,13 +66,10 @@ public struct ClipAdjustView: View {
     private var canvas: some View {
         ChalNaCanvas { box in
             let factor = box.width / Self.render.width
-            let live = working ?? committed
-            // 제스처 중에만 러버밴드 오버슛을 그대로 그리고(unclamped),
-            // 휴지 상태는 항상 clamp 된 사각형으로 렌더 — 프리뷰/export 와 픽셀 일치.
-            let rrect = raw != nil
-                ? resolvedRectUnclamped(transform: live)
-                : ClipFraming.resolvedRect(display: displaySize, rotation: rotation,
-                                           render: Self.render, transform: live)
+            let rrect = ClipFraming.resolvedRect(
+                display: displaySize, rotation: rotation,
+                render: Self.render, transform: live ?? committed
+            )
 
             RotatableContent(rotation: rotation) {
                 foreground
@@ -88,24 +83,12 @@ public struct ClipAdjustView: View {
         } overlay: { box in
             PinchPanGesture(
                 onChange: { handleGestureChange($0, $1, viewBox: box) },
-                onEnded: { commitWorking() }
+                onEnded: { commitLive() }
             )
             .frame(width: box.width, height: box.height)
             .onTapGesture(count: 2) { resetToCenterCrop() }
         }
         .padding(.horizontal, 20)
-    }
-
-    /// 러버밴드 오버슛을 그대로 반영해야 하므로 clamp 없는 배치 사각형을 직접 계산한다.
-    /// (한계 안 값은 `ClipFraming.resolvedRect` 와 동일 — scale·offset 산식 공유)
-    private func resolvedRectUnclamped(transform: ClipTransform) -> CGRect {
-        let s = ClipFraming.orientedSize(displaySize, rotation: rotation)
-        let fill = ClipFraming.fillScale(display: displaySize, rotation: rotation, render: Self.render)
-        let size = CGSize(width: s.width * fill * transform.scale, height: s.height * fill * transform.scale)
-        let center = CGPoint(x: Self.render.width / 2 + transform.offset.x * Self.render.width,
-                             y: Self.render.height / 2 + transform.offset.y * Self.render.height)
-        return CGRect(x: center.x - size.width / 2, y: center.y - size.height / 2,
-                      width: size.width, height: size.height)
     }
 
     @ViewBuilder
@@ -166,7 +149,7 @@ public struct ClipAdjustView: View {
     }
 
     private var adjustHint: some View {
-        Text("드래그로 보이는 부분을 옮기고, 핀치로 확대해요. 더블탭 = 초기화")
+        Text("드래그로 옮기고 핀치로 크기를 바꿔요. 더블탭 = 초기화")
             .font(ChalNaTypography.caption)
             .foregroundColor(ChalNaColor.textSecondary)
             .multilineTextAlignment(.center)
@@ -176,85 +159,39 @@ public struct ClipAdjustView: View {
 
     private func rotate() {
         session.cycleRotation(for: store.clipID)
-        // 회전으로 offset 이동 한계가 바뀌므로(가로↔세로 swap) committed 를 새 회전 기준으로
-        // 재클램프해 세션에 반영 — 한계 밖 offset 이 남아 조정/프리뷰/export 가 어긋나는 것을 방지.
-        let newRotation = rotation
-        let current = committed
-        let reclamped = ClipFraming.clampedOffset(
-            current.offset, display: displaySize, rotation: newRotation, render: Self.render, scale: current.scale
-        )
-        if reclamped != current.offset {
-            session.setTransform(ClipTransform(scale: current.scale, offset: reclamped), for: store.clipID)
-        }
         // 진행 중이던 제스처 상태는 옛 회전 좌표계 값이므로 무효화.
-        raw = nil
-        working = nil
-        atEdge = false
+        // (offset 재클램프는 없다 — 이동 한계 자체가 사라졌으므로 "스테일 offset" 개념이 없다.)
+        live = nil
         isAdjusting = false
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
     /// 기본 프레이밍(센터 크롭)으로 리셋 — 더블탭/초기화 버튼 공용.
     private func resetToCenterCrop() {
-        raw = nil
-        atEdge = false
         isAdjusting = false
         // 시각 변화는 committed(EditSession) 갱신에서 오므로 세션 뮤테이션까지
-        // withAnimation 안에 둬야 스프링 스냅백이 실제로 애니메이션된다.
+        // withAnimation 안에 둬야 스프링이 실제로 애니메이션된다.
         withAnimation(Self.snapBack) {
-            working = nil
+            live = nil
             session.resetTransform(for: store.clipID)
         }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
     private func handleGestureChange(_ scaleFactor: CGFloat, _ translation: CGSize, viewBox: CGSize) {
-        // 원시 값 누적(러버밴드는 표시 단계에서만) — 감쇠 값에 다시 감쇠가 쌓이는 이중 적용 방지.
-        var base = raw ?? committed
+        var base = live ?? committed
         base.scale *= scaleFactor
         base.offset.x += viewBox.width > 0 ? translation.width / viewBox.width : 0
         base.offset.y += viewBox.height > 0 ? translation.height / viewBox.height : 0
-        raw = base
+        // 제약이 없으니 표시값 = 원시값. 산술 안전 가드만 통과시킨다(idempotent).
+        live = base.sanitized
         isAdjusting = true
-
-        // 표시 scale: [1, 4] 초과분 러버밴드.
-        let displayScale = RubberBand.value(
-            proposed: base.scale, min: ClipTransform.minScale, max: ClipTransform.maxScale
-        )
-        // offset 한계는 커밋될 scale(clamp 값) 기준 — 스냅백 후 좌표계와 일치시킨다.
-        let commitScale = min(max(base.scale, ClipTransform.minScale), ClipTransform.maxScale)
-        let limit = ClipFraming.maxOffsetFraction(
-            display: displaySize, rotation: rotation, render: Self.render, scale: commitScale
-        )
-        let displayOffset = CGPoint(
-            x: RubberBand.value(proposed: base.offset.x, min: -limit.x, max: limit.x),
-            y: RubberBand.value(proposed: base.offset.y, min: -limit.y, max: limit.y)
-        )
-        working = ClipTransform(scale: displayScale, offset: displayOffset)
-
-        // 한계 도달 순간 1회 햅틱(상태-diff) — 경계에 붙어 있는 동안 반복 발화 금지.
-        let hitEdge = abs(base.offset.x) > limit.x + 0.0001
-            || abs(base.offset.y) > limit.y + 0.0001
-            || base.scale > ClipTransform.maxScale
-            || base.scale < ClipTransform.minScale
-        if hitEdge && !atEdge {
-            UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
-        }
-        atEdge = hitEdge
     }
 
-    private func commitWorking() {
-        guard let base = raw else { return }
-        let commitScale = min(max(base.scale, ClipTransform.minScale), ClipTransform.maxScale)
-        let clampedOffset = ClipFraming.clampedOffset(
-            base.offset, display: displaySize, rotation: rotation, render: Self.render, scale: commitScale
-        )
-        let final = ClipTransform(scale: commitScale, offset: clampedOffset)
-        // 오버슛 → 한계값으로 스프링 스냅백(오버슛 없는 파라미터).
-        withAnimation(Self.snapBack) { working = final }
+    private func commitLive() {
+        guard let final = live else { return }
         session.setTransform(final, for: store.clipID)
-        raw = nil
-        atEdge = false
+        live = nil
         isAdjusting = false
     }
 }

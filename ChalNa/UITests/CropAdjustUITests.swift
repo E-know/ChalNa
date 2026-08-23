@@ -3,15 +3,17 @@ import XCTest
 /// 크롭 조정 플로우 시각 검증용 UI 테스트 (devMock 픽스처 사용, 사진 권한 불필요).
 ///
 /// 각 체크포인트에서 `Thread.sleep` 으로 화면을 유지해, 호스트에서 `simctl io screenshot`
-/// 폴링으로 프레임을 수집·검수할 수 있게 한다(러버밴드 오버슛은 드래그 hold 중에만 보인다).
-/// XCTAttachment 스냅샷도 함께 남긴다(안정 상태 백업).
+/// 폴링으로 프레임을 수집·검수할 수 있게 한다. XCTAttachment 스냅샷도 함께 남긴다.
+///
+/// 확대·축소·이동에 제약이 없으므로(러버밴드·스냅백 없음) 검증 대상은
+/// "축소하면 검정 여백이 드러난다 · 캔버스 밖으로 밀어도 튕겨 돌아오지 않는다 · 초기화가 복구한다" 다.
 final class CropAdjustUITests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
 
-    func testAdjustFlow_CenterCrop_RubberBand_Reset() throws {
+    func testAdjustFlow_FreeCrop_ZoomOut_Pan_Reset() throws {
         let app = XCUIApplication()
         app.launchEnvironment["CHALNA_APP_MODE"] = "devMock"
         app.launchArguments += ["-AppleLanguages", "(ko)"]
@@ -48,30 +50,29 @@ final class CropAdjustUITests: XCTestCase {
         // 캔버스 중심 좌표 (화면 중앙 부근이 캔버스 안쪽)
         let canvasCenter = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45))
 
-        // 1) scale=1(딱 맞음)에서 우측으로 크게 드래그 + hold —
-        //    이동 한계 0 → 러버밴드 오버슛 + 3분할 그리드가 hold 동안 보여야 한다.
+        // 1) scale=1(딱 맞음)에서 우측으로 크게 드래그 —
+        //    이동 제약이 없으므로 손을 떼도 스냅백 없이 그 자리에 머물러야 한다.
+        //    (좌측에 검정 여백이 드러난 상태로 커밋된다.)
         let farRight = app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.45))
         canvasCenter.press(forDuration: 0.2, thenDragTo: farRight,
-                           withVelocity: 300, thenHoldForDuration: 2.5)
-        // 릴리즈 직후: 스프링 스냅백으로 원위치 복귀.
-        checkpoint(app, name: "30-after-rubberband-release", holdSeconds: 3)
+                           withVelocity: 300, thenHoldForDuration: 1.0)
+        checkpoint(app, name: "30-panned-past-cover", holdSeconds: 3)
 
-        // 2) 핀치 줌(2배) → 크롭 이동 여지 생김
-        app.pinch(withScale: 2.0, velocity: 1.0)
-        checkpoint(app, name: "40-zoomed", holdSeconds: 3)
+        // 2) 핀치 인(축소) → 사진이 캔버스보다 작아지고 사방에 검정 여백이 생긴다.
+        app.pinch(withScale: 0.5, velocity: -1.0)
+        checkpoint(app, name: "40-zoomed-out-with-margin", holdSeconds: 3)
 
-        // 3) 줌 상태에서 좌측으로 드래그 → 정상 크롭 이동 후 커밋
+        // 3) 축소 상태에서 좌측으로 드래그 → 제약 없이 그대로 이동
         let left = app.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.45))
         canvasCenter.press(forDuration: 0.2, thenDragTo: left,
                            withVelocity: 300, thenHoldForDuration: 1.0)
-        checkpoint(app, name: "50-panned-zoomed", holdSeconds: 3)
+        checkpoint(app, name: "50-panned-while-shrunk", holdSeconds: 3)
 
-        // 4) 팬 커밋 상태에서 회전 — committed offset 이 새 회전 한계로 재클램프되어
-        //    캔버스가 검게 비지 않아야 한다(리뷰에서 확정된 major 회귀 가드).
+        // 4) 회전 — 재클램프가 없어졌으므로 프레이밍(scale·offset)이 그대로 유지되어야 한다.
         let rotateButton = app.buttons["회전"].firstMatch
         XCTAssertTrue(rotateButton.waitForExistence(timeout: 5), "회전 버튼")
         rotateButton.tap()
-        checkpoint(app, name: "55-rotated-after-pan", holdSeconds: 3)
+        checkpoint(app, name: "55-rotated-keeps-framing", holdSeconds: 3)
         // 원위치(r0)로 3번 더 회전.
         for _ in 0..<3 { rotateButton.tap() }
 
