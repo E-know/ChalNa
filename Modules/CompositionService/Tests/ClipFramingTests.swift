@@ -148,4 +148,39 @@ struct ClipFramingTests {
         #expect(abs(r.minX - 0) < 0.5, "minX \(r.minX)")
         #expect(abs(r.minY - 0) < 0.5, "minY \(r.minY)")
     }
+
+    // MARK: - ClipTransform.sanitized (산술 안전 가드)
+
+    /// 하한 미달 배율은 minScale(0.1)로 clamp — 축소 자체는 허용되지만 0 근처는 막는다.
+    @Test func testSanitized_ClampsBelowMinScale() {
+        let t = ClipTransform(scale: 0.05, offset: CGPoint(x: 0.3, y: -0.2)).sanitized
+        #expect(abs(t.scale - ClipTransform.minScale) < 0.0001, "scale \(t.scale)")
+        #expect(abs(t.offset.x - 0.3) < 0.0001, "offset 은 건드리지 않는다: \(t.offset.x)")
+        #expect(abs(t.offset.y - (-0.2)) < 0.0001, "offset 은 건드리지 않는다: \(t.offset.y)")
+    }
+
+    /// 상한 초과 배율은 maxScale(10)로 clamp.
+    @Test func testSanitized_ClampsAboveMaxScale() {
+        let t = ClipTransform(scale: 100, offset: .zero).sanitized
+        #expect(abs(t.scale - ClipTransform.maxScale) < 0.0001, "scale \(t.scale)")
+    }
+
+    /// 범위 안 값은 그대로 통과 — 0.5 는 이제 유효한 축소값이다.
+    @Test func testSanitized_PassesThroughValidRange() {
+        let t = ClipTransform(scale: 0.5, offset: CGPoint(x: 5, y: -5)).sanitized
+        #expect(abs(t.scale - 0.5) < 0.0001, "scale \(t.scale)")
+        #expect(abs(t.offset.x - 5) < 0.0001, "offset 제한 없음: \(t.offset.x)")
+        #expect(abs(t.offset.y - (-5)) < 0.0001, "offset 제한 없음: \(t.offset.y)")
+    }
+
+    /// non-finite 방어: NaN scale → 1.0, NaN/Inf offset 성분 → 0.
+    @Test func testSanitized_RecoversFromNonFinite() {
+        // `.infinity`/`.nan` 를 한 표현식에서 중첩 초기화하면 타입 체커가 CGFloat/Double 사이에서
+        // "ambiguous use of 'infinity'"를 낸다(실측) — offset 을 먼저 명시 타입으로 분리한다.
+        let offset = CGPoint(x: CGFloat.infinity, y: CGFloat.nan)
+        let t = ClipTransform(scale: CGFloat.nan, offset: offset).sanitized
+        #expect(abs(t.scale - 1.0) < 0.0001, "scale \(t.scale)")
+        #expect(t.offset.x == 0, "offset.x \(t.offset.x)")
+        #expect(t.offset.y == 0, "offset.y \(t.offset.y)")
+    }
 }

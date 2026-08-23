@@ -296,8 +296,10 @@ struct CompositionTransformTests {
         #expect(abs(topLeft.x - 0) < 0.5, "한계 초과 offset 은 한계로 clamp: \(topLeft.x)")
     }
 
-    /// 축소(scale 0.5): 하한 1.0 으로 clamp → fill 그대로 렌더(여백/블러 배경이 없으므로 축소 금지).
-    @Test func testTransform_UserScaleBelowMin_ClampsToFill() {
+    /// 축소(scale 0.5): 하한이 없어졌으므로 그대로 0.5 배로 렌더된다 —
+    /// 세로 1080×1920 클립이 540×960 으로 줄고 캔버스 중앙에 놓여 상하좌우에 여백이 생긴다.
+    /// fillScale = 1, totalScale = 0.5, centerTranslate = ((1080-540)/2, (1920-960)/2) = (270, 480).
+    @Test func testTransform_UserScaleBelowFill_ShrinksWithMargin() {
         let natural = CGSize(width: 1080, height: 1920)
         let render = CGSize(width: 1080, height: 1920)
         let t = AVFoundationCompositionService.transform(
@@ -306,8 +308,8 @@ struct CompositionTransformTests {
         )
         let topLeft = CGPoint(x: 0, y: 0).applying(t)
         let bottomRight = CGPoint(x: natural.width, y: natural.height).applying(t)
-        #expect(abs(topLeft.x - 0) < 0.5 && abs(topLeft.y - 0) < 0.5, "좌상단 (0,0): \(topLeft)")
-        #expect(abs(bottomRight.x - 1080) < 0.5 && abs(bottomRight.y - 1920) < 0.5,
-                "우하단 (1080,1920): \(bottomRight)")
+        #expect(abs(topLeft.x - 270) < 0.5 && abs(topLeft.y - 480) < 0.5, "좌상단 (270,480): \(topLeft)")
+        #expect(abs(bottomRight.x - 810) < 0.5 && abs(bottomRight.y - 1440) < 0.5,
+                "우하단 (810,1440): \(bottomRight)")
     }
 }
