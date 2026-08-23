@@ -248,23 +248,41 @@ public actor AVFoundationCompositionService: CompositionServicing {
         videoComposition.renderSize = renderSize
         videoComposition.frameDuration = CMTime(value: 1, timescale: 30)          // 출력 30fps (바로 이 한 줄).
         videoComposition.customVideoCompositorClass = ChalNaVideoCompositor.self  // 우리 플레이팅 담당을 끼운다.
+        // 같은 "시각 문자열 + 날짜 문자열 + 자막" 조합은 완전히 같은 그림이다. 한 편의 vlog 는
+        // 같은 분(分)에 찍힌 클립이 흔해서 이 캐시가 실제로 듣는다 — 그림 하나를 여러 instruction 이
+        // 공유하면 그만큼 동시 생존 비트맵이 준다. 이 딕셔너리는 buildComposition 호출 범위에서만 산다.
+        var overlayCache: [OverlayKey: (image: CGImage, origin: CGPoint)] = [:]
+
         videoComposition.instructions = layerInstructions.map { entry in
             // 클립별 라벨(시간/날짜/커스텀)을 정적 CGImage 로 미리 렌더해 컴포지터가 전경 위에 합성.
-            // 라벨은 구간 내내 안 움직이므로 "도장"처럼 한 번만 그려 둔다(없으면 nil → 합성 스킵).
-            var overlay: CGImage?
+            // 라벨은 구간 내내 안 움직이므로 "도장"처럼 한 번만 그려 둔다.
+            var overlay: (image: CGImage, origin: CGPoint)?
             #if canImport(UIKit)
-            overlay = Self.renderLabelOverlayImage(
-                renderSize: renderSize,
-                capturedAt: entry.capturedAt,
-                clipLabel: clipLabels[entry.clipID] ?? .default
+            let clipLabel = clipLabels[entry.clipID] ?? .default
+            let locale = LabelText.locale()
+            let key = OverlayKey(
+                time: LabelText.timeString(entry.capturedAt, locale: locale),
+                date: LabelText.dateString(entry.capturedAt, locale: locale),
+                label: clipLabel
             )
+            if let cached = overlayCache[key] {
+                overlay = cached
+            } else {
+                overlay = Self.renderLabelOverlayImage(
+                    renderSize: renderSize,
+                    capturedAt: entry.capturedAt,
+                    clipLabel: clipLabel
+                )
+                overlayCache[key] = overlay
+            }
             #endif
             // 한 클립 구간의 "합성 설명서"를 만들어 넘긴다(전경 변환·라벨).
             return ChalNaCompositionInstruction(
                 timeRange: entry.timeRange,
                 trackID: compVideoTrack.trackID,
                 foreground: entry.transform,
-                overlayImage: overlay
+                overlayImage: overlay?.image,
+                overlayOrigin: overlay?.origin ?? .zero
             )
         }
 
@@ -277,40 +295,16 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
     // MARK: - Date label overlay
 
-    /// 앱에서 선택한 표시 언어(없으면 시스템)에 맞춘 오버레이 로케일.
-    /// 스위즐은 `Bundle` 만 바꾸므로 `Locale.current` 는 기기 언어를 반영한다.
-    /// 따라서 앱 선택 언어("appLanguage")를 직접 읽어 매핑한다.
-    private static func overlayLocale() -> Locale {
-        switch UserDefaults.standard.string(forKey: "appLanguage") {
-        case "ko": return Locale(identifier: "ko")
-        case "en": return Locale(identifier: "en")
-        case "ja": return Locale(identifier: "ja")
-        default:   return Locale.current
-        }
-    }
-
-    /// 우측 하단 라벨용 — 날짜. 글리프-세이프 숫자 형식(로케일별 순서만 다름).
-    /// en: `MM/dd/yyyy`, 그 외(ko·ja): `yyyy/MM/dd`. 현재 타임존.
-    private static func dateOnlyFormatter(_ locale: Locale) -> DateFormatter {
-        let f = DateFormatter()
-        f.locale = locale
-        f.timeZone = .current
-        f.dateFormat = (locale.language.languageCode?.identifier == "en") ? "MM/dd/yyyy" : "yyyy/MM/dd"
-        return f
-    }
-
-    /// 우측 하단 라벨용 — 시:분. en: 12시간(`h:mm a`), 그 외: 24시간(`HH:mm`).
-    private static func timeOnlyFormatter(_ locale: Locale) -> DateFormatter {
-        let f = DateFormatter()
-        f.locale = locale
-        f.timeZone = .current
-        f.dateFormat = (locale.language.languageCode?.identifier == "en") ? "h:mm a" : "HH:mm"
-        return f
-    }
+    // 로케일 해석과 시각/날짜 포매터는 `Models.LabelText` 가 갖는다 —
+    // 미리보기(`AutoLabelsOverlay`)와 여기가 같은 문자열을 만들어야 WYSIWYG 가 맞는데,
+    // 예전엔 양쪽에 그대로 복제해 두고 주석으로만 동기화하고 있었다.
 
     #if canImport(UIKit)
     /// 한 클립 구간의 라벨(시간/날짜/커스텀)을 `renderSize` 의 투명 CALayer 트리로 쌓아 정적 CGImage 로 렌더한다.
-    /// 라벨이 하나도 보이지 않으면 nil 을 반환해 컴포지터가 합성을 스킵하게 한다.
+    ///
+    /// 시각·날짜는 **항상 그려진다**(사용자가 끌 수 없다) — 따라서 "라벨이 없어서 nil" 인 경우는
+    /// 없고, nil 은 비트맵 생성 실패뿐이다. 스킵 경로에 기대는 호출자를 만들지 말 것.
+    /// 대신 같은 그림이 반복되는 비용은 `buildComposition` 의 오버레이 캐시가 막는다.
     ///
     /// 좌표계: 라벨 origin 들은 CoreAnimation y-UP(좌하단 원점)으로 계산된다. 이를 top-left 원점
     /// CGContext 로 렌더하면 상하가 뒤집히므로 `parentLayer.isGeometryFlipped = true` 로 보정한다
@@ -319,26 +313,20 @@ public actor AVFoundationCompositionService: CompositionServicing {
         renderSize: CGSize,
         capturedAt: Date,
         clipLabel: ClipLabel
-    ) -> CGImage? {
-        let custom = clipLabel
-
-        let parentLayer = CALayer()
-        parentLayer.frame = CGRect(origin: .zero, size: renderSize)
-        parentLayer.backgroundColor = UIColor.clear.cgColor
-
+    ) -> (image: CGImage, origin: CGPoint)? {
         let minDim = min(renderSize.width, renderSize.height)
         let dateFontSize = minDim * LabelLayout.dateFontFraction
         let timeFontSize = minDim * LabelLayout.timeFontFraction
         let padding = CGSize(width: renderSize.width * LabelLayout.paddingFraction, height: renderSize.height * LabelLayout.paddingFraction)
         let stackGap = minDim * LabelLayout.stackGapFraction
 
-        let locale = overlayLocale()
-        let dateText = dateOnlyFormatter(locale).string(from: capturedAt)
-        let timeText = timeOnlyFormatter(locale).string(from: capturedAt)
+        let locale = LabelText.locale()
+        let dateText = LabelText.dateString(capturedAt, locale: locale)
+        let timeText = LabelText.timeString(capturedAt, locale: locale)
 
         // 위치는 우측 하단 고정. 시각을 날짜 위로 쌓고 둘 다 항상 그린다.
-        let timeSize = measureOverlayText(timeText, fontSize: timeFontSize)
-        let dateSize = measureOverlayText(dateText, fontSize: dateFontSize)
+        let timeSize = LabelText.measure(timeText, px: timeFontSize)
+        let dateSize = LabelText.measure(dateText, px: dateFontSize)
         let origins = LabelLayout.stackedOrigins(
             timeSize: timeSize,
             dateSize: dateSize,
@@ -346,21 +334,38 @@ public actor AVFoundationCompositionService: CompositionServicing {
             renderSize: renderSize,
             padding: padding
         )
-        parentLayer.addSublayer(makeOverlayTextLayer(
-            text: dateText, fontSize: dateFontSize
-        ) { _ in origins.date })
-        parentLayer.addSublayer(makeOverlayTextLayer(
-            text: timeText, fontSize: timeFontSize
-        ) { _ in origins.time })
 
-        if custom.isVisible {
+        // 레이어 frame 은 전부 **캔버스 기준 y-up(좌하단 원점)** 으로 잡는다.
+        var layers: [CALayer] = [
+            makeOverlayTextLayer(text: dateText, fontSize: dateFontSize) { _ in origins.date },
+            makeOverlayTextLayer(text: timeText, fontSize: timeFontSize) { _ in origins.time },
+        ]
+        if clipLabel.isVisible {
             // 센터 크롭에서는 보이는 클립 영역 = 캔버스 전체 → 자막 앵커도 캔버스 기준.
-            for layer in makeCustomLabelLayers(
-                label: custom, placedRect: CGRect(origin: .zero, size: renderSize), renderSize: renderSize
-            ) {
-                parentLayer.addSublayer(layer)
-            }
+            layers += makeCustomLabelLayers(
+                label: clipLabel, placedRect: CGRect(origin: .zero, size: renderSize), renderSize: renderSize
+            )
         }
+
+        // 라벨이 실제로 덮는 사각형만 렌더한다. 캔버스 전체(1080×1920 RGBA ≈ 8MB)를 클립마다
+        // 만들면 instructions 가 그걸 전부 붙들고 있어 30클립 vlog 가 ≈240MB 를 export 내내 유지한다.
+        // 코너 스탬프만 있는 일반적인 경우 이 박스는 ≈200×121 (≈97KB) 로 두 자릿수 배 작다.
+        guard let cropRect = stampBounds(of: layers, renderSize: renderSize) else { return nil }
+
+        // 서브렉트를 새 캔버스로 삼아 레이어 좌표를 평행이동한다.
+        // **컨텍스트를 translate 하면 안 된다** — `isGeometryFlipped` 의 뒤집기 기준이
+        // 레이어 bounds 가 아니라 그리기 컨텍스트를 따라가면서 전체가 화면 밖으로 나간다
+        // (실측: 서브렉트 컨텍스트 + CTM translate 조합은 완전히 빈 이미지를 만들었다).
+        // 좌표를 옮기면 원본과 같은 코드 경로 위에서 캔버스만 작아진다.
+        let yUpBottom = renderSize.height - cropRect.maxY
+        for layer in layers {
+            layer.frame = layer.frame.offsetBy(dx: -cropRect.minX, dy: -yUpBottom)
+        }
+
+        let parentLayer = CALayer()
+        parentLayer.frame = CGRect(origin: .zero, size: cropRect.size)
+        parentLayer.backgroundColor = UIColor.clear.cgColor
+        layers.forEach { parentLayer.addSublayer($0) }
 
         // 라벨 origin 은 CoreAnimation y-UP(좌하단). `isGeometryFlipped = true` 로 하면
         // sublayer 좌표가 시각상 올바르게(상단=상단) 그려지면서 글자 자체는 뒤집히지 않는다.
@@ -370,40 +375,32 @@ public actor AVFoundationCompositionService: CompositionServicing {
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
         format.opaque = false
-        let renderer = UIGraphicsImageRenderer(size: renderSize, format: format)
+        let renderer = UIGraphicsImageRenderer(size: cropRect.size, format: format)
         let uiImage = renderer.image { ctx in
             parentLayer.render(in: ctx.cgContext)
         }
-        return uiImage.cgImage
+        guard let cg = uiImage.cgImage else { return nil }
+        return (cg, cropRect.origin)
     }
 
-    /// 오버레이 라벨용 UIFont — 시스템 기본 폰트 bold 고정.
-    /// 미리보기(`AutoLabelsOverlay`)의 `ChalNaTypography.fixed/fixedUIFont` 와 **같은 폰트여야**
-    /// WYSIWYG 가 맞는다. 한쪽만 바꾸면 프리뷰와 출력의 글자 폭이 어긋난다.
-    /// (DesignSystem 은 이 모듈의 의존이 아니라 토큰을 공유하지 못하고 값만 맞춘다.)
-    private static func overlayUIFont(fontSize: CGFloat) -> UIFont {
-        .systemFont(ofSize: fontSize, weight: .bold)
+    /// 라벨 레이어들이 최종 이미지에서 덮는 영역(**top-left 원점**, 그림자 여유 포함, 캔버스로 클램프).
+    ///
+    /// 레이어 `frame` 은 y-up(좌하단) 으로 작성돼 있고 `isGeometryFlipped` 가 렌더 시점에
+    /// 뒤집으므로, top-left 로 환산할 때 `renderH - maxY` 를 쓴다 —
+    /// `LabelText.stampRect` 가 테스트용으로 하는 환산과 같은 규칙이다.
+    private static func stampBounds(of layers: [CALayer], renderSize: CGSize) -> CGRect? {
+        guard !layers.isEmpty else { return nil }
+        let union = layers.reduce(CGRect.null) { acc, layer in
+            let f = layer.frame
+            return acc.union(CGRect(x: f.minX, y: renderSize.height - f.maxY, width: f.width, height: f.height))
+        }
+        guard !union.isNull else { return nil }
+        let padded = union.insetBy(dx: -LabelText.shadowSlack, dy: -LabelText.shadowSlack).integral
+        let clamped = padded.intersection(CGRect(origin: .zero, size: renderSize))
+        return clamped.isEmpty ? nil : clamped
     }
+
     #endif
-
-    /// 오버레이 텍스트의 실측 사이즈. `makeOverlayTextLayer`와 동일한 폰트/측정 규칙을 공유한다.
-    /// - UIKit: 위 폰트로 만든 NSAttributedString의 `.size()`를 `ceil`.
-    /// - 비-UIKit(테스트): 실측 불가 → 글자 수 기반 대략치 `fontSize * max(count,5)` × `fontSize*1.4`.
-    private static func measureOverlayText(_ text: String, fontSize: CGFloat) -> CGSize {
-        #if canImport(UIKit)
-        let attributed = NSAttributedString(
-            string: text,
-            attributes: [.font: overlayUIFont(fontSize: fontSize)]
-        )
-        let measured = attributed.size()
-        return CGSize(width: ceil(measured.width), height: ceil(measured.height))
-        #else
-        return CGSize(
-            width: fontSize * CGFloat(max(text.count, 5)),
-            height: fontSize * 1.4
-        )
-        #endif
-    }
 
     /// 흰색 시스템 bold 텍스트에 검은 그림자를 입혀 만든 `CATextLayer`.
     /// `placement` 클로저는 실측 텍스트 사이즈를 받아 좌하단 원점(CoreAnimation) 기준 좌측 하단 좌표를 반환한다.
@@ -414,7 +411,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
         placement: (CGSize) -> CGPoint
     ) -> CATextLayer {
         let textLayer = CATextLayer()
-        let textSize = measureOverlayText(text, fontSize: fontSize)
+        let textSize = LabelText.measure(text, px: fontSize)
 
         // CATextLayer.font 에 CGFont 를 직접 할당하는 패턴은 Swift에서 wrapping 이슈로
         // 무시되는 사례가 있어, NSAttributedString의 .font attribute 로 적용한다.
@@ -422,7 +419,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
         textLayer.string = NSAttributedString(
             string: text,
             attributes: [
-                .font: overlayUIFont(fontSize: fontSize),
+                .font: LabelText.uiFont(px: fontSize),
                 .foregroundColor: UIColor.white,
             ]
         )
@@ -602,4 +599,13 @@ public actor AVFoundationCompositionService: CompositionServicing {
         FileManager.default.temporaryDirectory
             .appendingPathComponent("chalNa-\(UUID().uuidString).mp4")
     }
+}
+
+/// 라벨 오버레이 비트맵의 내용 식별자. 이 셋이 같으면 렌더 결과가 픽셀 단위로 같다
+/// (renderSize 는 한 export 안에서 고정이라 키에 넣지 않는다 — 캐시 수명이 `buildComposition`
+/// 한 번의 호출로 한정되기 때문).
+private struct OverlayKey: Hashable {
+    let time: String
+    let date: String
+    let label: ClipLabel
 }

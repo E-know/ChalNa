@@ -38,13 +38,11 @@ struct ChalNaTypographyTests {
         #expect(caption.pointSize >= 12, "8pt·11pt 폰트 금지 규칙의 하한")
     }
 
-    /// 앱은 시스템 기본 폰트 하나만 쓴다 — `fixed` 는 크기만 pt 로 고정하고 폰트는 시스템이어야 하며,
-    /// 그 UIKit 짝(`fixedUIFont`)과 pt·패밀리가 일치해야 오버레이 WYSIWYG 가 맞는다.
+    /// 앱은 시스템 기본 폰트 하나만 쓴다 — `fixed` 는 크기만 pt 로 고정하고 폰트는 시스템이어야 한다.
+    /// (구 UIKit 짝 `fixedUIFont` 는 삭제됐다. 영상 라벨의 폰트·실측은 `Models.LabelText` 가
+    /// 단독으로 갖고, 두 렌더 경로의 일치는 `LabelTextFontParityTests` 가 검사한다.)
     @Test func testFixedUsesSystemFontAtExactPointSize() {
         #expect(ChalNaTypography.fixed(48) == Font.system(size: 48, weight: .bold, design: .default))
-
-        let ui = ChalNaTypography.fixedUIFont(48)
-        #expect(ui.pointSize == 48)
-        #expect(ui.familyName == UIFont.systemFont(ofSize: 48, weight: .bold).familyName)
+        #expect(ChalNaTypography.fixed(24) == Font.system(size: 24, weight: .bold, design: .default))
     }
 }

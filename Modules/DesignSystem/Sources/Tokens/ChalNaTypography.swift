@@ -1,7 +1,4 @@
 import SwiftUI
-#if canImport(UIKit)
-import UIKit
-#endif
 
 /// 역할 기반 타이포 토큰.
 ///
@@ -41,22 +38,18 @@ public enum ChalNaTypography {
         public static let title: CGFloat = -0.20
     }
 
-    // MARK: - Fixed size (영상 라벨 WYSIWYG · 스플래시 브랜드 전용)
+    // MARK: - Fixed size (스플래시 브랜드 라벨 전용)
 
     /// 기본 폰트를 **pt 로 직접** 받는 토큰 — Dynamic Type 비적용.
+    /// 스플래시 브랜드 라벨 하나만 쓴다(+ Showcase 견본). 아이콘과 크기 비율이 고정이라
+    /// 스케일되면 안 되기 때문이다.
     ///
-    /// 두 곳만 쓴다:
-    /// - 자동 시간/날짜 오버레이 미리보기. 합성(`CATextLayer`)의 `UIFont` 측정값과
-    ///   픽셀 단위로 일치해야 해서 스케일되는 역할 토큰을 쓸 수 없다.
-    /// - 스플래시 브랜드 라벨. 아이콘과 크기 비율이 고정이라 스케일되면 안 된다.
-    public static func fixed(_ size: CGFloat, weight: Font.Weight = .bold) -> Font {
-        .system(size: size, weight: weight, design: .default)
+    /// **굵기 인자를 일부러 받지 않는다.** 예전엔 `fixed(_:weight:)` 와 `fixedUIFont(_:)`
+    /// 짝이 있었는데 UIKit 쪽만 `.bold` 하드코딩이라, 비-bold 로 호출하면 bold 메트릭으로 잰
+    /// 레이아웃에 다른 글리프를 그리는 어긋남이 컴파일 에러도 테스트 실패도 없이 생겼다.
+    /// 영상 라벨의 폰트·실측은 이제 `Models.LabelText` 가 한 곳에서 갖는다 — 두 렌더 경로가
+    /// 같은 함수를 부르므로 어긋날 여지 자체가 없다.
+    public static func fixed(_ size: CGFloat) -> Font {
+        .system(size: size, weight: .bold, design: .default)
     }
-
-    #if canImport(UIKit)
-    /// `fixed(_:weight:)` 의 UIKit 짝 — 오버레이 라벨 실측용. 둘은 같은 폰트여야 한다.
-    public static func fixedUIFont(_ size: CGFloat) -> UIFont {
-        .systemFont(ofSize: size, weight: .bold)
-    }
-    #endif
 }

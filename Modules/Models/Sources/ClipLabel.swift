@@ -4,7 +4,7 @@ import Foundation
 /// 편집 세션 동안 클립별로 사용자가 붙이는 박스 자막. 회전(`ClipRotation`)과 같은 per-clip 메타로,
 /// 불변 `Clip` 이 아니라 `EditSession` 의 딕셔너리에 담는다.
 /// 스타일은 "흰 배경 + 검정 글씨 + 검정 테두리" 박스 자막으로 고정 — 사용자는 텍스트·크기·위치만 정한다.
-public struct ClipLabel: Equatable, Sendable {
+public struct ClipLabel: Hashable, Sendable {
     /// 자막 문구. 빈/공백 문자열이면 자막 없음으로 취급.
     public var text: String
     /// 9:16 캔버스 높이 대비 글자 크기 비율. `clampedSizeFraction` 으로 0.04...0.25 클램프해 사용.

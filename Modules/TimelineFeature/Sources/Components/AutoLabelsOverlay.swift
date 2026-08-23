@@ -1,47 +1,21 @@
 import SwiftUI
-import UIKit
 import Models
 import DesignSystem
 
 /// 자동 시간/날짜 라벨을 영상 출력과 동일하게 미리 보여주는 읽기 전용 오버레이.
 /// 둘 다 항상 표시되고 불투명도는 `LabelLayout.opacity` 고정 — 사용자 설정은 없다.
 /// `box` = 클립 표시 박스(에디터/미리보기의 fittedBox)를 renderSize 로 간주.
-/// 위치는 우측 하단 고정이고, 레이아웃은 합성과 동일한 `LabelLayout` 을 공유한다
-/// (좌표는 y-up 좌하단 → SwiftUI y-down 변환).
+/// 위치는 우측 하단 고정이고, 레이아웃은 합성과 동일한 `LabelLayout` 을,
+/// 문자열·폰트·실측은 `LabelText` 를 공유한다 (좌표는 y-up 좌하단 → SwiftUI y-down 변환).
+///
+/// **12pt 최소 크기 규칙(CLAUDE.md Typography)의 명시적 예외다.** 프리뷰 박스가 ~250pt 이면
+/// 시각 ≈11pt, 날짜 ≈7.5pt 로 그려진다. 이건 UI 크롬 텍스트가 아니라 **영상 픽셀의 축소 재현**이라
+/// (사진 안에 찍힌 작은 글씨와 같은 성격) 12pt 로 올리면 안 된다 — 올리는 순간 출력 영상보다
+/// 라벨이 크게 보여 WYSIWYG 가 거짓이 된다. 가독성이 필요하면 폰트가 아니라 캔버스를 키워야 한다.
+/// `AutoLabelsOverlayFidelityTests` 가 "바닥값 없이 분수에만 비례" 를 고정한다.
 struct AutoLabelsOverlay: View {
     let box: CGSize
     let capturedAt: Date
-
-    /// 영상 출력(CompositionService.timeOnlyFormatter)과 동일하게 앱 표시 언어 기준 분기.
-    /// en: 12시간 `h:mm a`, 그 외(ko·ja): 24시간 `HH:mm`. 현재 타임존.
-    private static func timeFormatter() -> DateFormatter {
-        let locale = overlayLocale()
-        let f = DateFormatter()
-        f.locale = locale
-        f.timeZone = .current
-        f.dateFormat = (locale.language.languageCode?.identifier == "en") ? "h:mm a" : "HH:mm"
-        return f
-    }
-    /// 영상 출력(CompositionService.dateOnlyFormatter)과 동일하게 앱 표시 언어 기준 분기.
-    /// en: `MM/dd/yyyy`, 그 외(ko·ja): `yyyy/MM/dd`. 현재 타임존.
-    private static func dateFormatter() -> DateFormatter {
-        let locale = overlayLocale()
-        let f = DateFormatter()
-        f.locale = locale
-        f.timeZone = .current
-        f.dateFormat = (locale.language.languageCode?.identifier == "en") ? "MM/dd/yyyy" : "yyyy/MM/dd"
-        return f
-    }
-
-    /// 앱에서 선택한 표시 언어("appLanguage", 없으면 시스템)에 맞춘 오버레이 로케일.
-    private static func overlayLocale() -> Locale {
-        switch UserDefaults.standard.string(forKey: "appLanguage") {
-        case "ko": return Locale(identifier: "ko")
-        case "en": return Locale(identifier: "en")
-        case "ja": return Locale(identifier: "ja")
-        default:   return Locale.current
-        }
-    }
 
     var body: some View {
         let minDim = min(box.width, box.height)
@@ -50,8 +24,10 @@ struct AutoLabelsOverlay: View {
         let padding = CGSize(width: box.width * LabelLayout.paddingFraction,
                              height: box.height * LabelLayout.paddingFraction)
         let gap = minDim * LabelLayout.stackGapFraction
-        let timeText = Self.timeFormatter().string(from: capturedAt)
-        let dateText = Self.dateFormatter().string(from: capturedAt)
+        // 로케일·포맷·폰트·실측은 전부 `LabelText`(Models) — 영상 합성이 쓰는 것과 같은 코드다.
+        let locale = LabelText.locale()
+        let timeText = LabelText.timeString(capturedAt, locale: locale)
+        let dateText = LabelText.dateString(capturedAt, locale: locale)
         let timeSize = measure(timeText, fontPx: timeFont)
         let dateSize = measure(dateText, fontPx: dateFont)
 
@@ -69,9 +45,7 @@ struct AutoLabelsOverlay: View {
     }
 
     private func measure(_ text: String, fontPx: CGFloat) -> CGSize {
-        let ui = ChalNaTypography.fixedUIFont(fontPx)
-        let s = NSAttributedString(string: text, attributes: [.font: ui]).size()
-        return CGSize(width: ceil(s.width), height: ceil(s.height))
+        LabelText.measure(text, px: fontPx)
     }
 
     /// y-up 좌하단 origin → SwiftUI(y-down) 중심으로 변환해 배치.
@@ -85,7 +59,7 @@ struct AutoLabelsOverlay: View {
         let centerX = originYUp.x + size.width / 2
         let centerY = topLeftY + size.height / 2
         Text(text)
-            .font(ChalNaTypography.fixed(fontPx))
+            .font(LabelText.font(px: fontPx))
             .foregroundColor(ChalNaColor.onMedia)
             .lineLimit(1)
             .fixedSize()
