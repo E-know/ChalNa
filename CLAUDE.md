@@ -90,7 +90,7 @@ External(SPM): ComposableArchitecture(TCA) · FirebaseAnalytics
 - **Models → FileStorage** 만 의존. (과거의 DesignSystem 의존은 제거됨 — 색상 hex 헬퍼를 Models 자체 `ColorHex.swift`로 내재화)
 - **PhotosService / CompositionService → Models, TCA**. **AnalyticsService → TCA, FirebaseAnalytics** (Models 도 모름).
 - **AppCore → Models, TCA** (Feature 모름).
-- **Feature → AppCore + 필요한 서비스 + Models + DesignSystem + TCA**. Feature 끼리는 절대 직접 import 안 한다 — 화면 전환은 자기 모듈의 `delegate` 액션으로 선언만 하고, 해석(매핑)은 앱 셸의 `AppFeature`가 한다.
+- **Feature → AppCore + 필요한 서비스 + Models + DesignSystem + TCA**. "필요한" 이 핵심이다 — 예를 들어 **`SettingsFeature` 는 Models 에 의존하지 않는다**(유일 소비자였던 `LabelSettings`/`LabelPosition`/`LabelKind` 가 라벨 설정 화면과 함께 삭제됐다). 안 쓰는 엣지를 `Project.swift` 에 남기면 `tuist graph` 가 계속 그리고, 그 모듈이 다시 새어 들어와도 아무도 모른다. Feature 끼리는 절대 직접 import 안 한다 — 화면 전환은 자기 모듈의 `delegate` 액션으로 선언만 하고, 해석(매핑)은 앱 셸의 `AppFeature`가 한다.
 - 앱 타겟은 `OTHER_LDFLAGS = -ObjC` 를 강제한다 (Firebase ObjC 카테고리가 dead-code-strip 되어 `unrecognized selector` 나는 것 방지).
 - 새 모듈: `Tuist/ProjectDescriptionHelpers/Module.swift`의 `Module.framework(name:hasResources:isDynamic:dependencies:)` / `Module.unitTests(for:)` 헬퍼 사용 → `Project.swift`에 추가 → `tuist generate`.
 
@@ -140,9 +140,11 @@ External(SPM): ComposableArchitecture(TCA) · FirebaseAnalytics
 - **자동 시각/날짜 라벨에는 사용자 설정이 없다.** 항상 표시되고, 위치·크기·불투명도 전부 `LabelLayout`(Models)이 갖는 고정값이다 — 합성과 프리뷰(`AutoLabelsOverlay`)가 이 하나를 공유해 WYSIWYG 를 맞춘다.
   - 위치: **우측 하단 고정**. 시각(`timeFontFraction 0.045`, 1080 기준 ≈49px)이 위, 날짜(`dateFontFraction 0.030`, ≈32px)가 아래로 쌓이고 둘 다 우측 정렬(`stackGapFraction 0.010`, 여백 `paddingFraction 0.04`).
   - 불투명도: `LabelLayout.opacity` = **0.75** 로 시각·날짜 공통.
-  - 9구역 위치 체계(`LabelPosition`)·`LabelSettings`/`LabelKind` 모델·[설정 → 라벨] 화면 전체가 삭제됐다. 그래서 `CompositionServicing.export` 에는 `labelSettings` 파라미터가 없다 — 라벨을 끌 방법이 없으므로, 합성 픽셀 테스트는 샘플 지점이 라벨 박스(대략 x≳857, y∈[1736,1843])를 피하는 것으로 격리한다.
+  - 9구역 위치 체계(`LabelPosition`)·`LabelSettings`/`LabelKind` 모델·[설정 → 라벨] 화면 전체가 삭제됐다. 그래서 `CompositionServicing.export` 에는 `labelSettings` 파라미터가 없다 — 라벨을 끌 방법이 없으므로, 합성 픽셀 테스트는 샘플 지점이 라벨 박스를 피하는 것으로 격리한다. **그 회피는 주석의 손계산이 아니라 `LabelText.stampRect` 계산으로 검증한다**(`expectClearOfAutoLabelStamp`) — 예전엔 세 파일에 좌표를 손으로 적어둬서, 라벨 기하를 바꾸면 "컴포지터가 틀렸다"는 엉뚱한 메시지로 실패했다.
   - 설정 화면에 남은 항목은 **언어 · 문의·신고** 2개다.
-- 프리뷰와 합성이 **같은 폰트여야** WYSIWYG 가 맞는다: 프리뷰는 `ChalNaTypography.fixed/fixedUIFont`, 합성은 `CompositionService.overlayUIFont` — 둘 다 `.systemFont(ofSize:weight: .bold)`. CompositionService 는 DesignSystem 에 의존하지 않으므로 토큰을 공유하지 못하고 값만 맞춰 둔 것이다. 한쪽만 바꾸면 글자 폭이 어긋난다.
+- **라벨 오버레이 비트맵은 캔버스 전체가 아니라 라벨이 덮는 사각형만** 렌더한다(`stampBounds`). 1080×1920 RGBA 는 장당 ≈8MB 인데 `videoComposition.instructions` 가 클립별 오버레이를 **전부 선반영**해 export 내내 붙들고 있어서, 캔버스 전체로 만들면 30클립 vlog 가 ≈240MB 를 동시 유지한다. 코너 스탬프만 있으면 이 박스는 ≈200×121(≈97KB)다. 같은 "시각+날짜+자막" 조합은 `OverlayKey` 캐시로 그림 하나를 공유한다.
+  - **서브렉트를 만들 땐 컨텍스트를 translate 하지 말 것.** `isGeometryFlipped` 의 뒤집기 기준이 그리기 컨텍스트를 따라가면서 결과가 완전히 빈 이미지가 된다(실측). 대신 레이어 `frame` 을 서브렉트 기준으로 평행이동한다.
+- 프리뷰와 합성이 **같은 폰트·같은 문자열**이어야 WYSIWYG 가 맞는다. 그래서 로케일 해석·시각/날짜 포매터·폰트·실측이 전부 **`LabelText`(Models)** 한 곳에 있고, 합성(`CompositionService`)과 프리뷰(`AutoLabelsOverlay`)가 같은 함수를 부른다. 예전엔 이 넷이 두 모듈에 바이트 단위로 복제돼 있었고 동기화 수단이 주석뿐이라, 한쪽만 고쳐도 컴파일·테스트가 조용히 통과했다. DesignSystem 은 최하단 모듈이라 CompositionService 가 볼 수 없으므로 **Models 가 유일하게 가능한 공유 지점**이다(`LabelLayout` 기하가 이미 거기 있는 것과 같은 이유).
 
 ## 에러 처리
 - `throws` 사용, `Result` 타입은 지양(Swift 6).
@@ -194,8 +196,9 @@ DesignSystem/Sources/
 
 ### Typography — `ChalNaTypography` (표준 iOS 텍스트 스타일 기반 역할 토큰)
 - **6개 역할 토큰**이 표준 텍스트 스타일에 그대로 대응해서, 별도 스케일링 코드 없이 Dynamic Type 을 따른다: `.display`(28pt bold, `.title`) · `.title`(22pt semibold, `.title2`) · `.headline`(17pt semibold, `.headline`) · `.body`(16pt, `.callout`) · `.label`(13pt medium, `.footnote`) · `.caption`(12pt, `.caption`).
-- **앱은 시스템 기본 폰트(SF Pro) 하나만 쓴다.** 번들 커스텀 폰트(구 `.keris` / KERISKEDU)도, 다른 `design`(구 `.mono` = SF Mono)도 없다. 숫자 폭이 흔들리면 안 되는 곳은 **폰트를 바꾸지 말고** 같은 폰트의 tabular figure(`Text.monospacedDigit()`)를 붙인다 — 실제로 실시간 숫자가 있는 5곳(`ChalNaListRow` 슬라이더 %, `ChalNaBlockingOverlay` 진행률, `ExportView` 진행률 %, `PreviewPanel` 타임코드 2개)에 붙어 있다.
-- `.fixed(_:weight:)` / `.fixedUIFont(_:)` — 기본 폰트를 **pt 로 직접** 받는 유일한 토큰(Dynamic Type 비적용). 두 곳 전용: 영상 오버레이 라벨 미리보기(합성의 `UIFont` 측정값과 픽셀 일치 필요)와 Splash 브랜드 라벨(아이콘과 크기 비율 고정). 구 `.keris`/`.kerisUIFont` 의 자리를 그대로 물려받았다.
+- **앱은 시스템 기본 폰트(SF Pro) 하나만 쓴다.** 번들 커스텀 폰트(구 `.keris` / KERISKEDU)도, 다른 `design`(구 `.mono` = SF Mono)도 없다. 숫자 폭이 흔들리면 안 되는 곳은 **폰트를 바꾸지 말고** 같은 폰트의 tabular figure(`Text.monospacedDigit()`)를 붙인다 — 실제로 값이 바뀌는 숫자 6곳(`ChalNaListRow` 슬라이더 %, `ChalNaBlockingOverlay` 진행률, `ExportView` 진행률 %, `ExportView` metaLine 의 `%02d:%02d`, `PreviewPanel` 타임코드 2개)에 붙어 있다.
+- **역할 토큰은 굵기를 자체적으로 고정한다.** 구 `mono(_:weight:)` 처럼 굵기를 인자로 받던 토큰에서 역할 토큰으로 갈아탈 땐 `.fontWeight()` 로 굵기를 따로 복원해야 한다 — 안 하면 굵기가 조용히 바뀌고 유닛 테스트로는 안 잡힌다(실제로 PR #38 에서 4곳이 그렇게 얇아졌다).
+- `.fixed(_:)` — 기본 폰트를 **pt 로 직접** 받는 유일한 토큰(Dynamic Type 비적용). 이제 **Splash 브랜드 라벨 전용**이다(+ Showcase 견본). 아이콘과 크기 비율이 고정이라 스케일되면 안 되기 때문. **굵기 인자를 받지 않는다** — 구 `fixed(_:weight:)`/`fixedUIFont(_:)` 짝은 UIKit 쪽만 `.bold` 하드코딩이라 비-bold 호출 시 bold 메트릭으로 잰 레이아웃에 다른 글리프를 그리는 어긋남이 조용히 생겼다. 영상 라벨 폰트는 `Models.LabelText` 로 옮겼고 `fixedUIFont` 는 삭제됐다.
 - `Tracking`: `.title(-0.20)` · `.body(-0.30)`.
 - **최소 12pt.** 8pt·11pt 는 금지(6개 역할 중 가장 작은 `.caption` 이 12pt).
 - 과거의 12단계 `Size` 스케일(`tag(12)…displayL(32)`)과 legacy stub(`displayEN`/`serifFallback`/`hand`/`handFallback`)은 Task 26 에서 전부 삭제됐다.
@@ -233,7 +236,7 @@ DesignSystem/Sources/
 - `Color.white`/`.white` 하드코딩 금지 — `ChalNaColor.textPrimary` 또는 `.onAccent` 사용.
 - `Color.black`/`.black` 하드코딩 금지 — `ChalNaColor.canvas`/`.scrim`/`.onMediaDark` 등 역할 토큰 사용. 흰색 규칙의 대칭 규칙: 값이 검정인 토큰(`canvas` 등)을 역할과 무관하게 범용 검정으로 갖다 쓰는 것도 이 규칙을 우회하진 못한다 — grep 은 토큰 이름이 아니라 최종 리터럴 값을 보지 않으므로, 하드코딩 자체가 없어야 규칙을 통과한다.
 - `UIColor(named:)` 금지 — 번들 조회가 조용히 실패한다(과거에 검은 띠 버그를 만들었다). UIKit 에서 색이 필요하면 `UIColor(ChalNaColor.bg)` 처럼 SwiftUI `Color` 를 감싼다.
-- `UIFont` 직접 참조 금지 — `ChalNaTypography.fixedUIFont` 경유(CompositionService 의 비디오 텍스트 오버레이는 불가피한 예외 — DesignSystem 에 의존하지 않는 모듈이다).
+- `UIFont` 직접 참조 금지 — 영상 라벨은 `Models.LabelText.uiFont(px:)` 경유(합성·프리뷰가 공유하는 SSOT). CompositionService 의 **박스 자막**(`overlayCustomUIFont`, 시스템 light)은 여전히 예외 — DesignSystem 에 의존하지 않는 모듈이다. 이 규칙은 프로즈일 뿐 `design-lint.sh` 의 6개 규칙에는 들어 있지 않다.
 - **`scripts/design-lint.sh` 가 위 6종을 정적 검사한다. 커밋 전에 실행한다.**
 
 **6개 규칙 전부 현재 0건**이지만 전부가 순수 코드 정리의 결과는 아니다 — 규칙 1(`.font(.system(`)의 0 은 코드 정리 + 아래 "다크 토큰 적용 예외"의 **정당한 파일 예외 2건**(`ClipLabelText.swift`·`LabelEditorView.swift`) 덕분이고, 나머지 규칙의 0 은 대부분 코드 정리만의 결과다. 스크립트는 주석 인식(comment-aware)이라 주석 전용 줄은 제외하지만 코드 뒤 trailing 주석은 계속 검사한다 — 반대로 위반 줄 전체를 주석으로 감싸면(그 시점엔 죽은 코드) 스킵되는 건 알려진 한계다. 예외 목록의 근거는 문서가 아니라 스크립트 자체(`scripts/design-lint.sh`)를 단일 출처로 본다. **파일 단위 예외는 그 파일에 실제 매치가 있을 때만 등록한다** — 매치가 없는 예외(죽은 예외)는 그 파일에 새로 들어오는 진짜 위반을 영구히 가리는 눈가림용 구멍이 된다(과거 `LabelEditorView.swift`·`ClipLabel.swift`·`ThumbnailPreset.swift`가 흰색 규칙에 죽은 예외로 남아 있다가 제거된 사례).
@@ -264,7 +267,9 @@ DesignSystem/Sources/
 - 서비스/모델은 **Swift Testing**(`@Test`/`#expect`)으로 작성, `SampleData` 활용. actor/Client 는 프로토콜 + `testValue` 로 격리.
 - 모델·서비스를 직접(예: `TimelineModel`, `AVFoundationCompositionService().export(...)`) 테스트하거나, 필요 시 TCA `TestStore` 사용 가능.
 - UI 는 스냅샷 대신 `#Preview` 적극 활용 (각 뷰 상태별).
-- 2026-08-23 기준 8개 유닛 스위트 전부 그린(17 Pro, 총 150 케이스): `DesignSystem` 22 · `TimelineFeature` 18 · `SettingsFeature` 13 · `MediaPickerFeature` 2 · `ExportFeature` 7 · `CompositionService` 60 · `AppCore` 24 · `PhotosService` 4. 이후 태스크가 이 수치를 크게 벗어나면 회귀를 의심한다. (직전 기재값 `SettingsFeature 28`·`CompositionService 51`·`ExportFeature 2` 는 2026-07-30 이후 갱신이 밀린 스테일 수치였다. 라벨 설정 삭제로 SettingsFeature 는 26→13 으로 줄었다.)
+- 2026-08-23 기준 8개 유닛 스위트 전부 그린(17 Pro, 총 160 케이스): `DesignSystem` 22 · `TimelineFeature` 21 · `SettingsFeature` 13 · `MediaPickerFeature` 2 · `ExportFeature` 7 · `CompositionService` 64 · `AppCore` 27 · `PhotosService` 4. 이후 태스크가 이 수치를 크게 벗어나면 회귀를 의심한다.
+  - 라벨 설정 삭제로 SettingsFeature 는 **28→13** 으로 줄었다(삭제분: `LabelPositionFeatureTests` 2 · `LabelPositionTests` 7 · `LabelSettingsFeatureTests` 5 · `labelMenuTapEmitsDelegate` 1 = 15). 한때 이 문단이 "직전 기재값 28 은 스테일이고 실제로는 26→13" 이라고 적었는데 **28 이 맞았다** — 세어보면 13+15=28 이다.
+  - PR #38 리뷰 후속으로 10 케이스가 늘었다: `AppCore/RemovedSettingsCleanupTests` 3 · `CompositionService/LabelTextTests` 5(대신 change-detector 였던 `fontFractionsAreCornerStampSized` 1 삭제) · `TimelineFeature/AutoLabelsOverlayFidelityTests` 3.
 
 ## 검증 방법 (시뮬레이터 / UI 테스트 노하우)
 다크 리디자인 사이클에서 실제로 시간을 잡아먹은 함정들이다. 다음 사람이 또 반복하지 않도록 적어둔다.

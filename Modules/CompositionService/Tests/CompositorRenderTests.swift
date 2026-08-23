@@ -65,7 +65,13 @@ struct CompositorRenderTests {
         let bottomLeft = sampler.rgb(x: 270, y: 1440)
         let bottomRight = sampler.rgb(x: 810, y: 1440)
         // 구(舊) 레터박스 영역이던 최상/최하단도 이제 선명한 전경이어야 한다(블러/검정 바 없음).
-        // bottomEdge 는 x=810 — 우측 하단 자동 라벨(x≳857)의 왼쪽이라 라벨에 안 가린다.
+        // bottomEdge 는 우측 하단 자동 라벨 근처라, 라벨을 피하는지 손계산이 아니라
+        // `LabelText.stampRect` 로 확인한다 (라벨 기하가 바뀌면 여기서 먼저 실패).
+        let samplePoints: [(x: Int, y: Int)] = [
+            (270, 480), (810, 480), (270, 1440), (810, 1440), (270, 40), (810, 1880),
+        ]
+        expectClearOfAutoLabelStamp(samplePoints, capturedAt: clip.capturedAt)
+
         let topEdge = sampler.rgb(x: 270, y: 40)
         let bottomEdge = sampler.rgb(x: 810, y: 1880)
 

@@ -36,10 +36,8 @@ struct LabelLayoutTests {
         #expect(r.time.x + timeSize.width == r.date.x + dateSize.width) // 오른쪽 끝 일치
     }
 
-    /// 우측 하단 코너 스탬프에 맞게 줄인 값. 시각이 날짜보다 크되 둘 다 캔버스를 가리지 않아야 한다.
-    @Test func fontFractionsAreCornerStampSized() {
-        #expect(LabelLayout.timeFontFraction == 0.045)   // 1080 기준 ≈49px
-        #expect(LabelLayout.dateFontFraction == 0.030)   // 1080 기준 ≈32px
-        #expect(LabelLayout.timeFontFraction > LabelLayout.dateFontFraction)
-    }
+    // 폰트 분수(`timeFontFraction`/`dateFontFraction`)는 여기서 리터럴로 대조하지 않는다 —
+    // 선언을 그대로 되읊는 change-detector 라 의도적 재튜닝만 깨뜨리고 진짜 회귀
+    // (분수를 잘못된 차원에 곱함, 라벨이 캔버스를 벗어남)는 그대로 통과했다.
+    // 실제 결과를 보는 검증은 `LabelTextTests.stampFitsInsidePaddedCanvas`.
 }

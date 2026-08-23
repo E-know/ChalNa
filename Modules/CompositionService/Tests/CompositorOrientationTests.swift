@@ -69,8 +69,10 @@ struct CompositorOrientationTests {
         )
 
         // 자동 시각/날짜 라벨은 이제 끌 수 없다(우측 하단 고정). ground truth 에는 라벨이 없으므로
-        // 샘플 지점이 라벨 박스(대략 x∈[857,1037], y∈[1736,1843])를 피해야 비교가 성립한다 —
-        // 위 두 테스트의 지점(x=270·810, y≤1440)은 모두 그 밖이다.
+        // 샘플 지점이 라벨 박스를 피해야 비교가 성립한다. 그 회피를 주석의 손계산이 아니라
+        // 실제 기하로 확인한다 — 라벨이 커지면 여기서 올바른 원인을 지목하며 먼저 실패한다.
+        expectClearOfAutoLabelStamp(samplePoints, renderSize: Self.renderSize, capturedAt: clip.capturedAt)
+
         // --- GROUND TRUTH (canonical layer-instruction) ---
         let truthURL = try await exportGroundTruth(srcURL: srcURL)
         defer { try? FileManager.default.removeItem(at: truthURL) }

@@ -30,7 +30,7 @@ struct CompositorLabelTests {
         )
 
         // 화면(클립) 정중앙에 큰 박스 라벨. 자동 시각/날짜 라벨은 이제 끌 수 없지만
-        // 우측 하단(x≳857, y≳1736)이라 아래 중앙 샘플 영역과 겹치지 않는다.
+        // 우측 하단이라 아래 중앙 샘플 영역과 겹치지 않는다 (겹침 여부는 아래에서 계산으로 확인).
         let label = ClipLabel(text: "TEST", sizeFraction: 0.12, position: CGPoint(x: 0.5, y: 0.5))
 
         // 1) WITH 커스텀 라벨
@@ -41,6 +41,11 @@ struct CompositorLabelTests {
         // 640×360(16:9) → 1080×1920 aspectFit: 클립 rect y ∈ [656.25, 1263.75], 세로 중앙 ≈ 960.
         // 클립 정중앙 ±100px 영역에서 near-white(>220) 픽셀 카운트.
         let region = CGRect(x: 440, y: 860, width: 200, height: 200)
+        // 중앙 샘플 영역과 비라벨 sanity 지점이 자동 라벨 스탬프 밖인지 확인.
+        expectClearOfAutoLabelStamp(
+            [(Int(region.minX), Int(region.minY)), (Int(region.maxX), Int(region.maxY)), (200, 720)],
+            capturedAt: clip.capturedAt
+        )
         let whiteWith = samplerWith.countNearWhite(in: region, threshold: 220)
         let whiteWithout = samplerWithout.countNearWhite(in: region, threshold: 220)
 
@@ -60,16 +65,28 @@ struct CompositorLabelTests {
         #expect(isGrayish(grayWithout), "커스텀 라벨 OFF 시 비라벨 영역은 회색이어야 함: \(grayWithout)")
 
         // 3) 뒤집힘·정렬 가드: 자동 시각/날짜 라벨은 우측 하단 고정이다.
-        //    padding = 1920*0.04 = 76.8 (세로) / 1080*0.04 = 43.2 (가로).
-        //    time ≈ 1080*0.045 ≈ 49px(높이 ≈58), date ≈ 1080*0.030 ≈ 32px(높이 ≈38), gap ≈11
-        //    → 스택 전체는 대략 y ∈ [1736, 1843], 우측 정렬이라 x ≳ 857.
-        //    흰 글자를 75% 불투명도로 회색(128) 위에 올리므로 코어 픽셀 ≈ 223 > threshold 200.
-        let bottomRightRegion = CGRect(x: 780, y: 1720, width: 300, height: 160)
-        let topRightRegion    = CGRect(x: 780, y: 40,   width: 300, height: 160)  // 상하 뒤집힘
-        let bottomLeftRegion  = CGRect(x: 0,   y: 1720, width: 300, height: 160)  // 좌우 정렬 어긋남
-        let brWhite = samplerWithout.countNearWhite(in: bottomRightRegion, threshold: 200)
-        let trWhite = samplerWithout.countNearWhite(in: topRightRegion, threshold: 200)
-        let blWhite = samplerWithout.countNearWhite(in: bottomLeftRegion, threshold: 200)
+        //    검사 영역을 손계산 주석이 아니라 실제 기하(`LabelText.stampRect`)에서 뽑는다 —
+        //    LabelLayout 의 padding/폰트 분수를 조정하면 이 가드가 같이 움직인다.
+        let canvas = CGSize(width: 1080, height: 1920)
+        let stamp = LabelText.stampRect(renderSize: canvas, capturedAt: clip.capturedAt)
+
+        //    임계값도 토큰에서 유도한다: 흰 글자를 `LabelLayout.opacity` 로 회색(128) 위에 올리면
+        //    코어 픽셀 ≈ 128 + 127×opacity (0.75 → ≈223). 불투명도를 바꾸면 가드가 따라간다 —
+        //    이게 "두 렌더 경로가 같은 불투명도를 쓰는가"를 픽셀로 붙잡는 유일한 지점이다.
+        let expectedCore = 128.0 + 127.0 * LabelLayout.opacity
+        let threshold = Int(expectedCore) - 24
+        #expect(threshold > 128, "라벨 불투명도가 회색 배경과 구분 불가할 만큼 낮다: \(LabelLayout.opacity)")
+
+        let bottomRightRegion = stamp
+        // 상하 뒤집힘: 같은 x, y 만 캔버스 기준으로 반사.
+        let topRightRegion = CGRect(x: stamp.minX, y: canvas.height - stamp.maxY,
+                                    width: stamp.width, height: stamp.height)
+        // 좌우 정렬 어긋남: 같은 y, x 만 반사.
+        let bottomLeftRegion = CGRect(x: canvas.width - stamp.maxX, y: stamp.minY,
+                                      width: stamp.width, height: stamp.height)
+        let brWhite = samplerWithout.countNearWhite(in: bottomRightRegion, threshold: threshold)
+        let trWhite = samplerWithout.countNearWhite(in: topRightRegion, threshold: threshold)
+        let blWhite = samplerWithout.countNearWhite(in: bottomLeftRegion, threshold: threshold)
         print("[CompositorLabelTests] auto-label br=\(brWhite) tr=\(trWhite) bl=\(blWhite)")
         #expect(brWhite > 100, "자동 라벨이 우측 하단에 흰 글자로 나타나야 함: \(brWhite)")
         #expect(brWhite > trWhite, "라벨이 (뒤집히지 않고) 아래쪽에 있어야 함: br=\(brWhite) tr=\(trWhite)")

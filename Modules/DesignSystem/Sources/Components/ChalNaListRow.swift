@@ -58,13 +58,6 @@ public struct ChalNaListRow: View {
               kind: .toggle(isOn: isOn, onChange: onChange))
     }
 
-    // MARK: - verbatim 변형
-    //
-    // `String(localized:)` 로 **이미 해석된 String** 을 받는 경우용.
-    // Task 15 의 라벨 토글 행이 유일한 사용처다.
-    // 이를 LocalizedStringKey 로 넘기면 번역 테이블에서 다시 찾는 이중 조회가 되어
-    // 조용히 잘못된 동작이 된다.
-
     public static func slider(
         title: LocalizedStringKey,
         value: Double,
@@ -80,6 +73,10 @@ public struct ChalNaListRow: View {
     }
 
     /// 언어 선택처럼 목록에서 하나를 고르는 행. 제목은 이미 해석된 문자열이라 verbatim.
+    ///
+    /// **`String(localized:)` 결과를 `LocalizedStringKey` 팩토리에 넘기지 말 것** — 번역 테이블에서
+    /// 한 번 더 찾는 이중 조회가 되어 조용히 틀린 문자열이 나온다. 그래서 이 행만 verbatim 이다.
+    /// (구 `toggleVerbatim` 도 같은 이유로 있었지만 유일 사용처인 라벨 설정 화면과 함께 삭제됐다.)
     public static func check(
         verbatimTitle: String,
         isChecked: Bool,
