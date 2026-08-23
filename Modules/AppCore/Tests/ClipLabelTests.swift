@@ -25,4 +25,16 @@ struct ClipLabelTests {
         #expect(ClipLabel(sizeFraction: ClipLabel.minSizeFraction).clampedSizeFraction == ClipLabel.minSizeFraction)
         #expect(ClipLabel(sizeFraction: ClipLabel.maxSizeFraction).clampedSizeFraction == ClipLabel.maxSizeFraction)
     }
+
+    /// 기본은 배경 ON — 기존 라벨의 외형(흰 박스)이 그대로 유지되어야 한다.
+    @Test func defaultHasBackgroundIsOn() {
+        #expect(ClipLabel().hasBackground)
+    }
+
+    /// 배경 유무는 값 동등성에 참여한다 — 참여하지 않으면 토글이 뷰 갱신을 못 일으킨다.
+    @Test func hasBackgroundParticipatesInEquality() {
+        let on = ClipLabel(text: "제주 바다", hasBackground: true)
+        let off = ClipLabel(text: "제주 바다", hasBackground: false)
+        #expect(on != off)
+    }
 }

@@ -3,7 +3,12 @@ import Foundation
 
 /// 편집 세션 동안 클립별로 사용자가 붙이는 박스 자막. 회전(`ClipRotation`)과 같은 per-clip 메타로,
 /// 불변 `Clip` 이 아니라 `EditSession` 의 딕셔너리에 담는다.
-/// 스타일은 "흰 배경 + 검정 글씨 + 검정 테두리" 박스 자막으로 고정 — 사용자는 텍스트·크기·위치만 정한다.
+///
+/// 스타일은 `hasBackground` 로 갈린다:
+/// - `true`  — 흰 배경 + 검정 글씨 + 검정 테두리 박스
+/// - `false` — 배경·테두리 없는 흰 글씨(장식 없음)
+///
+/// 사용자가 정하는 것은 문구 · 크기 · 위치 · 배경 유무 네 가지다.
 public struct ClipLabel: Hashable, Sendable {
     /// 자막 문구. 빈/공백 문자열이면 자막 없음으로 취급.
     public var text: String
@@ -11,15 +16,23 @@ public struct ClipLabel: Hashable, Sendable {
     public var sizeFraction: CGFloat
     /// 9:16 캔버스 기준 정규화 위치(자막 중심). x,y ∈ 0...1, y는 위(0)→아래(1) 스크린 방향.
     public var position: CGPoint
+    /// 배경 박스(흰 면 + 검정 테두리) 표시 여부. false 면 흰 글자만 그린다.
+    ///
+    /// **패딩은 ON/OFF 에서 동일하다.** 배경을 지울 때 패딩까지 지우면 박스 크기가 달라져
+    /// `position`(박스 중심) 역산이 바뀌고, 토글할 때마다 라벨이 움직인다. 프리뷰
+    /// (`BoxSubtitleStyle`)와 합성(`makeCustomLabelLayers`)이 이 규칙을 공유한다.
+    public var hasBackground: Bool
 
     public init(
         text: String = "",
         sizeFraction: CGFloat = 0.10,
-        position: CGPoint = CGPoint(x: 0.5, y: 0.5)
+        position: CGPoint = CGPoint(x: 0.5, y: 0.5),
+        hasBackground: Bool = true
     ) {
         self.text = text
         self.sizeFraction = sizeFraction
         self.position = position
+        self.hasBackground = hasBackground
     }
 
     /// 화면/영상에 그릴 자막이 있는지.
