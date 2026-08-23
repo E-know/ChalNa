@@ -2,7 +2,7 @@ import SwiftUI
 import ComposableArchitecture
 import DesignSystem
 
-/// 설정 최상위 메뉴. 현재 '라벨' 항목 1개 — 향후 다른 메뉴 행을 카드에 추가.
+/// 설정 최상위 메뉴. 현재 '언어'·'문의·신고' 2개 — 향후 다른 메뉴 행을 카드에 추가.
 public struct SettingsView: View {
     let store: StoreOf<SettingsFeature>
 
@@ -22,13 +22,6 @@ public struct SettingsView: View {
             ScrollView {
                 ChalNaCard(padding: 0) {
                     VStack(spacing: 0) {
-                        ChalNaListRow.navigate(
-                            title: "라벨",
-                            subtitle: "영상에 표시되는 시각·날짜 라벨"
-                        ) { store.send(.labelMenuTapped) }
-
-                        ChalNaListDivider()
-
                         ChalNaListRow.navigate(
                             title: "언어",
                             subtitle: "앱 표시 언어를 선택하세요"

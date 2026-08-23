@@ -40,7 +40,7 @@ public struct ChalNaBlockingOverlay: View {
 
                     if let progressText {
                         Text(verbatim: progressText)
-                            .font(ChalNaTypography.mono(.title2, weight: .bold))
+                            .font(ChalNaTypography.title)
                             .foregroundColor(ChalNaColor.accent)
                             .monospacedDigit()
                             .contentTransition(.numericText())

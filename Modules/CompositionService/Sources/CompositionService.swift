@@ -36,28 +36,24 @@ public enum ExportError: LocalizedError {
 }
 
 public protocol CompositionServicing: Sendable {
-    /// 클립 배열·회전·클립별 변환·자동 라벨 설정·클립별 사용자 라벨을 받아 mp4를 만든다.
+    /// 클립 배열·회전·클립별 변환·클립별 사용자 라벨을 받아 mp4를 만든다.
+    /// 자동 시각/날짜 라벨은 설정 대상이 아니라 항상 붙는다 — 기하·불투명도는 `LabelLayout` 고정값.
     func export(
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation],
         transforms: [Clip.ID: ClipTransform],
-        labelSettings: LabelSettings,
         clipLabels: [Clip.ID: ClipLabel]
     ) -> AsyncStream<ExportEvent>
 }
 
 public extension CompositionServicing {
     /// 사용자 라벨 없는 호출 → 빈 라벨(현행 동작).
-    func export(clips: [Clip], rotations: [Clip.ID: ClipRotation], labelSettings: LabelSettings) -> AsyncStream<ExportEvent> {
-        export(clips: clips, rotations: rotations, transforms: [:], labelSettings: labelSettings, clipLabels: [:])
-    }
-    /// 라벨 설정 없는 호출 → 기본값.
     func export(clips: [Clip], rotations: [Clip.ID: ClipRotation]) -> AsyncStream<ExportEvent> {
-        export(clips: clips, rotations: rotations, transforms: [:], labelSettings: .default, clipLabels: [:])
+        export(clips: clips, rotations: rotations, transforms: [:], clipLabels: [:])
     }
-    /// 회전·라벨 설정 없는 호출.
+    /// 회전 없는 호출.
     func export(clips: [Clip]) -> AsyncStream<ExportEvent> {
-        export(clips: clips, rotations: [:], transforms: [:], labelSettings: .default, clipLabels: [:])
+        export(clips: clips, rotations: [:], transforms: [:], clipLabels: [:])
     }
 }
 
@@ -72,7 +68,6 @@ public actor AVFoundationCompositionService: CompositionServicing {
         clips: [Clip],                          // 이어붙일 클립들(이미 촬영순 정렬)
         rotations: [Clip.ID: ClipRotation],     // 클립별 사용자 회전(없으면 0°)
         transforms: [Clip.ID: ClipTransform],   // 클립별 확대·이동(없으면 .fill = 센터 크롭)
-        labelSettings: LabelSettings,           // 시간·날짜 라벨 on/off·위치·투명도
         clipLabels: [Clip.ID: ClipLabel]        // 클립별 사용자 자막
     ) -> AsyncStream<ExportEvent> {             // 반환값 = 이벤트가 흘러나오는 통로
         AsyncStream { continuation in
@@ -84,7 +79,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
                 }
                 // 여기서부터 actor 격리 안. run()이 전 과정을 진행하며
                 // continuation으로 .progress / .completed / .failed 를 흘려보낸다.
-                await self.run(clips: clips, rotations: rotations, transforms: transforms, labelSettings: labelSettings, clipLabels: clipLabels, continuation: continuation)
+                await self.run(clips: clips, rotations: rotations, transforms: transforms, clipLabels: clipLabels, continuation: continuation)
             }
             // 구독자가 통로를 버리면(화면 이탈 등) 굽기 Task도 취소된다.
             // 안 보이는 영상을 계속 굽느라 배터리·발열을 낭비하지 않기 위함.
@@ -100,13 +95,12 @@ public actor AVFoundationCompositionService: CompositionServicing {
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation],
         transforms: [Clip.ID: ClipTransform],
-        labelSettings: LabelSettings,
         clipLabels: [Clip.ID: ClipLabel],
         continuation: AsyncStream<ExportEvent>.Continuation
     ) async {
         do {
             // [1·2·3단계] 트랙 잇기 + 클립별 변환·라벨 instruction 만들기.
-            let built = try await buildComposition(clips: clips, rotations: rotations, transforms: transforms, labelSettings: labelSettings, clipLabels: clipLabels)
+            let built = try await buildComposition(clips: clips, rotations: rotations, transforms: transforms, clipLabels: clipLabels)
             guard built.hasContent else {
                 throw ExportError.noVideoClips   // 한 장도 못 붙였으면 중단.
             }
@@ -169,7 +163,6 @@ public actor AVFoundationCompositionService: CompositionServicing {
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation],
         transforms: [Clip.ID: ClipTransform],
-        labelSettings: LabelSettings,
         clipLabels: [Clip.ID: ClipLabel]
     ) async throws -> BuiltComposition {
         // [1단계] 빈 필름 릴 + 비디오 트랙 1줄.
@@ -263,7 +256,6 @@ public actor AVFoundationCompositionService: CompositionServicing {
             overlay = Self.renderLabelOverlayImage(
                 renderSize: renderSize,
                 capturedAt: entry.capturedAt,
-                labelSettings: labelSettings,
                 clipLabel: clipLabels[entry.clipID] ?? .default
             )
             #endif
@@ -297,7 +289,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
         }
     }
 
-    /// 우측 하단 작은 라벨용 — 날짜. 글리프-세이프 숫자 형식(로케일별 순서만 다름).
+    /// 우측 하단 라벨용 — 날짜. 글리프-세이프 숫자 형식(로케일별 순서만 다름).
     /// en: `MM/dd/yyyy`, 그 외(ko·ja): `yyyy/MM/dd`. 현재 타임존.
     private static func dateOnlyFormatter(_ locale: Locale) -> DateFormatter {
         let f = DateFormatter()
@@ -307,7 +299,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
         return f
     }
 
-    /// 화면 정중앙 큰 라벨용 — 시:분. en: 12시간(`h:mm a`), 그 외: 24시간(`HH:mm`).
+    /// 우측 하단 라벨용 — 시:분. en: 12시간(`h:mm a`), 그 외: 24시간(`HH:mm`).
     private static func timeOnlyFormatter(_ locale: Locale) -> DateFormatter {
         let f = DateFormatter()
         f.locale = locale
@@ -315,31 +307,6 @@ public actor AVFoundationCompositionService: CompositionServicing {
         f.dateFormat = (locale.language.languageCode?.identifier == "en") ? "h:mm a" : "HH:mm"
         return f
     }
-
-    /// `UIAppFonts`로 등록된 KERISKEDU 패밀리에서 Line(outline) 변형의 PostScript name 우선 선택.
-    /// 매칭 실패 시 빈 문자열 → `UIFont(name:size:)`가 nil 리턴 → 시스템 폰트로 fallback.
-    /// 첫 호출 시 진단용 print 1회 — 사용자 환경에서 매칭이 안 될 때 family/name 을 확인할 수 있음.
-    private static let kerisLabelFontName: String = {
-        #if canImport(UIKit)
-        let kerisFamilies = UIFont.familyNames.filter { $0.localizedCaseInsensitiveContains("KERIS") }
-        print("[CompositionService] KERIS families: \(kerisFamilies)")
-        for family in kerisFamilies {
-            let names = UIFont.fontNames(forFamilyName: family)
-            print("[CompositionService] family=\(family) names=\(names)")
-            if let line = names.first(where: {
-                let upper = $0.uppercased()
-                return upper.contains("LINE") || upper.contains("OUTLINE")
-                    || upper.hasSuffix("_LINE") || upper.hasSuffix("-LINE")
-            }) {
-                return line
-            }
-            if let any = names.first {
-                return any
-            }
-        }
-        #endif
-        return ""
-    }()
 
     #if canImport(UIKit)
     /// 한 클립 구간의 라벨(시간/날짜/커스텀)을 `renderSize` 의 투명 CALayer 트리로 쌓아 정적 CGImage 로 렌더한다.
@@ -351,12 +318,9 @@ public actor AVFoundationCompositionService: CompositionServicing {
     private static func renderLabelOverlayImage(
         renderSize: CGSize,
         capturedAt: Date,
-        labelSettings: LabelSettings,
         clipLabel: ClipLabel
     ) -> CGImage? {
         let custom = clipLabel
-        let anyVisible = labelSettings.timeEnabled || labelSettings.dateEnabled || custom.isVisible
-        guard anyVisible else { return nil }
 
         let parentLayer = CALayer()
         parentLayer.frame = CGRect(origin: .zero, size: renderSize)
@@ -367,50 +331,27 @@ public actor AVFoundationCompositionService: CompositionServicing {
         let timeFontSize = minDim * LabelLayout.timeFontFraction
         let padding = CGSize(width: renderSize.width * LabelLayout.paddingFraction, height: renderSize.height * LabelLayout.paddingFraction)
         let stackGap = minDim * LabelLayout.stackGapFraction
-        let stacked = labelSettings.timeEnabled && labelSettings.dateEnabled
-            && labelSettings.timePosition == labelSettings.datePosition
 
         let locale = overlayLocale()
         let dateText = dateOnlyFormatter(locale).string(from: capturedAt)
         let timeText = timeOnlyFormatter(locale).string(from: capturedAt)
 
-        if stacked {
-            let timeSize = measureOverlayText(timeText, fontSize: timeFontSize)
-            let dateSize = measureOverlayText(dateText, fontSize: dateFontSize)
-            let origins = LabelLayout.stackedOrigins(
-                position: labelSettings.timePosition,
-                timeSize: timeSize,
-                dateSize: dateSize,
-                gap: stackGap,
-                renderSize: renderSize,
-                padding: padding
-            )
-            parentLayer.addSublayer(makeOverlayTextLayer(
-                text: dateText, fontSize: dateFontSize,
-                opacity: labelSettings.dateOpacity
-            ) { _ in origins.date })
-            parentLayer.addSublayer(makeOverlayTextLayer(
-                text: timeText, fontSize: timeFontSize,
-                opacity: labelSettings.timeOpacity
-            ) { _ in origins.time })
-        } else {
-            if labelSettings.dateEnabled {
-                parentLayer.addSublayer(makeOverlayTextLayer(
-                    text: dateText, fontSize: dateFontSize,
-                    opacity: labelSettings.dateOpacity
-                ) { size in
-                    labelSettings.datePosition.origin(renderSize: renderSize, textSize: size, padding: padding)
-                })
-            }
-            if labelSettings.timeEnabled {
-                parentLayer.addSublayer(makeOverlayTextLayer(
-                    text: timeText, fontSize: timeFontSize,
-                    opacity: labelSettings.timeOpacity
-                ) { size in
-                    labelSettings.timePosition.origin(renderSize: renderSize, textSize: size, padding: padding)
-                })
-            }
-        }
+        // 위치는 우측 하단 고정. 시각을 날짜 위로 쌓고 둘 다 항상 그린다.
+        let timeSize = measureOverlayText(timeText, fontSize: timeFontSize)
+        let dateSize = measureOverlayText(dateText, fontSize: dateFontSize)
+        let origins = LabelLayout.stackedOrigins(
+            timeSize: timeSize,
+            dateSize: dateSize,
+            gap: stackGap,
+            renderSize: renderSize,
+            padding: padding
+        )
+        parentLayer.addSublayer(makeOverlayTextLayer(
+            text: dateText, fontSize: dateFontSize
+        ) { _ in origins.date })
+        parentLayer.addSublayer(makeOverlayTextLayer(
+            text: timeText, fontSize: timeFontSize
+        ) { _ in origins.time })
 
         if custom.isVisible {
             // 센터 크롭에서는 보이는 클립 영역 = 캔버스 전체 → 자막 앵커도 캔버스 기준.
@@ -436,14 +377,12 @@ public actor AVFoundationCompositionService: CompositionServicing {
         return uiImage.cgImage
     }
 
-    /// 오버레이 라벨용 UIFont. KERISKEDU(UIAppFonts 등록, PostScript name 매칭 성공 시)
-    /// 커스텀 폰트, 실패하면 시스템 bold로 fallback.
+    /// 오버레이 라벨용 UIFont — 시스템 기본 폰트 bold 고정.
+    /// 미리보기(`AutoLabelsOverlay`)의 `ChalNaTypography.fixed/fixedUIFont` 와 **같은 폰트여야**
+    /// WYSIWYG 가 맞는다. 한쪽만 바꾸면 프리뷰와 출력의 글자 폭이 어긋난다.
+    /// (DesignSystem 은 이 모듈의 의존이 아니라 토큰을 공유하지 못하고 값만 맞춘다.)
     private static func overlayUIFont(fontSize: CGFloat) -> UIFont {
-        if !kerisLabelFontName.isEmpty,
-           let f = UIFont(name: kerisLabelFontName, size: fontSize) {
-            return f
-        }
-        return .systemFont(ofSize: fontSize, weight: .bold)
+        .systemFont(ofSize: fontSize, weight: .bold)
     }
     #endif
 
@@ -466,13 +405,12 @@ public actor AVFoundationCompositionService: CompositionServicing {
         #endif
     }
 
-    /// 흰색 KERISKEDU(없으면 시스템 bold) 텍스트에 검은 그림자를 입혀 만든 `CATextLayer`.
+    /// 흰색 시스템 bold 텍스트에 검은 그림자를 입혀 만든 `CATextLayer`.
     /// `placement` 클로저는 실측 텍스트 사이즈를 받아 좌하단 원점(CoreAnimation) 기준 좌측 하단 좌표를 반환한다.
-    /// opacity 를 목표값으로 고정한다(클립 구간 동안만 컴포지터가 합성하므로 per-frame gating 불필요).
+    /// 불투명도는 `LabelLayout.opacity` 로 고정한다(클립 구간 동안만 컴포지터가 합성하므로 per-frame gating 불필요).
     private static func makeOverlayTextLayer(
         text: String,
         fontSize: CGFloat,
-        opacity: CGFloat = 1.0,
         placement: (CGSize) -> CGPoint
     ) -> CATextLayer {
         let textLayer = CATextLayer()
@@ -503,7 +441,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
         let origin = placement(textSize)
         textLayer.frame = CGRect(origin: origin, size: textSize)
-        textLayer.opacity = Float(opacity)
+        textLayer.opacity = Float(LabelLayout.opacity)
 
         return textLayer
     }

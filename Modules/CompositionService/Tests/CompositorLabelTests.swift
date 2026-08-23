@@ -14,8 +14,8 @@ import UIKit
 struct CompositorLabelTests {
 
     /// 회색 영상에 흰색 박스 커스텀 라벨을 올렸을 때, 라벨 ON 이 OFF 보다 클립 영역에 흰색 픽셀이
-    /// 확연히 더 많아야 한다. 또한 TOP 위치의 시각 라벨은 이미지 위쪽에 나타나야 한다(뒤집힘 가드).
-    @Test func testCompositor_OverlaysLabel_WhiteBoxVisible_AndTopLabelAtTop() async throws {
+    /// 확연히 더 많아야 한다. 또한 자동 시각/날짜 라벨은 우측 하단에 나타나야 한다(뒤집힘·정렬 가드).
+    @Test func testCompositor_OverlaysLabel_WhiteBoxVisible_AndAutoLabelsAtBottomRight() async throws {
         let srcURL = try await makeSolidGrayVideo(width: 640, height: 360, seconds: 0.5, fps: 24)
         defer { try? FileManager.default.removeItem(at: srcURL) }
 
@@ -29,18 +29,14 @@ struct CompositorLabelTests {
             displaySize: CGSize(width: 640, height: 360)
         )
 
-        // 시간/날짜 라벨 OFF. 커스텀 박스 라벨만 검사하기 위함.
-        let labelsOff = LabelSettings(
-            timeEnabled: false, timePosition: .center, timeOpacity: 0,
-            dateEnabled: false, datePosition: .bottomCenter, dateOpacity: 0
-        )
-        // 화면(클립) 정중앙에 큰 박스 라벨.
+        // 화면(클립) 정중앙에 큰 박스 라벨. 자동 시각/날짜 라벨은 이제 끌 수 없지만
+        // 우측 하단(x≳857, y≳1736)이라 아래 중앙 샘플 영역과 겹치지 않는다.
         let label = ClipLabel(text: "TEST", sizeFraction: 0.12, position: CGPoint(x: 0.5, y: 0.5))
 
-        // 1) WITH 라벨
-        let samplerWith = try await exportAndSample(clip: clip, labels: labelsOff, clipLabels: [clip.id: label])
-        // 2) WITHOUT 라벨
-        let samplerWithout = try await exportAndSample(clip: clip, labels: labelsOff, clipLabels: [:])
+        // 1) WITH 커스텀 라벨
+        let samplerWith = try await exportAndSample(clip: clip, clipLabels: [clip.id: label])
+        // 2) WITHOUT 커스텀 라벨 (자동 시각/날짜 라벨만 있는 상태)
+        let samplerWithout = try await exportAndSample(clip: clip, clipLabels: [:])
 
         // 640×360(16:9) → 1080×1920 aspectFit: 클립 rect y ∈ [656.25, 1263.75], 세로 중앙 ≈ 960.
         // 클립 정중앙 ±100px 영역에서 near-white(>220) 픽셀 카운트.
@@ -51,45 +47,44 @@ struct CompositorLabelTests {
         print("[CompositorLabelTests] whiteWith=\(whiteWith) whiteWithout=\(whiteWithout)")
 
         // WITH 라벨: 흰 박스가 검출돼야 함.
-        #expect(whiteWith > 200, "라벨 ON 시 클립 중앙에 흰 박스 픽셀이 충분해야 함: \(whiteWith)")
-        // WITHOUT: 회색 클립이라 near-white 거의 없음.
-        #expect(whiteWithout < 50, "라벨 OFF 시 클립 중앙에 near-white 픽셀이 거의 없어야 함: \(whiteWithout)")
-        // 차분: 라벨이 명확히 흰 박스를 더한다.
-        #expect(whiteWith > whiteWithout + 200, "라벨 ON 이 OFF 보다 흰 픽셀이 확연히 많아야 함: with=\(whiteWith) without=\(whiteWithout)")
+        #expect(whiteWith > 200, "커스텀 라벨 ON 시 클립 중앙에 흰 박스 픽셀이 충분해야 함: \(whiteWith)")
+        // WITHOUT: 회색 클립이라 near-white 거의 없음(자동 라벨은 우측 하단이라 이 영역에 없다).
+        #expect(whiteWithout < 50, "커스텀 라벨 없을 때 클립 중앙에 near-white 픽셀이 거의 없어야 함: \(whiteWithout)")
+        // 차분: 커스텀 라벨이 명확히 흰 박스를 더한다.
+        #expect(whiteWith > whiteWithout + 200, "커스텀 라벨 ON 이 OFF 보다 흰 픽셀이 확연히 많아야 함: with=\(whiteWith) without=\(whiteWithout)")
 
         // Sanity: 비-라벨 영역(클립 좌상단 근처)은 두 케이스 모두 회색 클립이 보여야 함.
         let grayWith = samplerWith.rgb(x: 200, y: 720)
         let grayWithout = samplerWithout.rgb(x: 200, y: 720)
-        #expect(isGrayish(grayWith), "라벨 ON 비라벨 영역은 회색이어야 함: \(grayWith)")
-        #expect(isGrayish(grayWithout), "라벨 OFF 비라벨 영역은 회색이어야 함: \(grayWithout)")
+        #expect(isGrayish(grayWith), "커스텀 라벨 ON 시 비라벨 영역은 회색이어야 함: \(grayWith)")
+        #expect(isGrayish(grayWithout), "커스텀 라벨 OFF 시 비라벨 영역은 회색이어야 함: \(grayWithout)")
 
-        // 3) 뒤집힘 가드: TOP 위치 시각 라벨이 이미지 위쪽(클립 상단 바)에 나타나는지.
-        let labelsTopTime = LabelSettings(
-            timeEnabled: true, timePosition: .topCenter, timeOpacity: 1.0,
-            dateEnabled: false, datePosition: .bottomCenter, dateOpacity: 0
-        )
-        let samplerTop = try await exportAndSample(clip: clip, labels: labelsTopTime, clipLabels: [:])
-        // padding = 1920*0.04 = 76.8, time font ≈ 1080*0.18 ≈ 194. TOP 라벨은 대략 y ∈ [77, 271].
-        let topRegion = CGRect(x: 340, y: 80, width: 400, height: 260)
-        let bottomRegion = CGRect(x: 340, y: 1580, width: 400, height: 260)
-        // 시각 라벨은 흰색(opacity 1.0). near-white 카운트로 위/아래 비교.
-        let topWhite = samplerTop.countNearWhite(in: topRegion, threshold: 200)
-        let bottomWhite = samplerTop.countNearWhite(in: bottomRegion, threshold: 200)
-        print("[CompositorLabelTests] TOP-time topWhite=\(topWhite) bottomWhite=\(bottomWhite)")
-        #expect(topWhite > 100, "TOP 위치 시각 라벨이 이미지 위쪽에 흰 글자로 나타나야 함: \(topWhite)")
-        #expect(topWhite > bottomWhite, "시각 라벨이 (뒤집히지 않고) 위쪽에 더 많아야 함: top=\(topWhite) bottom=\(bottomWhite)")
+        // 3) 뒤집힘·정렬 가드: 자동 시각/날짜 라벨은 우측 하단 고정이다.
+        //    padding = 1920*0.04 = 76.8 (세로) / 1080*0.04 = 43.2 (가로).
+        //    time ≈ 1080*0.045 ≈ 49px(높이 ≈58), date ≈ 1080*0.030 ≈ 32px(높이 ≈38), gap ≈11
+        //    → 스택 전체는 대략 y ∈ [1736, 1843], 우측 정렬이라 x ≳ 857.
+        //    흰 글자를 75% 불투명도로 회색(128) 위에 올리므로 코어 픽셀 ≈ 223 > threshold 200.
+        let bottomRightRegion = CGRect(x: 780, y: 1720, width: 300, height: 160)
+        let topRightRegion    = CGRect(x: 780, y: 40,   width: 300, height: 160)  // 상하 뒤집힘
+        let bottomLeftRegion  = CGRect(x: 0,   y: 1720, width: 300, height: 160)  // 좌우 정렬 어긋남
+        let brWhite = samplerWithout.countNearWhite(in: bottomRightRegion, threshold: 200)
+        let trWhite = samplerWithout.countNearWhite(in: topRightRegion, threshold: 200)
+        let blWhite = samplerWithout.countNearWhite(in: bottomLeftRegion, threshold: 200)
+        print("[CompositorLabelTests] auto-label br=\(brWhite) tr=\(trWhite) bl=\(blWhite)")
+        #expect(brWhite > 100, "자동 라벨이 우측 하단에 흰 글자로 나타나야 함: \(brWhite)")
+        #expect(brWhite > trWhite, "라벨이 (뒤집히지 않고) 아래쪽에 있어야 함: br=\(brWhite) tr=\(trWhite)")
+        #expect(brWhite > blWhite, "라벨이 우측 정렬이어야 함: br=\(brWhite) bl=\(blWhite)")
     }
 
     // MARK: - Export + sample
 
     private func exportAndSample(
         clip: Clip,
-        labels: LabelSettings,
         clipLabels: [Clip.ID: ClipLabel]
     ) async throws -> PixelSampler {
         let service = AVFoundationCompositionService()
         var outURL: URL?
-        for await event in service.export(clips: [clip], rotations: [:], transforms: [:], labelSettings: labels, clipLabels: clipLabels) {
+        for await event in service.export(clips: [clip], rotations: [:], transforms: [:], clipLabels: clipLabels) {
             switch event {
             case .completed(let url): outURL = url
             case .failed(let msg):

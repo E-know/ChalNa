@@ -3,19 +3,14 @@ import UIKit
 import Models
 import DesignSystem
 
-/// 사용자가 설정한 자동 시간/날짜 라벨을 영상 출력과 동일하게 미리 보여주는 읽기 전용 오버레이.
+/// 자동 시간/날짜 라벨을 영상 출력과 동일하게 미리 보여주는 읽기 전용 오버레이.
+/// 둘 다 항상 표시되고 불투명도는 `LabelLayout.opacity` 고정 — 사용자 설정은 없다.
 /// `box` = 클립 표시 박스(에디터/미리보기의 fittedBox)를 renderSize 로 간주.
-/// 레이아웃은 합성과 동일한 `LabelLayout`/`LabelPosition` 규칙을 공유한다(좌표는 y-up 좌하단 → SwiftUI y-down 변환).
+/// 위치는 우측 하단 고정이고, 레이아웃은 합성과 동일한 `LabelLayout` 을 공유한다
+/// (좌표는 y-up 좌하단 → SwiftUI y-down 변환).
 struct AutoLabelsOverlay: View {
     let box: CGSize
     let capturedAt: Date
-
-    @AppStorage("labelTimeEnabled") private var timeEnabled = true
-    @AppStorage("labelTimePosition") private var timePosition = LabelPosition.center
-    @AppStorage("labelTimeOpacity") private var timeOpacity = 0.5
-    @AppStorage("labelDateEnabled") private var dateEnabled = true
-    @AppStorage("labelDatePosition") private var datePosition = LabelPosition.bottomCenter
-    @AppStorage("labelDateOpacity") private var dateOpacity = 1.0
 
     /// 영상 출력(CompositionService.timeOnlyFormatter)과 동일하게 앱 표시 언어 기준 분기.
     /// en: 12시간 `h:mm a`, 그 외(ko·ja): 24시간 `HH:mm`. 현재 타임존.
@@ -59,33 +54,22 @@ struct AutoLabelsOverlay: View {
         let dateText = Self.dateFormatter().string(from: capturedAt)
         let timeSize = measure(timeText, fontPx: timeFont)
         let dateSize = measure(dateText, fontPx: dateFont)
-        let stacked = timeEnabled && dateEnabled && timePosition == datePosition
+
+        let origins = LabelLayout.stackedOrigins(
+            timeSize: timeSize, dateSize: dateSize,
+            gap: gap, renderSize: box, padding: padding
+        )
 
         ZStack {
-            if stacked {
-                let origins = LabelLayout.stackedOrigins(
-                    position: timePosition, timeSize: timeSize, dateSize: dateSize,
-                    gap: gap, renderSize: box, padding: padding
-                )
-                label(dateText, fontPx: dateFont, opacity: dateOpacity, originYUp: origins.date, size: dateSize)
-                label(timeText, fontPx: timeFont, opacity: timeOpacity, originYUp: origins.time, size: timeSize)
-            } else {
-                if dateEnabled {
-                    let o = datePosition.origin(renderSize: box, textSize: dateSize, padding: padding)
-                    label(dateText, fontPx: dateFont, opacity: dateOpacity, originYUp: o, size: dateSize)
-                }
-                if timeEnabled {
-                    let o = timePosition.origin(renderSize: box, textSize: timeSize, padding: padding)
-                    label(timeText, fontPx: timeFont, opacity: timeOpacity, originYUp: o, size: timeSize)
-                }
-            }
+            label(dateText, fontPx: dateFont, originYUp: origins.date, size: dateSize)
+            label(timeText, fontPx: timeFont, originYUp: origins.time, size: timeSize)
         }
         .frame(width: box.width, height: box.height)
         .allowsHitTesting(false)
     }
 
     private func measure(_ text: String, fontPx: CGFloat) -> CGSize {
-        let ui = ChalNaTypography.kerisUIFont(fontPx)
+        let ui = ChalNaTypography.fixedUIFont(fontPx)
         let s = NSAttributedString(string: text, attributes: [.font: ui]).size()
         return CGSize(width: ceil(s.width), height: ceil(s.height))
     }
@@ -96,18 +80,18 @@ struct AutoLabelsOverlay: View {
     /// 출력이 흰 글자 + 검은 그림자이므로 미디어 위 마크용 테마 독립 토큰
     /// (`onMedia`·`onMediaDark`)을 쓴다 — 아래 픽셀이 어떤 사진/영상이든 대비를 보장해야 하기 때문이다.
     @ViewBuilder
-    private func label(_ text: String, fontPx: CGFloat, opacity: Double, originYUp: CGPoint, size: CGSize) -> some View {
+    private func label(_ text: String, fontPx: CGFloat, originYUp: CGPoint, size: CGSize) -> some View {
         let topLeftY = box.height - originYUp.y - size.height
         let centerX = originYUp.x + size.width / 2
         let centerY = topLeftY + size.height / 2
         Text(text)
-            .font(ChalNaTypography.keris(fontPx))
+            .font(ChalNaTypography.fixed(fontPx))
             .foregroundColor(ChalNaColor.onMedia)
             .lineLimit(1)
             .fixedSize()
             .frame(width: size.width, height: size.height)
             .shadow(color: ChalNaColor.onMediaDark.opacity(0.5), radius: 4, x: 0, y: 2)
-            .opacity(opacity)
+            .opacity(LabelLayout.opacity)
             .position(x: centerX, y: centerY)
     }
 }

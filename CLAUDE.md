@@ -136,7 +136,13 @@ External(SPM): ComposableArchitecture(TCA) · FirebaseAnalytics
 - **출력은 1080×1920(9:16 세로) 고정, 클립은 aspectFill 센터 크롭**이 기본(`ClipTransform.fill`, scale 하한 1.0 — 여백/블러 배경 없음). 배치 기하 SSOT 는 `ClipFraming`(Models)이고 프리뷰·조정 화면·export 가 공유한다(WYSIWYG). 사용자 크롭 조정(줌/이동)은 `EditSession.transforms`.
 - `AVMutableComposition` + `AVMutableVideoComposition`. 모든 트랙 조작은 **`CompositionService` actor 내부에서만**.
 - 익스포트는 `AVAssetExportSession` + `AsyncStream<ExportEvent>`로 진행률 폴링/래핑.
-- 출력 영상 중앙 시간 라벨은 `CATextLayer`로 합성하며, **`UIAppFonts`에 등록된 KERISKEDU 패밀리**(`ChalNa/Resources/Fonts/KERISKEDU/`) 폰트를 PostScript 이름 매칭으로 사용(없으면 시스템 bold fallback).
+- 출력 영상의 자동 시간/날짜 라벨은 `CATextLayer`로 합성하며 **시스템 기본 폰트 bold** 를 쓴다. 번들 커스텀 폰트는 없다(구 KERISKEDU 는 제거됨 — `UIAppFonts` 키 자체가 사라졌다).
+- **자동 시각/날짜 라벨에는 사용자 설정이 없다.** 항상 표시되고, 위치·크기·불투명도 전부 `LabelLayout`(Models)이 갖는 고정값이다 — 합성과 프리뷰(`AutoLabelsOverlay`)가 이 하나를 공유해 WYSIWYG 를 맞춘다.
+  - 위치: **우측 하단 고정**. 시각(`timeFontFraction 0.045`, 1080 기준 ≈49px)이 위, 날짜(`dateFontFraction 0.030`, ≈32px)가 아래로 쌓이고 둘 다 우측 정렬(`stackGapFraction 0.010`, 여백 `paddingFraction 0.04`).
+  - 불투명도: `LabelLayout.opacity` = **0.75** 로 시각·날짜 공통.
+  - 9구역 위치 체계(`LabelPosition`)·`LabelSettings`/`LabelKind` 모델·[설정 → 라벨] 화면 전체가 삭제됐다. 그래서 `CompositionServicing.export` 에는 `labelSettings` 파라미터가 없다 — 라벨을 끌 방법이 없으므로, 합성 픽셀 테스트는 샘플 지점이 라벨 박스(대략 x≳857, y∈[1736,1843])를 피하는 것으로 격리한다.
+  - 설정 화면에 남은 항목은 **언어 · 문의·신고** 2개다.
+- 프리뷰와 합성이 **같은 폰트여야** WYSIWYG 가 맞는다: 프리뷰는 `ChalNaTypography.fixed/fixedUIFont`, 합성은 `CompositionService.overlayUIFont` — 둘 다 `.systemFont(ofSize:weight: .bold)`. CompositionService 는 DesignSystem 에 의존하지 않으므로 토큰을 공유하지 못하고 값만 맞춰 둔 것이다. 한쪽만 바꾸면 글자 폭이 어긋난다.
 
 ## 에러 처리
 - `throws` 사용, `Result` 타입은 지양(Swift 6).
@@ -188,8 +194,8 @@ DesignSystem/Sources/
 
 ### Typography — `ChalNaTypography` (표준 iOS 텍스트 스타일 기반 역할 토큰)
 - **6개 역할 토큰**이 표준 텍스트 스타일에 그대로 대응해서, 별도 스케일링 코드 없이 Dynamic Type 을 따른다: `.display`(28pt bold, `.title`) · `.title`(22pt semibold, `.title2`) · `.headline`(17pt semibold, `.headline`) · `.body`(16pt, `.callout`) · `.label`(13pt medium, `.footnote`) · `.caption`(12pt, `.caption`).
-- `.mono(_:weight:)` — SF Mono. 타임코드·퍼센트 등 순수 숫자 전용. **한글에 쓰지 않는다**(한글 글리프가 없어 폴백되며 자간이 어긋남).
-- `.keris(_:weight:)` — Splash 브랜드 라벨과 영상 오버레이 미리보기 전용. 합성 영상(`CATextLayer`)의 `UIFont` 측정값과 **픽셀 단위로 일치**해야 해서 여기만 Dynamic Type 없이 pt 를 직접 받는다 — 지울 대상이 아니라 존재 이유가 있는 토큰이다(아래 "비디오 합성 원칙" 참고).
+- **앱은 시스템 기본 폰트(SF Pro) 하나만 쓴다.** 번들 커스텀 폰트(구 `.keris` / KERISKEDU)도, 다른 `design`(구 `.mono` = SF Mono)도 없다. 숫자 폭이 흔들리면 안 되는 곳은 **폰트를 바꾸지 말고** 같은 폰트의 tabular figure(`Text.monospacedDigit()`)를 붙인다 — 실제로 실시간 숫자가 있는 5곳(`ChalNaListRow` 슬라이더 %, `ChalNaBlockingOverlay` 진행률, `ExportView` 진행률 %, `PreviewPanel` 타임코드 2개)에 붙어 있다.
+- `.fixed(_:weight:)` / `.fixedUIFont(_:)` — 기본 폰트를 **pt 로 직접** 받는 유일한 토큰(Dynamic Type 비적용). 두 곳 전용: 영상 오버레이 라벨 미리보기(합성의 `UIFont` 측정값과 픽셀 일치 필요)와 Splash 브랜드 라벨(아이콘과 크기 비율 고정). 구 `.keris`/`.kerisUIFont` 의 자리를 그대로 물려받았다.
 - `Tracking`: `.title(-0.20)` · `.body(-0.30)`.
 - **최소 12pt.** 8pt·11pt 는 금지(6개 역할 중 가장 작은 `.caption` 이 12pt).
 - 과거의 12단계 `Size` 스케일(`tag(12)…displayL(32)`)과 legacy stub(`displayEN`/`serifFallback`/`hand`/`handFallback`)은 Task 26 에서 전부 삭제됐다.
@@ -211,7 +217,7 @@ DesignSystem/Sources/
 | 버튼 | `Button{}.buttonStyle(.chalNa(.primary, size: .lg, fillWidth: true, destructive: false))` — variant `primary/secondary/ghost`, size `lg(52)/md(44)/sm(36)`, `destructive: Bool` 하나로 파괴적 색(danger)까지 컴포넌트가 결정. 축약 `.chalNaPrimary/.chalNaSecondary/.chalNaGhost` |
 | 헤더 | `ChalNaNavBar(title: "설정", leading: .back { }, trailing: .text("저장") { }, showsDivider: true)` — 좌우 슬롯 **최소** 56pt. `ChalNaNavAction` 팩토리는 `.back/.close/.icon(_:accessibilityLabel:action:)/.text(_:action:)` 뿐이라 **글리프 크기(20pt)를 호출처가 못 바꾼다** |
 | 캔버스 | `ChalNaCanvas(aspect: 9/16) { box in ... } overlay: { box in ... }` — Timeline 프리뷰·ClipAdjust·LabelEditor 가 공유하는 WYSIWYG aspect-fit 박스(기하 SSOT `ChalNaCanvasGeometry.fittedBox`). **내부에서 이미 fit 하므로 바깥에서 `.aspectRatio` 로 다시 감싸지 않는다**(무한 높이 컨테이너에서 오동작) |
-| 카드 / 리스트 | `ChalNaCard(padding:showsBorder:) { ... }` · `ChalNaListRow.navigate/.toggle/.toggleVerbatim/.slider/.check(...)`(팩토리로만 생성, `private init`) + `ChalNaListDivider()` |
+| 카드 / 리스트 | `ChalNaCard(padding:showsBorder:) { ... }` · `ChalNaListRow.navigate/.toggle/.slider/.check(...)`(팩토리로만 생성, `private init`) + `ChalNaListDivider()`. `.toggleVerbatim` 은 유일 소비자였던 라벨 설정 화면과 함께 삭제됐다 — `.check(verbatimTitle:)` 만 verbatim 변형으로 남는다 |
 | 태그 / 썸네일 | `ChalNaTag("LIVE", variant: .live, icon: .film)`(구 `ChalNaChip` 대체) · `MediaThumb(state:size:aspect:) { ... }`(구 `ClipThumbCard`/`LiveBadge` 대체, 6개 상태) |
 | 상태 표시 | `ChalNaEmptyState(icon:title:message:actionTitle:action:)` · `ChalNaNotice(icon:title:message:)` · `ChalNaProgressBar(progress:tint:height:)` · `view.chalNaToast(message:onDismiss:)`(모디파이어, 내부 `ChalNaToast` 는 직접 안 씀) · `ChalNaBlockingOverlay(...)` — 뒤 세 개는 `ChalNaShadow.floating` 을 공유 |
 | 입력 | `ChalNaTextField(...)` · `ChalNaTextArea(placeholder:minHeight:text:)` · `ChalNaSlider(...)` |
@@ -227,7 +233,7 @@ DesignSystem/Sources/
 - `Color.white`/`.white` 하드코딩 금지 — `ChalNaColor.textPrimary` 또는 `.onAccent` 사용.
 - `Color.black`/`.black` 하드코딩 금지 — `ChalNaColor.canvas`/`.scrim`/`.onMediaDark` 등 역할 토큰 사용. 흰색 규칙의 대칭 규칙: 값이 검정인 토큰(`canvas` 등)을 역할과 무관하게 범용 검정으로 갖다 쓰는 것도 이 규칙을 우회하진 못한다 — grep 은 토큰 이름이 아니라 최종 리터럴 값을 보지 않으므로, 하드코딩 자체가 없어야 규칙을 통과한다.
 - `UIColor(named:)` 금지 — 번들 조회가 조용히 실패한다(과거에 검은 띠 버그를 만들었다). UIKit 에서 색이 필요하면 `UIColor(ChalNaColor.bg)` 처럼 SwiftUI `Color` 를 감싼다.
-- `UIFont` 직접 참조 금지 — `ChalNaTypography.kerisUIFont` 경유(CompositionService 의 비디오 텍스트 오버레이는 불가피한 예외).
+- `UIFont` 직접 참조 금지 — `ChalNaTypography.fixedUIFont` 경유(CompositionService 의 비디오 텍스트 오버레이는 불가피한 예외 — DesignSystem 에 의존하지 않는 모듈이다).
 - **`scripts/design-lint.sh` 가 위 6종을 정적 검사한다. 커밋 전에 실행한다.**
 
 **6개 규칙 전부 현재 0건**이지만 전부가 순수 코드 정리의 결과는 아니다 — 규칙 1(`.font(.system(`)의 0 은 코드 정리 + 아래 "다크 토큰 적용 예외"의 **정당한 파일 예외 2건**(`ClipLabelText.swift`·`LabelEditorView.swift`) 덕분이고, 나머지 규칙의 0 은 대부분 코드 정리만의 결과다. 스크립트는 주석 인식(comment-aware)이라 주석 전용 줄은 제외하지만 코드 뒤 trailing 주석은 계속 검사한다 — 반대로 위반 줄 전체를 주석으로 감싸면(그 시점엔 죽은 코드) 스킵되는 건 알려진 한계다. 예외 목록의 근거는 문서가 아니라 스크립트 자체(`scripts/design-lint.sh`)를 단일 출처로 본다. **파일 단위 예외는 그 파일에 실제 매치가 있을 때만 등록한다** — 매치가 없는 예외(죽은 예외)는 그 파일에 새로 들어오는 진짜 위반을 영구히 가리는 눈가림용 구멍이 된다(과거 `LabelEditorView.swift`·`ClipLabel.swift`·`ThumbnailPreset.swift`가 흰색 규칙에 죽은 예외로 남아 있다가 제거된 사례).
@@ -258,7 +264,7 @@ DesignSystem/Sources/
 - 서비스/모델은 **Swift Testing**(`@Test`/`#expect`)으로 작성, `SampleData` 활용. actor/Client 는 프로토콜 + `testValue` 로 격리.
 - 모델·서비스를 직접(예: `TimelineModel`, `AVFoundationCompositionService().export(...)`) 테스트하거나, 필요 시 TCA `TestStore` 사용 가능.
 - UI 는 스냅샷 대신 `#Preview` 적극 활용 (각 뷰 상태별).
-- 2026-07-30 기준 8개 유닛 스위트 전부 그린(SE·17 Pro 양쪽 확인): `DesignSystem` 22 · `TimelineFeature` 18 · `SettingsFeature` 28 · `MediaPickerFeature` 2 · `ExportFeature` 2 · `CompositionService` 51 · `AppCore` 24 · `PhotosService` 4. 이후 태스크가 이 수치를 크게 벗어나면 회귀를 의심한다.
+- 2026-08-23 기준 8개 유닛 스위트 전부 그린(17 Pro, 총 150 케이스): `DesignSystem` 22 · `TimelineFeature` 18 · `SettingsFeature` 13 · `MediaPickerFeature` 2 · `ExportFeature` 7 · `CompositionService` 60 · `AppCore` 24 · `PhotosService` 4. 이후 태스크가 이 수치를 크게 벗어나면 회귀를 의심한다. (직전 기재값 `SettingsFeature 28`·`CompositionService 51`·`ExportFeature 2` 는 2026-07-30 이후 갱신이 밀린 스테일 수치였다. 라벨 설정 삭제로 SettingsFeature 는 26→13 으로 줄었다.)
 
 ## 검증 방법 (시뮬레이터 / UI 테스트 노하우)
 다크 리디자인 사이클에서 실제로 시간을 잡아먹은 함정들이다. 다음 사람이 또 반복하지 않도록 적어둔다.

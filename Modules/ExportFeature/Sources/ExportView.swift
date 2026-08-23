@@ -182,7 +182,7 @@ public struct ExportView: View {
                         .foregroundColor(ChalNaColor.textPrimary)
                         .lineLimit(1)
                     Text(verbatim: metaLine)
-                        .font(ChalNaTypography.mono())
+                        .font(ChalNaTypography.label)
                         .foregroundColor(ChalNaColor.textSecondary)
                     Text(statusLine)
                         .font(ChalNaTypography.label)
@@ -224,7 +224,8 @@ public struct ExportView: View {
                     VStack(spacing: 6) {
                         HStack {
                             Text(verbatim: "\(Int(store.progress * 100))%")
-                                .font(ChalNaTypography.mono(.footnote, weight: .semibold))
+                                .font(ChalNaTypography.label)
+                                .monospacedDigit()
                                 .foregroundColor(ChalNaColor.textPrimary)
                             Spacer()
                         }

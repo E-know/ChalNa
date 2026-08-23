@@ -68,12 +68,9 @@ struct CompositorOrientationTests {
             displaySize: CGSize(width: 640, height: 360)
         )
 
-        // 라벨 OFF (방향만 검증).
-        let labelsOff = LabelSettings(
-            timeEnabled: false, timePosition: .center, timeOpacity: 0,
-            dateEnabled: false, datePosition: .bottomCenter, dateOpacity: 0
-        )
-
+        // 자동 시각/날짜 라벨은 이제 끌 수 없다(우측 하단 고정). ground truth 에는 라벨이 없으므로
+        // 샘플 지점이 라벨 박스(대략 x∈[857,1037], y∈[1736,1843])를 피해야 비교가 성립한다 —
+        // 위 두 테스트의 지점(x=270·810, y≤1440)은 모두 그 밖이다.
         // --- GROUND TRUTH (canonical layer-instruction) ---
         let truthURL = try await exportGroundTruth(srcURL: srcURL)
         defer { try? FileManager.default.removeItem(at: truthURL) }
@@ -82,7 +79,7 @@ struct CompositorOrientationTests {
         // --- COMPOSITOR ---
         let service = AVFoundationCompositionService()
         var compURL: URL?
-        for await event in service.export(clips: [clip], rotations: [:], transforms: [:], labelSettings: labelsOff, clipLabels: [:]) {
+        for await event in service.export(clips: [clip], rotations: [:], transforms: [:], clipLabels: [:]) {
             switch event {
             case .completed(let u): compURL = u
             case .failed(let m): Issue.record("compositor export failed: \(m)"); return

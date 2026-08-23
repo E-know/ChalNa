@@ -33,9 +33,9 @@ struct SplashView: View {
 
                 VStack(spacing: 2) {
                     Text(verbatim: "찰나")
-                        .font(ChalNaTypography.keris(48))
+                        .font(ChalNaTypography.fixed(48))
                     Text(verbatim: "ChalNa")
-                        .font(ChalNaTypography.keris(24))
+                        .font(ChalNaTypography.fixed(24))
                 }
                 .foregroundStyle(ChalNaColor.textPrimary)
             }

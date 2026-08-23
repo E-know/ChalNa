@@ -37,8 +37,6 @@ public struct AppFeature {
         case export(ExportFeature)
         case filmDetail(FilmDetailFeature)
         case settings(SettingsFeature)
-        case labelSettings(LabelSettingsFeature)
-        case labelPosition(LabelPositionSettingsFeature)
         case support(SupportFeature)
         case clipAdjust(ClipAdjustFeature)
         case language(LanguageFeature)
@@ -109,19 +107,10 @@ public struct AppFeature {
 
             case let .path(.element(id: _, action: .settings(.delegate(delegateAction)))):
                 switch delegateAction {
-                case .labelSettingsRequested:
-                    state.path.append(.labelSettings(LabelSettingsFeature.State()))
                 case .languageRequested:
                     state.path.append(.language(LanguageFeature.State()))
                 case .supportRequested:
                     state.path.append(.support(SupportFeature.State()))
-                }
-                return .none
-
-            case let .path(.element(id: _, action: .labelSettings(.delegate(delegateAction)))):
-                switch delegateAction {
-                case let .positionRequested(kind):
-                    state.path.append(.labelPosition(LabelPositionSettingsFeature.State(kind: kind)))
                 }
                 return .none
 
