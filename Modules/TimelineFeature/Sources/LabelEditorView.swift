@@ -222,7 +222,7 @@ struct LabelEditorView: View {
             .focused($focused)
             .submitLabel(.done)
             .onSubmit { focused = false }
-            .boxSubtitleStyle(fontPx: fontPx)
+            .boxSubtitleStyle(fontPx: fontPx, hasBackground: label.hasBackground)
     }
 
     private var selectionFrame: some View {

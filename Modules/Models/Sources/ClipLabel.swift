@@ -18,9 +18,10 @@ public struct ClipLabel: Hashable, Sendable {
     public var position: CGPoint
     /// 배경 박스(흰 면 + 검정 테두리) 표시 여부. false 면 흰 글자만 그린다.
     ///
-    /// **패딩은 ON/OFF 에서 동일하다.** 배경을 지울 때 패딩까지 지우면 박스 크기가 달라져
-    /// `position`(박스 중심) 역산이 바뀌고, 토글할 때마다 라벨이 움직인다. 프리뷰
-    /// (`BoxSubtitleStyle`)와 합성(`makeCustomLabelLayers`)이 이 규칙을 공유한다.
+    /// **패딩은 ON/OFF 에서 동일하다.** 합성(`customLabelOrigin`)은 텍스트 크기만으로 중심을
+    /// 정해 패딩과 무관하지만, 에디터(`LabelEditorView`)는 좌상단 코너를 고정하고 패딩 포함
+    /// 크기로 중심을 역산한다(`LabelAnchorMath.center`) — 패딩이 바뀌면 코너는 그대로여도
+    /// 중심이 옮겨가므로, 토글마다 라벨이 움직이지 않도록 패딩을 동일하게 유지한다.
     public var hasBackground: Bool
 
     public init(
