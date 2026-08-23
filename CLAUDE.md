@@ -133,7 +133,7 @@ External(SPM): ComposableArchitecture(TCA) · FirebaseAnalytics
 - **`DevMediaSource`** (`BundledDevMediaSource` actor) — devMock 전용. 번들 `DevFixtures` mp4 를 고정 ID(`dev-jeju-sea` 등)로 제공.
 
 ## 비디오 합성 원칙
-- **출력은 1080×1920(9:16 세로) 고정, 클립은 aspectFill 센터 크롭**이 기본(`ClipTransform.fill`, scale 하한 1.0 — 여백/블러 배경 없음). 배치 기하 SSOT 는 `ClipFraming`(Models)이고 프리뷰·조정 화면·export 가 공유한다(WYSIWYG). 사용자 크롭 조정(줌/이동)은 `EditSession.transforms`.
+- **출력은 1080×1920(9:16 세로) 고정.** 기본 프레이밍은 aspectFill 센터 크롭(`ClipTransform.fill`)이지만 **사용자 확대·축소·이동에 제약이 없다** — scale < 1 로 줄이거나 캔버스 밖으로 밀어낼 수 있고, 드러나는 여백은 **검정**이다(합성은 `ChalNaVideoCompositor` 의 불투명 검정 베이스, 프리뷰는 `ChalNaColor.canvas`). `ClipTransform.minScale`/`maxScale`(0.1 / 10)은 UX 한계가 아니라 **산술 안전 가드**이며 적용 지점은 `ClipTransform.sanitized` 하나다 — 프리뷰(`ClipFraming.resolvedRect`)와 export(`AVFoundationCompositionService.transform`)가 둘 다 이걸 경유한다(예전엔 export 만 clamp 하는 비대칭이 있었다). 과거의 `ClipFraming.clampedOffset`/`maxOffsetFraction` 은 삭제됐다 — identity 로 남기지 않은 이유는 아무것도 안 하는 clamp 가 호출부 독자에게 제약이 아직 있다고 잘못 알리기 때문이다. 배치 기하 SSOT 는 여전히 `ClipFraming`(Models)이고 프리뷰·조정 화면·export 가 공유한다(WYSIWYG). 사용자 크롭 조정은 `EditSession.transforms`.
 - `AVMutableComposition` + `AVMutableVideoComposition`. 모든 트랙 조작은 **`CompositionService` actor 내부에서만**.
 - 익스포트는 `AVAssetExportSession` + `AsyncStream<ExportEvent>`로 진행률 폴링/래핑.
 - 출력 영상의 자동 시간/날짜 라벨은 `CATextLayer`로 합성하며 **시스템 기본 폰트 bold** 를 쓴다. 번들 커스텀 폰트는 없다(구 KERISKEDU 는 제거됨 — `UIAppFonts` 키 자체가 사라졌다).
@@ -142,6 +142,7 @@ External(SPM): ComposableArchitecture(TCA) · FirebaseAnalytics
   - 불투명도: `LabelLayout.opacity` = **0.75** 로 시각·날짜 공통.
   - 9구역 위치 체계(`LabelPosition`)·`LabelSettings`/`LabelKind` 모델·[설정 → 라벨] 화면 전체가 삭제됐다. 그래서 `CompositionServicing.export` 에는 `labelSettings` 파라미터가 없다 — 라벨을 끌 방법이 없으므로, 합성 픽셀 테스트는 샘플 지점이 라벨 박스를 피하는 것으로 격리한다. **그 회피는 주석의 손계산이 아니라 `LabelText.stampRect` 계산으로 검증한다**(`expectClearOfAutoLabelStamp`) — 예전엔 세 파일에 좌표를 손으로 적어둬서, 라벨 기하를 바꾸면 "컴포지터가 틀렸다"는 엉뚱한 메시지로 실패했다.
   - 설정 화면에 남은 항목은 **언어 · 문의·신고** 2개다.
+- **사용자 박스 자막(`ClipLabel`)의 스타일은 `hasBackground` 로 갈린다** — `true`(기본) = 흰 배경 + 검정 글씨 + 검정 테두리, `false` = 배경·테두리 없는 흰 글씨(장식 없음). **패딩은 ON/OFF 동일**하다: 배경을 지울 때 패딩까지 지우면 박스 크기가 달라져 `position`(박스 중심) 역산이 어긋나고 토글마다 라벨이 움직인다. 이 규칙을 프리뷰(`BoxSubtitleStyle`)와 합성(`makeCustomLabelLayers`)이 공유하고, `CustomLabelLayoutTests.customLabelLayers_ToggleKeepsTextFrame` 이 `textLayer.frame` 동일성으로 잠근다. 라벨 편집은 **`[문구 입력] → [위치·배경·크기]` 2스텝**이다(`LabelEditorView` 의 `Step.text`/`.style`) — 진입은 기존 라벨 재편집이어도 항상 문구 스텝부터이고, 문구를 비운 채 저장하는 것이 라벨을 지우는 유일한 경로다.
 - **라벨 오버레이 비트맵은 캔버스 전체가 아니라 라벨이 덮는 사각형만** 렌더한다(`stampBounds`). 1080×1920 RGBA 는 장당 ≈8MB 인데 `videoComposition.instructions` 가 클립별 오버레이를 **전부 선반영**해 export 내내 붙들고 있어서, 캔버스 전체로 만들면 30클립 vlog 가 ≈240MB 를 동시 유지한다. 코너 스탬프만 있으면 이 박스는 ≈200×121(≈97KB)다. 같은 "시각+날짜+자막" 조합은 `OverlayKey` 캐시로 그림 하나를 공유한다.
   - **서브렉트를 만들 땐 컨텍스트를 translate 하지 말 것.** `isGeometryFlipped` 의 뒤집기 기준이 그리기 컨텍스트를 따라가면서 결과가 완전히 빈 이미지가 된다(실측). 대신 레이어 `frame` 을 서브렉트 기준으로 평행이동한다.
 - 프리뷰와 합성이 **같은 폰트·같은 문자열**이어야 WYSIWYG 가 맞는다. 그래서 로케일 해석·시각/날짜 포매터·폰트·실측이 전부 **`LabelText`(Models)** 한 곳에 있고, 합성(`CompositionService`)과 프리뷰(`AutoLabelsOverlay`)가 같은 함수를 부른다. 예전엔 이 넷이 두 모듈에 바이트 단위로 복제돼 있었고 동기화 수단이 주석뿐이라, 한쪽만 고쳐도 컴파일·테스트가 조용히 통과했다. DesignSystem 은 최하단 모듈이라 CompositionService 가 볼 수 없으므로 **Models 가 유일하게 가능한 공유 지점**이다(`LabelLayout` 기하가 이미 거기 있는 것과 같은 이유).
@@ -243,7 +244,7 @@ DesignSystem/Sources/
 
 ### 다크 토큰 적용 예외 (근거 있는 리터럴)
 `design-lint.sh` 의 하드코딩 관련 규칙들(`Color(hex:)`·흰색/검정 하드코딩, 라벨 박스 파일 2건은 `.font(.system(` 도)이 파일 단위로 예외 처리하는 대상이다:
-- **라벨 박스 픽셀 일치** — `ClipLabelText.swift`·`LabelEditorView.swift`(TimelineFeature). 화면 라벨이 합성(`CATextLayer`)의 `UIFont` 측정값·색과 픽셀 단위로 일치해야 해서, Dynamic Type 에 따라 스케일되는 역할 토큰을 쓸 수 없다(위 "비디오 합성 원칙" 참고). 흰색·검정 두 규칙 모두 이 이유로 예외다.
+- **라벨 박스 픽셀 일치** — `ClipLabelText.swift`(TimelineFeature). 화면 라벨이 합성(`CATextLayer`)의 `UIFont` 측정값·색과 픽셀 단위로 일치해야 해서, Dynamic Type 에 따라 스케일되는 역할 토큰을 쓸 수 없다. **박스 자막의 색 리터럴은 이 파일의 `ClipLabelBoxPalette` 한곳에만 둔다** — `LabelEditorView.swift` 는 이 헬퍼를 호출하므로 색 리터럴이 없고, 그래서 규칙 5(검정) 예외에서 **제거됐다**(폰트 규칙 1 예외는 `.font(.system(size: fontPx, ...))` 때문에 유지된다). 매치 없는 예외는 그 파일에 새로 들어오는 진짜 위반을 영구히 가린다.
 - **미디어 위 마크의 컴포넌트 고유 상수** — `ChalNaTag.swift`(필 배경/보더 `Color.white.opacity(0.08~0.10)`). LIVE/VIDEO 배지처럼 미디어 위에도, 카드·진행률 바처럼 UI 크롬 위에도 동일하게 올라가는 범용 컴포넌트라 "미디어 위 마크"(`onMedia`) 역할로 좁혀 쓸 수 없고, `scrim`(0.6, 어둡게 덮는 용도)과도 강도·목적이 다르다. **주의**: 과거 이 예외를 "토큰으로 표현할 수 없는 합성 연산"이라 적었으나 틀렸다 — 같은 파일의 `scrim = Color.black.opacity(0.6)` 자체가 반투명 오버레이도 토큰으로 표현 가능하다는 반증이다. 실제 이유는 이 상수가 ChalNaTag 하나만 쓰는 단일 소비자 값이라 아직 전용 토큰으로 승격되지 않았을 뿐이라는 것.
 - **콘텐츠 그라디언트** — `ThumbnailPreset.swift`(12종 여행 톤 그라디언트) · `ColorHex.swift`(그 hex 헬퍼). 둘 다 Models, `Color(hex:)` 규칙의 예외. UI 크롬이 아니라 콘텐츠이므로 다크 팔레트 규율 밖이다.
 
@@ -267,7 +268,8 @@ DesignSystem/Sources/
 - 서비스/모델은 **Swift Testing**(`@Test`/`#expect`)으로 작성, `SampleData` 활용. actor/Client 는 프로토콜 + `testValue` 로 격리.
 - 모델·서비스를 직접(예: `TimelineModel`, `AVFoundationCompositionService().export(...)`) 테스트하거나, 필요 시 TCA `TestStore` 사용 가능.
 - UI 는 스냅샷 대신 `#Preview` 적극 활용 (각 뷰 상태별).
-- 2026-08-23 기준 8개 유닛 스위트 전부 그린(17 Pro, 총 160 케이스): `DesignSystem` 22 · `TimelineFeature` 21 · `SettingsFeature` 13 · `MediaPickerFeature` 2 · `ExportFeature` 7 · `CompositionService` 64 · `AppCore` 27 · `PhotosService` 4. 이후 태스크가 이 수치를 크게 벗어나면 회귀를 의심한다.
+- 2026-08-24 기준 8개 유닛 스위트 전부 그린(17 Pro, 총 166 케이스): `DesignSystem` 22 · `TimelineFeature` 25 · `SettingsFeature` 13 · `MediaPickerFeature` 2 · `ExportFeature` 7 · `CompositionService` 64 · `AppCore` 29 · `PhotosService` 4. 이후 태스크가 이 수치를 크게 벗어나면 회귀를 의심한다.
+  - 직전 기재값(160)에서 **+6**: `AppCore` +2(`ClipLabelTests`에 `hasBackground` 케이스 추가), `TimelineFeature` +4(신규 `ClipLabelBoxPaletteTests`). `CompositionService` 는 64 로 그대로인데 내부적으로는 상쇄가 있었다 — 크롭 러버밴드 제거로 `RubberBandTests` 7케이스, `ClipFraming` offset clamp 삭제로 그 전용 케이스(`testClampedOffset_*`/`testMaxOffsetFraction_*`) 7케이스가 없어졌고, 같은 타겟에 신규 라벨·렌더 테스트(`CompositorLabelTests`·`CompositorRenderTests`·`CustomLabelLayoutTests`·`PreviewExportContractTests`의 축소 계약 케이스)가 정확히 그만큼 늘어 순변동 0이다.
   - 라벨 설정 삭제로 SettingsFeature 는 **28→13** 으로 줄었다(삭제분: `LabelPositionFeatureTests` 2 · `LabelPositionTests` 7 · `LabelSettingsFeatureTests` 5 · `labelMenuTapEmitsDelegate` 1 = 15). 한때 이 문단이 "직전 기재값 28 은 스테일이고 실제로는 26→13" 이라고 적었는데 **28 이 맞았다** — 세어보면 13+15=28 이다.
   - PR #38 리뷰 후속으로 10 케이스가 늘었다: `AppCore/RemovedSettingsCleanupTests` 3 · `CompositionService/LabelTextTests` 5(대신 change-detector 였던 `fontFractionsAreCornerStampSized` 1 삭제) · `TimelineFeature/AutoLabelsOverlayFidelityTests` 3.
 
@@ -281,6 +283,8 @@ DesignSystem/Sources/
 - **`LocalizedStringKey` 에 카탈로그 항목이 없으면 한국어 키를 그대로 렌더링한다** — 개발 언어(한국어)로 테스트하면 안 보인다. `-AppleLanguages "(en)"` 로 한 번은 꼭 실행한다.
 - **`RenderPreview` 캔버스에서 점(pt) 측정을 하지 않는다**(~0.583 pt/px 스케일 차이 관측) — 시뮬레이터에 설치 후 스크린샷하고, 표시 좌표 → 원본 좌표 환산을 거쳐서 계산한다.
 - **`.aspectRatio(.fit)` 는 높이 제안이 무한(예: `ScrollView` 내부)이면 무한 높이로부터 너비를 유도해 오동작한다** — 높이가 유한한 컨테이너에선 상한으로만 작동해 무해하다. `ChalNaCanvas` 는 내부에서 이미 fit 하므로 절대 바깥에서 다시 `aspectRatio` 로 감싸지 않는다.
+- **devMock(`BundledDevMediaSource`) fixture 는 시각 검증 채널로 쓰지 않는다** — 실제 미디어(사진 라이브러리)와 차이가 커서, 여기서 관찰한 결과로 시각·기하 결론을 내리면 안 된다(사용자 지시). 실측: `ChalNaUITests/CropAdjustUITests` 의 스크린샷 체크포인트가 핀치·드래그 제스처 전후로 **두 번의 독립 실행 모두 바이트 단위로 완전히 동일**했다 — XCUITest 의 합성 제스처가 실제로 화면에 관측 가능한 변화를 만들지 못했다는 뜻이다. 그래서 이 UI 테스트는 도달성(reachability)·무크래시 스모크 테스트로만 취급한다. 실제 크롭·라벨 기하 가드는 유닛 테스트가 담당한다: `CompositionServiceTests/ClipFramingTests`(offset 이 clamp 없이 반영되는지, 축소가 전경을 캔버스보다 작게 만드는지), `CompositionServiceTests/CompositorRenderTests.testCompositor_ScaleBelowFill_LeavesBlackMargin`(실제 export 프레임을 픽셀 샘플링해 축소 여백이 검정인지 확인), `CompositionServiceTests/CustomLabelLayoutTests` + `CompositorLabelTests`(라벨 배경 ON/OFF 분기). 이 때문에 유닛 테스트 실행 명령에는 `-skip-testing:ChalNaUITests` 가 필요하다 — `ChalNa-Workspace` 스킴의 test 액션은 이를 지정하지 않으면 이 devMock UI 테스트까지 함께 돌린다.
+- **이 저장소의 interactive shell 에서 `grep` 은 셸 함수로 재정의되어 내부적으로 `ugrep -G`(기본 정규식)를 실행한다** — `-E` 확장 정규식 패턴을 그대로 쓰면 파싱이 조용히 실패할 수 있는데, `&&`/`||` 체인 뒤에 있으면 아무것도 검증하지 않았는데 성공 메시지만 찍히는 조용한 거짓 통과가 된다. 검증용 grep 은 `command grep` 으로 이 재정의를 우회해서 쓴다.
 
 ## 커밋 / PR
 - 단계가 끝나면 커밋, 메시지 한국어 OK. Claude 가 커밋할 땐 변경 파일 요약을 한국어로.
