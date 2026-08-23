@@ -89,8 +89,7 @@ public struct DesignSystemShowcaseView: View {
             Text(verbatim: "body — Live Photo와 짧은 영상을 이어 붙여요").font(ChalNaTypography.body)
             Text(verbatim: "label — 8 클립 · Live 5").font(ChalNaTypography.label)
             Text(verbatim: "caption — 클립을 탭해 편집").font(ChalNaTypography.caption)
-            Text(verbatim: "mono — 00:12 / 01:40").font(ChalNaTypography.mono())
-            Text(verbatim: "keris — 찰나").font(ChalNaTypography.keris(28))
+            Text(verbatim: "fixed(28) — 찰나").font(ChalNaTypography.fixed(28))
         }
         .foregroundColor(ChalNaColor.textPrimary)
         .frame(maxWidth: .infinity, alignment: .leading)

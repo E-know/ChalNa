@@ -16,12 +16,6 @@ struct ChalNaTypographyTests {
         #expect(ChalNaTypography.caption  == Font.system(.caption,  design: .default, weight: .regular))
     }
 
-    @Test func testMonoUsesMonospacedDesign() {
-        #expect(ChalNaTypography.mono() == Font.system(.footnote, design: .monospaced, weight: .regular))
-        #expect(ChalNaTypography.mono(.body, weight: .semibold)
-                == Font.system(.body, design: .monospaced, weight: .semibold))
-    }
-
     /// 역할이 대응하는 텍스트 스타일의 기본 크기가 스펙의 pt 값과 일치해야 한다.
     /// (다르면 스케일 근거가 무너진 것 — 스펙 §4.3 을 다시 봐야 한다)
     @Test func testDefaultPointSizesMatchSpec() {
@@ -44,8 +38,11 @@ struct ChalNaTypographyTests {
         #expect(caption.pointSize >= 12, "8pt·11pt 폰트 금지 규칙의 하한")
     }
 
-    @Test func testKerisFontResolvesToConcreteFont() {
-        let font = ChalNaTypography.kerisUIFont(48)
-        #expect(font.pointSize == 48)
+    /// 앱은 시스템 기본 폰트 하나만 쓴다 — `fixed` 는 크기만 pt 로 고정하고 폰트는 시스템이어야 한다.
+    /// (구 UIKit 짝 `fixedUIFont` 는 삭제됐다. 영상 라벨의 폰트·실측은 `Models.LabelText` 가
+    /// 단독으로 갖고, 두 렌더 경로의 일치는 `LabelTextFontParityTests` 가 검사한다.)
+    @Test func testFixedUsesSystemFontAtExactPointSize() {
+        #expect(ChalNaTypography.fixed(48) == Font.system(size: 48, weight: .bold, design: .default))
+        #expect(ChalNaTypography.fixed(24) == Font.system(size: 24, weight: .bold, design: .default))
     }
 }

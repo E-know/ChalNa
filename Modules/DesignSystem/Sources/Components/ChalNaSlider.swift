@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 다크용 슬라이더. LabelSettings 투명도 · LabelEditor 라벨 크기에 쓴다.
+/// 다크용 슬라이더. LabelEditor 라벨 크기 조절에 쓴다.
 ///
 /// 시스템 `Slider` 를 감싸고 tint 만 지정한다 — 트랙·노브를 직접 그리면
 /// 접근성(조절 제스처·VoiceOver adjustable)을 다시 구현해야 하는데

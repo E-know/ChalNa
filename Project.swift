@@ -91,7 +91,9 @@ let project = Project(
             dependencies: [
                 .target(name: "AppCore"),
                 .target(name: "AnalyticsService"),
-                .target(name: "Models"),
+                // Models 의존 없음 — LabelSettings/LabelPosition/LabelKind 가 유일한 소비자였고
+                // 라벨 설정 화면과 함께 삭제됐다. 죽은 엣지를 남기면 tuist graph 가 계속 그리고
+                // Models 가 다시 새어 들어와도 아무도 모른다.
                 .target(name: "DesignSystem"),
                 .external(name: "ComposableArchitecture"),
             ]
@@ -124,9 +126,6 @@ let project = Project(
                     "NSPhotoLibraryUsageDescription": "Live Photo 내부의 영상을 불러와 Vlog로 이어 붙이기 위해 사진 보관함 접근이 필요해요.",
                     "NSPhotoLibraryAddUsageDescription": "완성한 Vlog를 사진 보관함에 저장하려면 권한이 필요해요.",
                     "UIUserInterfaceStyle": "Dark",
-                    "UIAppFonts": [
-                        "KERISKEDU_Line.otf",
-                    ],
                     "CFBundleDevelopmentRegion": "ko",
                     "CFBundleLocalizations": ["ko", "en", "ja"],
                 ]
@@ -217,7 +216,6 @@ let project = Project(
             for: "SettingsFeature",
             dependencies: [
                 .target(name: "AppCore"),
-                .target(name: "Models"),
                 .external(name: "ComposableArchitecture"),
             ]
         ),

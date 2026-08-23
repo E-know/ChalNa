@@ -25,14 +25,6 @@ public struct ExportFeature {
         public var didAddToLibrary: Bool
         public var isPlayerPresented: Bool
 
-        // 라벨 설정(설정 화면과 동일 키 공유). 익스포트 시 LabelSettings로 조립.
-        @Shared(.appStorage("labelTimeEnabled")) public var timeEnabled = true
-        @Shared(.appStorage("labelTimePosition")) public var timePosition = LabelPosition.center
-        @Shared(.appStorage("labelDateEnabled")) public var dateEnabled = true
-        @Shared(.appStorage("labelDatePosition")) public var datePosition = LabelPosition.bottomCenter
-        @Shared(.appStorage("labelTimeOpacity")) public var timeOpacity = 0.5
-        @Shared(.appStorage("labelDateOpacity")) public var dateOpacity = 1.0
-
         public init(
             phase: ExportPhase = .idle,
             progress: Double = 0,
@@ -130,16 +122,8 @@ public struct ExportFeature {
                 state.exportedURL = nil
                 state.didAddToLibrary = false
                 analyticsTracker.log(.exportStarted(clipCount: clips.count))
-                let labelSettings = LabelSettings(
-                    timeEnabled: state.timeEnabled,
-                    timePosition: state.timePosition,
-                    timeOpacity: state.timeOpacity,
-                    dateEnabled: state.dateEnabled,
-                    datePosition: state.datePosition,
-                    dateOpacity: state.dateOpacity
-                )
                 return .run { send in
-                    for await event in compositionClient.export(clips, rotations, transforms, labelSettings, clipLabels) {
+                    for await event in compositionClient.export(clips, rotations, transforms, clipLabels) {
                         switch event {
                         case let .progress(p):
                             await send(.exportProgress(p))

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 설정류 리스트 행. Settings · LabelSettings · Language 가 각자 손으로 쓰던
+/// 설정류 리스트 행. Settings · Language 가 각자 손으로 쓰던
 /// 행 빌더 4개를 대체한다. 최소 높이·터치 영역·비활성 톤이 여기서만 결정된다.
 ///
 /// **고정 높이가 아니라 `minHeight`** 다 — Dynamic Type 확대 시 행이 밀려 커진다.
@@ -58,25 +58,6 @@ public struct ChalNaListRow: View {
               kind: .toggle(isOn: isOn, onChange: onChange))
     }
 
-    // MARK: - verbatim 변형
-    //
-    // `LabelKind.title`/`.subtitle` 처럼 `String(localized:)` 로 **이미 해석된 String** 을 받는 경우용.
-    // Task 15 의 라벨 토글 행이 유일한 사용처다.
-    // 이를 LocalizedStringKey 로 넘기면 번역 테이블에서 다시 찾는 이중 조회가 되어
-    // 조용히 잘못된 동작이 된다.
-
-    public static func toggleVerbatim(
-        title: String,
-        subtitle: String? = nil,
-        isOn: Bool,
-        onChange: @escaping (Bool) -> Void
-    ) -> ChalNaListRow {
-        .init(titleText: Text(verbatim: title),
-              subtitleText: subtitle.map { Text(verbatim: $0) },
-              enabled: true,
-              kind: .toggle(isOn: isOn, onChange: onChange))
-    }
-
     public static func slider(
         title: LocalizedStringKey,
         value: Double,
@@ -92,6 +73,10 @@ public struct ChalNaListRow: View {
     }
 
     /// 언어 선택처럼 목록에서 하나를 고르는 행. 제목은 이미 해석된 문자열이라 verbatim.
+    ///
+    /// **`String(localized:)` 결과를 `LocalizedStringKey` 팩토리에 넘기지 말 것** — 번역 테이블에서
+    /// 한 번 더 찾는 이중 조회가 되어 조용히 틀린 문자열이 나온다. 그래서 이 행만 verbatim 이다.
+    /// (구 `toggleVerbatim` 도 같은 이유로 있었지만 유일 사용처인 라벨 설정 화면과 함께 삭제됐다.)
     public static func check(
         verbatimTitle: String,
         isChecked: Bool,
@@ -175,7 +160,8 @@ public struct ChalNaListRow: View {
                 .frame(minWidth: 120)
                 if let trailingText {
                     Text(verbatim: trailingText)
-                        .font(ChalNaTypography.mono())
+                        .font(ChalNaTypography.label)
+                        .monospacedDigit()
                         .foregroundColor(enabled ? ChalNaColor.textSecondary : ChalNaColor.textTertiary)
                         .frame(minWidth: 44, alignment: .trailing)
                 }

@@ -20,7 +20,7 @@ struct ExportFeatureQuotaTests {
                 didReserve.setValue(true)
                 return .allowed
             }
-            $0.compositionClient.export = { _, _, _, _, _ in
+            $0.compositionClient.export = { _, _, _, _ in
                 AsyncStream { continuation in
                     continuation.yield(.completed(output))
                     continuation.finish()
@@ -44,7 +44,7 @@ struct ExportFeatureQuotaTests {
             ExportFeature()
         } withDependencies: {
             $0.exportQuotaClient.reserveExport = { .blocked(.dailyLimit) }
-            $0.compositionClient.export = { _, _, _, _, _ in
+            $0.compositionClient.export = { _, _, _, _ in
                 didStartComposition.setValue(true)
                 return AsyncStream { $0.finish() }
             }

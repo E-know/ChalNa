@@ -647,23 +647,6 @@
         }
       }
     },
-    "날짜 라벨" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Date label"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "日付ラベル"
-          }
-        }
-      }
-    },
     "내보내기 세션을 준비하지 못했어요." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1650,19 +1633,19 @@
         }
       }
     },
-    "시각 라벨" : {
+    "시각 표시" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Time label"
+            "value" : "Show time"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "時刻ラベル"
+            "value" : "時刻を表示"
           }
         }
       }
@@ -2037,57 +2020,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "完成した動画を再生"
-          }
-        }
-      }
-    },
-    "우측 상단" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Top right"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "右上"
-          }
-        }
-      }
-    },
-    "우측 중앙" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Middle right"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "右中央"
-          }
-        }
-      }
-    },
-    "우측 하단" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bottom right"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "右下"
           }
         }
       }
@@ -2568,23 +2500,6 @@
         }
       }
     },
-    "정중앙" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Center"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "中央"
-          }
-        }
-      }
-    },
     "제안" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2636,57 +2551,6 @@
         }
       }
     },
-    "좌측 상단" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Top left"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "左上"
-          }
-        }
-      }
-    },
-    "좌측 중앙" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Middle left"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "左中央"
-          }
-        }
-      }
-    },
-    "좌측 하단" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bottom left"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "左下"
-          }
-        }
-      }
-    },
     "중문 노을" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2700,40 +2564,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "チュンムン夕焼け"
-          }
-        }
-      }
-    },
-    "중앙 상단" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Top center"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "上中央"
-          }
-        }
-      }
-    },
-    "중앙 하단" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bottom center"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "下中央"
           }
         }
       }

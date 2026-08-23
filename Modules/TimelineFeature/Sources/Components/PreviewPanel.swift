@@ -109,13 +109,17 @@ struct PreviewPanel: View {
     private var scrubBar: some View {
         HStack(spacing: 8) {
             Text(verbatim: store.isPlaying ? store.playheadLabel : "00:00")
-                .font(ChalNaTypography.mono(.caption, weight: .semibold))
+                .font(ChalNaTypography.caption)
+                .fontWeight(.semibold)
+                .monospacedDigit()
                 .foregroundColor(ChalNaColor.textPrimary)
 
             ChalNaProgressBar(progress: scrubProgress, height: 3)
 
             Text(verbatim: store.totalClockLabel)
-                .font(ChalNaTypography.mono(.caption, weight: .semibold))
+                .font(ChalNaTypography.caption)
+                .fontWeight(.semibold)
+                .monospacedDigit()
                 .foregroundColor(ChalNaColor.textSecondary)
         }
         .frame(height: 20)

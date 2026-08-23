@@ -182,7 +182,10 @@ public struct ExportView: View {
                         .foregroundColor(ChalNaColor.textPrimary)
                         .lineLimit(1)
                     Text(verbatim: metaLine)
-                        .font(ChalNaTypography.mono())
+                        .font(ChalNaTypography.label)
+                        // "%02d:%02d" 를 품고 있고 편집 패스마다 값이 바뀐다 — 다른 숫자 표시
+                        // 4곳과 같은 이유로 tabular figure 를 쓴다.
+                        .monospacedDigit()
                         .foregroundColor(ChalNaColor.textSecondary)
                     Text(statusLine)
                         .font(ChalNaTypography.label)
@@ -224,7 +227,9 @@ public struct ExportView: View {
                     VStack(spacing: 6) {
                         HStack {
                             Text(verbatim: "\(Int(store.progress * 100))%")
-                                .font(ChalNaTypography.mono(.footnote, weight: .semibold))
+                                .font(ChalNaTypography.label)
+                                .fontWeight(.semibold)
+                                .monospacedDigit()
                                 .foregroundColor(ChalNaColor.textPrimary)
                             Spacer()
                         }

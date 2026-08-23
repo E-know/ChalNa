@@ -13,17 +13,24 @@ final class ChalNaCompositionInstruction: NSObject, AVVideoCompositionInstructio
 
     let trackID: CMPersistentTrackID    // 어느 트랙의 프레임을 읽을지.
     let foreground: CGAffineTransform   // natural→render, y-down (Self.transform 결과)
-    /// 이 클립 구간에 전경 위로 올릴, 이미 renderSize 로 미리 렌더한 정적 라벨 오버레이(top-left origin).
-    /// nil 이면 라벨 없음 → 합성 스킵.
+    /// 이 클립 구간에 전경 위로 올릴 정적 라벨 오버레이(정상 방향 = top-left, visual-top=row0).
+    ///
+    /// **캔버스 전체가 아니라 라벨이 실제로 덮는 사각형만** 담는다 — 1080×1920 RGBA 는 장당 ≈8MB 라
+    /// 클립 수만큼 곱하면 export 내내 그대로 살아 있다(instructions 가 선반영되므로 스트리밍이 아니다).
+    /// 그림이 놓일 위치는 `overlayOrigin` 이 알려준다.
     let overlayImage: CGImage?
+    /// `overlayImage` 좌상단이 렌더 캔버스에서 놓일 좌표(top-left 원점).
+    /// 캔버스 전체 오버레이면 `.zero` 라 기존 동작과 동일하다.
+    let overlayOrigin: CGPoint
 
     init(timeRange: CMTimeRange, trackID: CMPersistentTrackID, foreground: CGAffineTransform,
-         overlayImage: CGImage? = nil) {
+         overlayImage: CGImage? = nil, overlayOrigin: CGPoint = .zero) {
         self.timeRange = timeRange
         self.trackID = trackID
         self.requiredSourceTrackIDs = [NSNumber(value: trackID)]
         self.foreground = foreground
         self.overlayImage = overlayImage
+        self.overlayOrigin = overlayOrigin
         super.init()
     }
 }
@@ -77,14 +84,19 @@ final class ChalNaVideoCompositor: NSObject, AVVideoCompositing, @unchecked Send
         let foreground = placeYDown(src, instruction.foreground).cropped(to: renderRect)
         var output = foreground.composited(over: base).cropped(to: renderRect)
 
-        // ② 라벨 오버레이: 이미 renderSize 로 미리 렌더한 "정상 방향(top-left, visual-top=row0)" 정적 이미지.
+        // ② 라벨 오버레이: 미리 렌더한 "정상 방향(top-left, visual-top=row0)" 정적 이미지.
         // 전경은 `placeYDown` 의 두 flip 으로 "소스 visual-top → 출력 visual-top" 이 되도록 맞춰져 있다.
         // 반면 `CIImage(cgImage:)` 는 CGImage 의 visual-top 을 y-up CIImage 의 high-y 에 두므로, 그대로
-        // 합성하면 전경과 상하가 반대로 놓인다(라벨이 아래로 감). renderH 기준 한 번 flip 해 전경과 정렬한다.
-        // (`CompositorLabelTests` 의 TOP 라벨 위치 가드로 확정.)
+        // 합성하면 전경과 상하가 반대로 놓인다(라벨이 아래로 감). 자기 높이 기준으로 한 번 flip 한 뒤
+        // `overlayOrigin`(top-left) 이 가리키는 자리로 옮겨 전경과 정렬한다.
+        // 캔버스 전체 오버레이(origin .zero, h = render.height)면 예전의 단일 flip 과 정확히 같은 식이다.
+        // (`CompositorLabelTests` 의 라벨 위치 가드로 확정.)
         if let overlay = instruction.overlayImage {
-            let flipOverlay = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: render.height)
-            let overlayCI = CIImage(cgImage: overlay).transformed(by: flipOverlay)
+            let h = CGFloat(overlay.height)
+            let origin = instruction.overlayOrigin
+            let flipOverlay = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: h)
+            let place = CGAffineTransform(translationX: origin.x, y: render.height - origin.y - h)
+            let overlayCI = CIImage(cgImage: overlay).transformed(by: flipOverlay.concatenating(place))
             output = overlayCI.composited(over: output).cropped(to: renderRect)
         }
 

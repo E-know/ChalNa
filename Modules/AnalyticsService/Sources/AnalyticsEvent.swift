@@ -26,10 +26,8 @@ public enum AnalyticsEvent: Sendable, Equatable {
     // 라이브러리
     case filmDeleted(filmID: UUID)
 
-    // 설정 / 라벨
+    // 설정
     case settingsOpened
-    case labelToggled(kind: String, on: Bool)
-    case labelPositionChanged(kind: String, position: Int)
 
     // 문의 / 신고
     case feedbackSubmitted(category: String)
@@ -52,8 +50,6 @@ public enum AnalyticsEvent: Sendable, Equatable {
         case .vlogSaveFailed:      return "vlog_save_failed"
         case .filmDeleted:         return "film_deleted"
         case .settingsOpened:        return "settings_opened"
-        case .labelToggled:          return "label_toggled"
-        case .labelPositionChanged:  return "label_position_changed"
         case .feedbackSubmitted:     return "feedback_submitted"
         case .feedbackSendFailed:    return "feedback_send_failed"
         }
@@ -81,10 +77,6 @@ public enum AnalyticsEvent: Sendable, Equatable {
             return ["film_id": .string(filmID.uuidString)]
         case let .filmDeleted(filmID):
             return ["film_id": .string(filmID.uuidString)]
-        case let .labelToggled(kind, on):
-            return ["kind": .string(kind), "on": .bool(on)]
-        case let .labelPositionChanged(kind, position):
-            return ["kind": .string(kind), "position": .int(position)]
         case let .feedbackSubmitted(category):
             return ["category": .string(category)]
         case let .feedbackSendFailed(reason):
