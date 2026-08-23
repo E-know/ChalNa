@@ -341,7 +341,9 @@ public actor AVFoundationCompositionService: CompositionServicing {
             makeOverlayTextLayer(text: timeText, fontSize: timeFontSize) { _ in origins.time },
         ]
         if clipLabel.isVisible {
-            // 센터 크롭에서는 보이는 클립 영역 = 캔버스 전체 → 자막 앵커도 캔버스 기준.
+            // 자막 앵커는 크롭 상태와 무관하게 항상 캔버스 전체 기준이다 — placedRect 를
+            // 늘 origin .zero, size renderSize(캔버스 전체)로 넘기기 때문이다(자유 크롭으로
+            // 전경이 캔버스보다 작아져도 앵커는 그대로 캔버스 코너에 고정된다).
             layers += makeCustomLabelLayers(
                 label: clipLabel, placedRect: CGRect(origin: .zero, size: renderSize), renderSize: renderSize
             )

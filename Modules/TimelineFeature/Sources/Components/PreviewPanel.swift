@@ -73,7 +73,8 @@ struct PreviewPanel: View {
     // MARK: - Overlays
 
     /// 자동 시간/날짜 라벨을 출력과 동일하게 표시(읽기 전용).
-    /// 센터 크롭에서는 보이는 클립 영역 = 캔버스 전체 → 캔버스 박스를 renderSize 로 간주.
+    /// 자동 라벨은 크롭 상태와 무관하게 항상 캔버스 전체 기준으로 앉는다(합성의 `placedRect` 가
+    /// 늘 캔버스 전체인 것과 같은 이유) — 그래서 캔버스 박스를 그대로 renderSize 로 넘긴다.
     @ViewBuilder
     private func autoLabelsOverlay(box: CGSize) -> some View {
         if let clip = store.currentClip {

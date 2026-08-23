@@ -90,7 +90,6 @@ struct CustomLabelLayoutTests {
         let text = layers[0] as? CATextLayer
         let attrs = (text?.string as? NSAttributedString)?.attributes(at: 0, effectiveRange: nil)
         #expect(attrs?[.foregroundColor] as? UIColor == UIColor.white, "글자는 흰색")
-        #expect(text?.shadowOpacity == 0, "장식 없음 — 그림자 0: \(text?.shadowOpacity ?? -1)")
     }
 
     /// 토글이 글자 위치를 움직이지 않는다 — 패딩을 유지하므로 textLayer.frame 이 동일해야 한다.

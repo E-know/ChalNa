@@ -74,7 +74,8 @@ struct LabelEditorView: View {
         // 슬라이더는 실제 높이만 차지한다. 기존 84pt 고정 예약(Color.clear)은
         // 키보드·세이프에어리어 조합에 따라 캔버스를 과하게 줄였다.
         .safeAreaInset(edge: .bottom) { bottomControls }
-        // 라벨 외 영역 탭 → 키보드 내림 / ADJUST 종료. 라벨·슬라이더는 각자 제스처가 우선.
+        // 라벨 외 영역 탭 → `.text` 에서는 키보드만 내린다. `.style` 에서는 할 일이 없다(backgroundTapped 참고).
+        // 라벨·슬라이더는 각자 제스처가 우선.
         .contentShape(Rectangle())
         .onTapGesture { backgroundTapped() }
         .onAppear { keyboard.start() }
@@ -241,11 +242,11 @@ struct LabelEditorView: View {
             .boxSubtitleStyle(fontPx: fontPx, hasBackground: label.hasBackground)
     }
 
+    // `labelContent` 가 `.style` 케이스에서만 이 오버레이를 붙이므로 step 분기가 필요 없다.
     private var selectionFrame: some View {
         Rectangle()
             .strokeBorder(ChalNaColor.accent, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
             .padding(-3)
-            .opacity(step == .style ? 1 : 0)
     }
 
     @ViewBuilder

@@ -13,10 +13,18 @@ import XCTest
 ///   `CompositionServiceTests/CompositorRenderTests`(실제 export 프레임을 픽셀 샘플링해
 ///   축소 여백이 검정인지 확인).
 /// - **실측 기록**: 이 파일의 이전 버전으로 아래 제스처 시퀀스를 2회 독립 실행한 결과,
-///   핀치 아웃 이후의 체크포인트(`40-after-pinch-out`, `50-after-drag-left`)가
-///   그 앞 체크포인트(`30-after-drag-right`)와 스크린샷이 바이트 단위로 완전히 동일했다
-///   (2회 모두 재현). 즉 이 스크린샷 경로로는 제스처의 결과(여백 반영 여부 등)를 관측할 수
-///   없다 — 다음 사람이 같은 조사를 반복하지 않도록 남겨둔다.
+///   핀치(`withScale: 0.5`, 손가락을 모으는 축소 방향) 이후의 체크포인트(`40-after-pinch-in`,
+///   `50-after-drag-left`)가 그 앞 체크포인트(`30-after-drag-right`)와 스크린샷이 바이트
+///   단위로 완전히 동일했다(2회 모두 재현). **원인은 확정되지 않았다.** 부분 설명은 있다 —
+///   dev fixture 4개(`Modules/PhotosService/Resources/DevFixtures/*.mp4`)는 640×360 가로
+///   (16:9)라 1080×1920 캔버스에서 `fillScale = max(1080/640, 1920/360) = 5.3333`
+///   (3413.33×1920)이 되고, 옛 `maxOffsetFraction`(scale 1 기준)이 (1.08025, 0)이라
+///   세로 방향 여유가 정확히 0 이었다(세로 무변화는 이걸로 설명됨). 또한 옛 `ClipAdjustView`
+///   는 핀치를 `min(max(scale, 1.0), 4.0)` 로 클램프해 `app.pinch(withScale: 0.5)` 가
+///   scale 1.0 으로 커밋됐다(핀치 체크포인트 무변화는 이걸로 설명됨). 하지만 **두 번째(가로)
+///   드래그**(`50-after-drag-left`) 이후에도 동일했던 것은 이 둘로 설명되지 않는다(가로
+///   방향은 여유가 있었다) — 그래서 "XCUITest 합성 제스처가 뷰에 관측 가능한 변화를 못
+///   만든다"는 결론은 근거가 없다. 다음 사람이 같은 조사를 반복하지 않도록 남겨둔다.
 ///
 /// 각 체크포인트에서 `Thread.sleep` 으로 화면을 유지해, 호스트에서 `simctl io screenshot`
 /// 폴링으로 프레임을 수집할 수 있게 한다. XCTAttachment 스냅샷도 함께 남긴다.
@@ -69,9 +77,9 @@ final class CropAdjustUITests: XCTestCase {
                            withVelocity: 300, thenHoldForDuration: 1.0)
         checkpoint(app, name: "30-after-drag-right", holdSeconds: 3)
 
-        // 2) 핀치 아웃(축소) 제스처를 실행한다.
+        // 2) 핀치 인(손가락을 모으는 축소) 제스처를 실행한다.
         app.pinch(withScale: 0.5, velocity: -1.0)
-        checkpoint(app, name: "40-after-pinch-out", holdSeconds: 3)
+        checkpoint(app, name: "40-after-pinch-in", holdSeconds: 3)
 
         // 3) 좌측으로 드래그한다.
         let left = app.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.45))

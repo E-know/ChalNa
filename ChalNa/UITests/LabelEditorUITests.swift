@@ -1,6 +1,8 @@
 import XCTest
 
-/// 라벨 에디터 시각 검증 + 키보드 도달성 회귀 테스트 (devMock 픽스처 사용, 사진 권한 불필요).
+/// 라벨 에디터 2스텝 플로우 도달성 + 키보드 도달성 회귀 테스트 (devMock 픽스처 사용, 사진 권한 불필요).
+/// devMock 은 시각 검증 채널이 아니다 — 여기 assertion 은 존재/탭 가능 여부(exists/isHittable)뿐이고
+/// 화면 내용(색·기하)은 보지 않는다.
 ///
 /// Task 16 이 미해결로 남긴 질문 — 키보드가 올라온 상태에서 주 컨트롤(크기 슬라이더·저장/닫기)이
 /// 여전히 화면 안에 있고 탭 가능한가 — 을 XCUITest 의 합성 키보드 입력(`typeText`)으로 검증한다.
@@ -14,7 +16,7 @@ import XCTest
 /// `xcrun simctl get_app_container`로 호스트에서 읽기)으로 다시 확인한 결과,
 /// `keyboardWillChangeFrameNotification` 은 **실제로 발생**하며 `keyboard.height` 도 실측
 /// 260pt(iPhone SE)·335pt(iPhone 17/17 Pro)의 실질적인 값에 도달한다 — 즉 슬라이더를 키보드 위로
-/// 띄우는 코드 경로(`phase == .editing && keyboard.height > 0`)가 **실제로 실행된다**. `sizeControls`
+/// 띄우는 코드 경로(`step == .text && keyboard.height > 0`)가 **실제로 실행된다**. `bottomControls`
 /// 자체에 붙인 별도 프로브로도 이 안전영역이 260pt만큼 커지는 것을 확인했다. (다만 온스크린 소프트
 /// 키보드 그래픽 자체는 스크린샷에 나타나지 않는다 — 여전한 시뮬레이터 특성이지만 레이아웃 반응과는
 /// 무관하다.) 단, `XCUIElement.frame`으로 슬라이더의 정확한 상승폭(pt)을 재는 것은 `.safeAreaInset`
