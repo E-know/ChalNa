@@ -1633,6 +1633,23 @@
         }
       }
     },
+    "시각 표시" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show time"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "時刻を表示"
+          }
+        }
+      }
+    },
     "시스템 설정" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2037,6 +2054,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "元ファイルの確認が必要"
+          }
+        }
+      }
+    },
+    "위치" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Position"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "位置"
           }
         }
       }

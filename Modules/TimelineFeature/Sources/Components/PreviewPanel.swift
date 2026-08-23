@@ -110,6 +110,7 @@ struct PreviewPanel: View {
         HStack(spacing: 8) {
             Text(verbatim: store.isPlaying ? store.playheadLabel : "00:00")
                 .font(ChalNaTypography.caption)
+                .fontWeight(.semibold)
                 .monospacedDigit()
                 .foregroundColor(ChalNaColor.textPrimary)
 
@@ -117,6 +118,7 @@ struct PreviewPanel: View {
 
             Text(verbatim: store.totalClockLabel)
                 .font(ChalNaTypography.caption)
+                .fontWeight(.semibold)
                 .monospacedDigit()
                 .foregroundColor(ChalNaColor.textSecondary)
         }
