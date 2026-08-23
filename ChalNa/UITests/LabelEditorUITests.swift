@@ -27,8 +27,13 @@ final class LabelEditorUITests: XCTestCase {
         continueAfterFailure = false
     }
 
-    /// 라벨 에디터 진입(EDIT, 키보드 ↑) → 슬라이더/저장/닫기 도달성 확인 → 제출(IDLE, 키보드 ↓).
-    func testLabelEditor_KeyboardUp_ControlsRemainReachable() throws {
+    /// 스텝 1(문구) 진입 → `[다음]` → 스텝 2(스타일) 컨트롤 도달성 → `[‹]` 로 복귀.
+    ///
+    /// 클래스 doc 의 계측 정정 기록 참고: 키보드 알림은 실제로 발생하고 `keyboard.height` 도
+    /// 실측값(SE 260pt / 17 계열 335pt)에 도달한다. 다만 소프트 키보드 그래픽은 스크린샷에
+    /// 나타나지 않고, `XCUIElement.frame` 으로 정확한 상승폭(pt)을 재는 것은 불안정하다 —
+    /// 그래서 수치 assert 대신 도달성(exists/isHittable) assert 를 쓴다.
+    func testLabelEditor_TwoStepFlow_ControlsReachable() throws {
         let app = XCUIApplication()
         app.launchEnvironment["CHALNA_APP_MODE"] = "devMock"
         app.launchArguments += ["-AppleLanguages", "(ko)"]
@@ -36,42 +41,52 @@ final class LabelEditorUITests: XCTestCase {
 
         navigateToLabelEditor(app)
 
-        // 클립에 저장된 라벨이 없으면 reflow() 가 즉시 .editing 으로 진입 → 키보드가 이미 떠 있어야 한다.
+        // ── 스텝 1: 문구. 진입은 항상 문구 스텝이며 키보드가 올라와 있어야 한다.
         let textField = app.textFields.firstMatch
         XCTAssertTrue(textField.waitForExistence(timeout: 10), "라벨 인라인 TextField")
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5), "키보드가 올라오지 않음")
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5), "스텝 1 에서 키보드가 올라오지 않음")
 
-        // ★ CI-visible 정정 기록: 클래스 doc 참고 — keyboardWillChangeFrameNotification 은 실제로
-        // 발생하고 keyboard.height 는 실측값(SE 260pt·17 계열 335pt)에 도달한다(별도 파일 기반
-        // 계측으로 확인, 리포트 fix round 1 절 참고). 이 활동 로그가 그 사실을 CI 출력에 남긴다.
         XCTContext.runActivity(
             named: "키보드 알림 실측 정정: keyboardWillChangeFrameNotification 발생 확인됨(SE 260pt/17계열 335pt) — Task 16 잔여 질문 해소, 최초 'not captured' 결론은 계측 채널 오류였음"
         ) { _ in }
 
-        // 키보드가 올라온 상태에서 주 컨트롤 도달성 확인 (Task 16 잔여 질문).
+        // 스텝 1 에는 크기 슬라이더·배경 토글이 없어야 한다(문구 입력에만 집중).
+        XCTAssertFalse(app.sliders.firstMatch.exists, "스텝 1 에 크기 슬라이더가 있으면 안 됨")
+        XCTAssertFalse(app.switches.firstMatch.exists, "스텝 1 에 배경 토글이 있으면 안 됨")
+
+        textField.typeText("제주 바다")
+
+        let next = app.buttons["다음"].firstMatch
+        XCTAssertTrue(next.exists, "스텝 1 에 다음 버튼이 없음")
+        XCTAssertTrue(next.isHittable, "키보드 ↑ 상태에서 다음 버튼을 탭할 수 없음")
+        let close = app.buttons["닫기"].firstMatch
+        XCTAssertTrue(close.exists && close.isHittable, "키보드 ↑ 상태에서 닫기 버튼 도달 불가")
+
+        // ── 스텝 2: 스타일. 키보드가 내려가고 배경 토글 + 크기 슬라이더가 나타난다.
+        next.tap()
+
         let slider = app.sliders.firstMatch
-        XCTAssertTrue(slider.exists, "키보드 ↑ 상태에서 크기 슬라이더가 존재하지 않음")
-        XCTAssertTrue(slider.isHittable, "키보드 ↑ 상태에서 크기 슬라이더를 탭할 수 없음")
+        XCTAssertTrue(slider.waitForExistence(timeout: 5), "스텝 2 에 크기 슬라이더가 없음")
+        XCTAssertTrue(slider.isHittable, "스텝 2 에서 크기 슬라이더를 탭할 수 없음")
+
+        let backgroundToggle = app.switches.firstMatch
+        XCTAssertTrue(backgroundToggle.exists, "스텝 2 에 배경 토글이 없음")
+        XCTAssertTrue(backgroundToggle.isHittable, "스텝 2 에서 배경 토글을 탭할 수 없음")
 
         let save = app.buttons["저장"].firstMatch
-        XCTAssertTrue(save.exists, "키보드 ↑ 상태에서 저장 버튼이 존재하지 않음")
-        XCTAssertTrue(save.isHittable, "키보드 ↑ 상태에서 저장 버튼을 탭할 수 없음")
+        XCTAssertTrue(save.exists && save.isHittable, "스텝 2 에서 저장 버튼 도달 불가")
 
-        let close = app.buttons["닫기"].firstMatch
-        XCTAssertTrue(close.exists, "키보드 ↑ 상태에서 닫기 버튼이 존재하지 않음")
-        XCTAssertTrue(close.isHittable, "키보드 ↑ 상태에서 닫기 버튼을 탭할 수 없음")
+        // 배경을 끄고 켜도 화면이 유지되어야 한다(라벨이 사라지거나 크래시하지 않는다).
+        backgroundToggle.tap()
+        XCTAssertTrue(slider.isHittable, "배경 OFF 후 슬라이더 도달 불가")
+        backgroundToggle.tap()
 
-        checkpoint(app, name: "t25-se-editing", holdSeconds: 3)
-
-        // 텍스트 입력 후 제출 → IDLE 로 전환(키보드 ↓).
-        textField.typeText("제주 바다")
-        textField.typeText("\n")   // submitLabel(.done) → onSubmit { focused = false } → phase = .idle
-
-        let keyboardGone = NSPredicate(format: "exists == false")
-        expectation(for: keyboardGone, evaluatedWith: app.keyboards.firstMatch, handler: nil)
-        waitForExpectations(timeout: 5)
-
-        checkpoint(app, name: "t25-se-idle", holdSeconds: 3)
+        // ── 스텝 1 복귀: 뒤로 버튼 → 키보드 다시 ↑
+        let back = app.buttons["뒤로"].firstMatch
+        XCTAssertTrue(back.exists, "스텝 2 에 뒤로 버튼이 없음")
+        back.tap()
+        XCTAssertTrue(app.textFields.firstMatch.waitForExistence(timeout: 5), "스텝 1 복귀 실패")
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5), "스텝 1 복귀 후 키보드가 올라오지 않음")
     }
 
     /// Task 13 이 `RootView` 에 건 전역 상한(`.dynamicTypeSize(...accessibility1)`)이
@@ -89,6 +104,11 @@ final class LabelEditorUITests: XCTestCase {
         app.launch()
 
         navigateToLabelEditor(app)
+
+        // "크기" 캡션은 스텝 2(스타일) 컨트롤이다 — 진입은 항상 스텝 1(문구)이므로 먼저 넘어간다.
+        let next = app.buttons["다음"].firstMatch
+        XCTAssertTrue(next.waitForExistence(timeout: 10), "스텝 1 다음 버튼")
+        next.tap()
 
         let sizeCaption = app.staticTexts["크기"].firstMatch
         XCTAssertTrue(sizeCaption.waitForExistence(timeout: 10), "\"크기\" 캡션")
