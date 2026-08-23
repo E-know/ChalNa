@@ -88,6 +88,74 @@ struct CompositorRenderTests {
         #expect(bottomEdge.r > 150 && bottomEdge.g > 150 && bottomEdge.b < 120, "최하단도 YELLOW 전경이어야 함: \(bottomEdge)")
     }
 
+    /// 축소(scale 0.5): 전경이 캔버스를 못 덮고 상·하단에 여백이 생긴다. 그 여백은 **검정**이어야 한다
+    /// (`ChalNaVideoCompositor` 의 불투명 검정 베이스). 이 사실은 지금까지 주석에만 있었다.
+    ///
+    /// 기하: 640×360 → fillScale = max(1080/640, 1920/360) = 5.3333, ×0.5 = 2.6667
+    ///       → 전경 1706.67×960, 캔버스 중앙 배치 → y ∈ [480, 1440) 만 전경, 그 밖은 검정.
+    ///       x 는 여전히 넘침(1706.67 > 1080)이라 좌우 여백은 없다.
+    @Test func testCompositor_ScaleBelowFill_LeavesBlackMargin() async throws {
+        let srcURL = try await makeQuadrantVideo(width: 640, height: 360, seconds: 0.5, fps: 24)
+        defer { try? FileManager.default.removeItem(at: srcURL) }
+
+        let clip = Clip(
+            kind: .video,
+            capturedAt: Date(),
+            duration: 0.5,
+            preset: .jejuSea,
+            thumbnailData: nil,
+            videoURL: srcURL,
+            displaySize: CGSize(width: 640, height: 360)
+        )
+
+        let service = AVFoundationCompositionService()
+        var outURL: URL?
+        for await event in service.export(
+            clips: [clip], rotations: [:],
+            transforms: [clip.id: ClipTransform(scale: 0.5, offset: .zero)],
+            clipLabels: [:]
+        ) {
+            switch event {
+            case .completed(let url): outURL = url
+            case .failed(let msg): Issue.record("export failed: \(msg)"); return
+            case .progress: break
+            }
+        }
+        guard let exportedURL = outURL else {
+            Issue.record("export never completed")
+            return
+        }
+        defer { try? FileManager.default.removeItem(at: exportedURL) }
+
+        let asset = AVURLAsset(url: exportedURL)
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = false
+        generator.requestedTimeToleranceBefore = .zero
+        generator.requestedTimeToleranceAfter = .zero
+        let cgImage = try await generator.image(at: CMTime(seconds: 0.25, preferredTimescale: 600)).image
+        let sampler = try PixelSampler(cgImage: cgImage, width: 1080, height: 1920)
+
+        // 여백 샘플 2곳(상단 밴드·하단 밴드 좌측) + 전경 샘플 1곳.
+        // 자동 시각/날짜 라벨은 우측 하단이라 여백 밴드와 겹칠 수 있다 —
+        // 손계산 주석이 아니라 `LabelText.stampRect` 로 회피를 확인한다.
+        let samplePoints: [(x: Int, y: Int)] = [(100, 100), (100, 1800), (270, 700)]
+        expectClearOfAutoLabelStamp(samplePoints, capturedAt: clip.capturedAt)
+
+        let topMargin = sampler.rgb(x: 100, y: 100)
+        let bottomMargin = sampler.rgb(x: 100, y: 1800)
+        // x=270 → 소스 좌측 절반, y=700 → 전경 상단 절반 → 4분면 좌상 RED.
+        let foreground = sampler.rgb(x: 270, y: 700)
+
+        print("[CompositorRenderTests] topMargin=\(topMargin) bottomMargin=\(bottomMargin) foreground=\(foreground)")
+
+        #expect(topMargin.r < 24 && topMargin.g < 24 && topMargin.b < 24,
+                "축소 시 상단 여백은 검정이어야 함: \(topMargin)")
+        #expect(bottomMargin.r < 24 && bottomMargin.g < 24 && bottomMargin.b < 24,
+                "축소 시 하단 여백은 검정이어야 함: \(bottomMargin)")
+        #expect(foreground.r > 150 && foreground.g < 120 && foreground.b < 120,
+                "축소된 전경 상단 좌측은 RED 여야 함: \(foreground)")
+    }
+
     // MARK: - Helpers
 
     /// 4분면 색상으로 채워진 클린 H.264 가로 영상을 만들어 temp URL 반환.
