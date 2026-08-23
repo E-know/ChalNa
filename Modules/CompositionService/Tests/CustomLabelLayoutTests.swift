@@ -1,8 +1,13 @@
 import Foundation
 import Testing
 import CoreGraphics
+import QuartzCore
 import Models
 @testable import CompositionService
+
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct CustomLabelLayoutTests {
 
@@ -48,4 +53,64 @@ struct CustomLabelLayoutTests {
         #expect(origin.x == 950)
         #expect(origin.y == 1980)
     }
+
+    // MARK: - 배경 박스 ON/OFF (ClipLabel.hasBackground)
+
+    #if canImport(UIKit)
+    /// 배경 ON: [배경 박스, 텍스트] 2 레이어. 박스는 흰 면 + 검정 테두리, 글자는 검정.
+    @Test func customLabelLayers_BackgroundOn_BoxAndBlackText() {
+        let label = ClipLabel(text: "제주 바다", sizeFraction: 0.10,
+                              position: CGPoint(x: 0.5, y: 0.5), hasBackground: true)
+        let layers = AVFoundationCompositionService.makeCustomLabelLayers(
+            label: label,
+            placedRect: CGRect(x: 0, y: 0, width: 1080, height: 1920),
+            renderSize: CGSize(width: 1080, height: 1920)
+        )
+        #expect(layers.count == 2, "배경 ON 은 [bg, text] 2 레이어: \(layers.count)")
+        #expect(layers[0].backgroundColor == UIColor.white.cgColor, "박스 면은 흰색")
+        #expect(layers[0].borderColor == UIColor.black.cgColor, "박스 테두리는 검정")
+        #expect(layers[0].borderWidth > 0, "테두리 두께 \(layers[0].borderWidth)")
+
+        let text = layers[1] as? CATextLayer
+        let attrs = (text?.string as? NSAttributedString)?.attributes(at: 0, effectiveRange: nil)
+        #expect(attrs?[.foregroundColor] as? UIColor == UIColor.black, "글자는 검정")
+    }
+
+    /// 배경 OFF: 텍스트 1 레이어만. 글자는 흰색, 장식(그림자·테두리) 없음.
+    @Test func customLabelLayers_BackgroundOff_WhiteTextOnly() {
+        let label = ClipLabel(text: "제주 바다", sizeFraction: 0.10,
+                              position: CGPoint(x: 0.5, y: 0.5), hasBackground: false)
+        let layers = AVFoundationCompositionService.makeCustomLabelLayers(
+            label: label,
+            placedRect: CGRect(x: 0, y: 0, width: 1080, height: 1920),
+            renderSize: CGSize(width: 1080, height: 1920)
+        )
+        #expect(layers.count == 1, "배경 OFF 는 텍스트 1 레이어: \(layers.count)")
+
+        let text = layers[0] as? CATextLayer
+        let attrs = (text?.string as? NSAttributedString)?.attributes(at: 0, effectiveRange: nil)
+        #expect(attrs?[.foregroundColor] as? UIColor == UIColor.white, "글자는 흰색")
+        #expect(text?.shadowOpacity == 0, "장식 없음 — 그림자 0: \(text?.shadowOpacity ?? -1)")
+    }
+
+    /// 토글이 글자 위치를 움직이지 않는다 — 패딩을 유지하므로 textLayer.frame 이 동일해야 한다.
+    /// (`ClipLabel.hasBackground` doc 의 규칙을 픽셀 기하로 잠근다.)
+    @Test func customLabelLayers_ToggleKeepsTextFrame() {
+        let placed = CGRect(x: 0, y: 0, width: 1080, height: 1920)
+        let render = CGSize(width: 1080, height: 1920)
+        let on = AVFoundationCompositionService.makeCustomLabelLayers(
+            label: ClipLabel(text: "제주 바다", sizeFraction: 0.12,
+                             position: CGPoint(x: 0.3, y: 0.7), hasBackground: true),
+            placedRect: placed, renderSize: render
+        )
+        let off = AVFoundationCompositionService.makeCustomLabelLayers(
+            label: ClipLabel(text: "제주 바다", sizeFraction: 0.12,
+                             position: CGPoint(x: 0.3, y: 0.7), hasBackground: false),
+            placedRect: placed, renderSize: render
+        )
+        let onText = on.last!.frame
+        let offText = off.last!.frame
+        #expect(onText == offText, "배경 토글이 글자 프레임을 바꿈: ON \(onText) vs OFF \(offText)")
+    }
+    #endif
 }

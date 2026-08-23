@@ -462,9 +462,15 @@ public actor AVFoundationCompositionService: CompositionServicing {
         return CGSize(width: ceil(m.width), height: ceil(m.height))
     }
 
-    /// 박스 자막 라벨 한 개를 그릴 레이어들([배경 박스, 텍스트]).
-    /// 스타일은 흰 배경 + 검정 글씨 + 검정 테두리로 고정.
-    private static func makeCustomLabelLayers(
+    /// 박스 자막 라벨 한 개를 그릴 레이어들.
+    ///
+    /// - `label.hasBackground == true`  → `[배경 박스, 텍스트]` (흰 면 · 검정 테두리 · 검정 글씨)
+    /// - `label.hasBackground == false` → `[텍스트]` (흰 글씨, 장식 없음)
+    ///
+    /// **두 경우 `textLayer.frame` 은 동일하다** — 패딩을 유지하므로 토글이 위치를 움직이지 않는다.
+    /// 프리뷰의 `BoxSubtitleStyle`/`ClipLabelBoxPalette` 가 같은 규칙·같은 색을 쓴다(WYSIWYG).
+    /// `internal`(테스트 도달용) — `CustomLabelLayoutTests` 가 레이어 구성과 글자 프레임을 잠근다.
+    static func makeCustomLabelLayers(
         label: ClipLabel,
         placedRect: CGRect,
         renderSize: CGSize
@@ -478,7 +484,8 @@ public actor AVFoundationCompositionService: CompositionServicing {
             string: label.text,
             attributes: [
                 .font: overlayCustomUIFont(fontSize: fontSize),
-                .foregroundColor: UIColor.black,
+                // 흰 박스 위면 검정, 영상 위에 직접 올리면 흰색. 프리뷰의 ClipLabelBoxPalette 와 같은 규칙.
+                .foregroundColor: label.hasBackground ? UIColor.black : UIColor.white,
                 .kern: ClipLabel.BoxStyle.letterSpacing(for: fontSize),
             ]
         )
@@ -487,6 +494,9 @@ public actor AVFoundationCompositionService: CompositionServicing {
         textLayer.alignmentMode = .center
         textLayer.frame = CGRect(origin: origin, size: textSize)
         textLayer.opacity = 1
+
+        // 배경 OFF: 장식 없이 텍스트만. (패딩은 계산에 쓰지 않으므로 frame 은 위와 동일하게 유지된다.)
+        guard label.hasBackground else { return [textLayer] }
 
         // 흰 배경 + 검정 테두리 박스. (프리뷰 ClipLabelText 와 동일한 ClipLabel.BoxStyle 사용)
         let padX = fontSize * ClipLabel.BoxStyle.horizontalPaddingFraction
