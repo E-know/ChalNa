@@ -1,19 +1,32 @@
 import XCTest
 
-/// 크롭 조정 플로우 시각 검증용 UI 테스트 (devMock 픽스처 사용, 사진 권한 불필요).
+/// 크롭 조정 화면의 **도달성·무크래시 스모크 테스트** (devMock 픽스처 사용, 사진 권한 불필요).
+///
+/// - 이 테스트가 보증하는 것은 "조정 화면에 도달하고, 드래그·핀치·회전·더블탭 제스처를 실행해도
+///   크래시 없이 컨트롤이 계속 살아 있다" 뿐이다. **시각/기하 계약(여백이 검정으로 보이는지,
+///   프레이밍이 유지되는지 등)은 검증하지 않는다** — assertion 은 버튼·힌트 텍스트의 존재
+///   확인(`waitForExistence`)뿐이고 화면 내용은 보지 않는다.
+/// - devMock 픽스처는 실제 미디어(사진 라이브러리)와 너무 달라 시각 검증 채널로 쓰지 않는다
+///   (사용자 지시). 실제 시각 검증은 사용자가 실제 사진 라이브러리로 별도 진행한다.
+/// - 기하·여백 계약은 유닛 테스트가 담당한다: `CompositionServiceTests/ClipFramingTests`
+///   (offset 이 제약 없이 반영되는지, 축소 시 결과 사각형이 캔버스보다 작아지는지)와
+///   `CompositionServiceTests/CompositorRenderTests`(실제 export 프레임을 픽셀 샘플링해
+///   축소 여백이 검정인지 확인).
+/// - **실측 기록**: 이 파일의 이전 버전으로 아래 제스처 시퀀스를 2회 독립 실행한 결과,
+///   핀치 아웃 이후의 체크포인트(`40-after-pinch-out`, `50-after-drag-left`)가
+///   그 앞 체크포인트(`30-after-drag-right`)와 스크린샷이 바이트 단위로 완전히 동일했다
+///   (2회 모두 재현). 즉 이 스크린샷 경로로는 제스처의 결과(여백 반영 여부 등)를 관측할 수
+///   없다 — 다음 사람이 같은 조사를 반복하지 않도록 남겨둔다.
 ///
 /// 각 체크포인트에서 `Thread.sleep` 으로 화면을 유지해, 호스트에서 `simctl io screenshot`
-/// 폴링으로 프레임을 수집·검수할 수 있게 한다. XCTAttachment 스냅샷도 함께 남긴다.
-///
-/// 확대·축소·이동에 제약이 없으므로(러버밴드·스냅백 없음) 검증 대상은
-/// "축소하면 검정 여백이 드러난다 · 캔버스 밖으로 밀어도 튕겨 돌아오지 않는다 · 초기화가 복구한다" 다.
+/// 폴링으로 프레임을 수집할 수 있게 한다. XCTAttachment 스냅샷도 함께 남긴다.
 final class CropAdjustUITests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
 
-    func testAdjustFlow_FreeCrop_ZoomOut_Pan_Reset() throws {
+    func testAdjustFlow_SurvivesGestureRotationAndReset() throws {
         let app = XCUIApplication()
         app.launchEnvironment["CHALNA_APP_MODE"] = "devMock"
         app.launchArguments += ["-AppleLanguages", "(ko)"]
@@ -50,29 +63,27 @@ final class CropAdjustUITests: XCTestCase {
         // 캔버스 중심 좌표 (화면 중앙 부근이 캔버스 안쪽)
         let canvasCenter = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45))
 
-        // 1) scale=1(딱 맞음)에서 우측으로 크게 드래그 —
-        //    이동 제약이 없으므로 손을 떼도 스냅백 없이 그 자리에 머물러야 한다.
-        //    (좌측에 검정 여백이 드러난 상태로 커밋된다.)
+        // 1) 우측으로 크게 드래그한다.
         let farRight = app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.45))
         canvasCenter.press(forDuration: 0.2, thenDragTo: farRight,
                            withVelocity: 300, thenHoldForDuration: 1.0)
-        checkpoint(app, name: "30-panned-past-cover", holdSeconds: 3)
+        checkpoint(app, name: "30-after-drag-right", holdSeconds: 3)
 
-        // 2) 핀치 인(축소) → 사진이 캔버스보다 작아지고 사방에 검정 여백이 생긴다.
+        // 2) 핀치 아웃(축소) 제스처를 실행한다.
         app.pinch(withScale: 0.5, velocity: -1.0)
-        checkpoint(app, name: "40-zoomed-out-with-margin", holdSeconds: 3)
+        checkpoint(app, name: "40-after-pinch-out", holdSeconds: 3)
 
-        // 3) 축소 상태에서 좌측으로 드래그 → 제약 없이 그대로 이동
+        // 3) 좌측으로 드래그한다.
         let left = app.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.45))
         canvasCenter.press(forDuration: 0.2, thenDragTo: left,
                            withVelocity: 300, thenHoldForDuration: 1.0)
-        checkpoint(app, name: "50-panned-while-shrunk", holdSeconds: 3)
+        checkpoint(app, name: "50-after-drag-left", holdSeconds: 3)
 
-        // 4) 회전 — 재클램프가 없어졌으므로 프레이밍(scale·offset)이 그대로 유지되어야 한다.
+        // 4) 회전 버튼을 탭한다.
         let rotateButton = app.buttons["회전"].firstMatch
         XCTAssertTrue(rotateButton.waitForExistence(timeout: 5), "회전 버튼")
         rotateButton.tap()
-        checkpoint(app, name: "55-rotated-keeps-framing", holdSeconds: 3)
+        checkpoint(app, name: "55-after-rotate", holdSeconds: 3)
         // 원위치(r0)로 3번 더 회전.
         for _ in 0..<3 { rotateButton.tap() }
 
