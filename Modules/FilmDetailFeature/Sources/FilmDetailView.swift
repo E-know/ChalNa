@@ -25,9 +25,6 @@ public struct FilmDetailView: View {
     public var body: some View {
         VStack(spacing: 0) {
             header
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .chalNaHeaderBar(scrollProgress: scrollProgress)
                 .zIndex(1)
 
             if let film = films.first {
@@ -43,11 +40,11 @@ public struct FilmDetailView: View {
     // MARK: - Header
 
     private var header: some View {
-        ChalNaNavigationBar(titleKey: "필름 정보") {
-            ChalNaHeaderBackButton { store.send(.backTapped) }
-        } trailing: {
-            EmptyView()
-        }
+        ChalNaNavBar(
+            title: "필름 정보",
+            leading: .back { store.send(.backTapped) }
+        )
+        .chalNaScrollHairline(progress: scrollProgress)
     }
 
     // MARK: - Content
@@ -70,12 +67,12 @@ public struct FilmDetailView: View {
 
                 titleBlock(for: film)
 
-                metaGrid(for: film)
+                metaTags(for: film)
 
                 actionButtons(canPlayOrShare: isPlayable)
                     .padding(.top, 8)
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 20)
             .padding(.top, 12)
             .padding(.bottom, 32)
         }
@@ -89,11 +86,17 @@ public struct FilmDetailView: View {
             isPresented: $store.isPlayerPresented.sending(\.playerPresentedChanged)
         ) {
             if let url = movieURL {
-                VideoPlayerCover(url: url) {
-                    store.send(.playerPresentedChanged(false))
+                ZStack {
+                    ChalNaColor.canvas.ignoresSafeArea()
+                    VideoPlayerCover(url: url) {
+                        store.send(.playerPresentedChanged(false))
+                    }
                 }
-                .ignoresSafeArea()
                 .presentationDragIndicator(.visible)
+                .presentationBackground(ChalNaColor.canvas)
+                // RootView 의 전역 Dynamic Type 상한(.dynamicTypeSize(...accessibility1))은
+                // sheet 경계를 넘어 전달되지 않는다(실측 확인) — 여기서 다시 건다.
+                .dynamicTypeSize(...DynamicTypeSize.accessibility1)
             }
         }
         .sheet(
@@ -101,6 +104,9 @@ public struct FilmDetailView: View {
         ) {
             if let url = movieURL {
                 ShareSheet(activityItems: [url])
+                    // RootView 의 전역 Dynamic Type 상한(.dynamicTypeSize(...accessibility1))은
+                    // sheet 경계를 넘어 전달되지 않는다(실측 확인) — 여기서 다시 건다.
+                    .dynamicTypeSize(...DynamicTypeSize.accessibility1)
             }
         }
         .alert(
@@ -118,183 +124,136 @@ public struct FilmDetailView: View {
         }
     }
 
-    // MARK: - Poster hero (9:16 고정 크기, 가운데 정렬, 단일 길이 배지)
+    // MARK: - Poster hero (9:16, 폭 상한 240pt)
 
-    /// 9:16 출력 비율을 살린 세로 포스터. 세로 ScrollView 안에서는 높이 제안이 무한이라
-    /// aspectRatio(.fit)가 폭을 역산해 레이아웃이 화면 밖으로 부풀어 깨진다. 그래서 높이
-    /// 300pt 기준 9:16 고정 크기로 두고 가로 가운데 정렬해 한 화면에 메타/액션이 함께 보이게 한다.
+    /// 9:16 출력 비율 포스터.
+    ///
+    /// ScrollView 안에서는 높이 제안이 무한이라 `aspectRatio(.fit)` 이 폭을 역산해
+    /// 레이아웃이 부풀 수 있다(실측: `.frame(maxWidth: 240).aspectRatio(9/16, contentMode: .fit)`
+    /// 조합이 240×643pt로 부풀어 아래 태그/버튼이 화면 밖으로 밀려남 — SwiftUI 의
+    /// `aspectRatio`가 ScrollView 안에서 자주 보이는 알려진 결함).
+    /// 폭 상한(240)에서 높이를 직접 산술로 고정해 이 불안정성을 우회한다.
+    /// (기존에는 이걸 300pt 고정으로 우회했다)
     private func posterHero(for film: Film, isPlayable: Bool) -> some View {
-        let posterHeight: CGFloat = 300
+        let width: CGFloat = 240
         return ZStack(alignment: .bottomTrailing) {
             posterThumbnail(for: film, isPlayable: isPlayable)
-
-            durationBadge(for: film)
-                .padding(12)
+            durationBadge(for: film).padding(12)
         }
-        .frame(width: posterHeight * 9 / 16, height: posterHeight)
-        .chalNaShadow(ChalNaShadow.md)
+        .frame(width: width, height: width * 16 / 9)
         .frame(maxWidth: .infinity)
     }
 
     private func posterThumbnail(for film: Film, isPlayable: Bool) -> some View {
         ZStack {
+            ChalNaColor.canvas
+
             if let data = film.thumbnailData, let image = UIImage(data: data) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
+                Image(uiImage: image).resizable().scaledToFill()
             } else {
                 ThumbnailPreset.jejuOrange.view()
             }
 
-            // 파일이 사라진 필름은 포스터를 어둡게 덮어 재생 불가 상태를 즉시 알린다.
+            // 파일이 사라진 필름은 포스터를 덮어 재생 불가 상태를 즉시 알린다.
             if !isPlayable {
-                ChalNaColor.Gray.g900.opacity(0.45)
-                ChalNaIcon(.film, size: 40)
-                    .foregroundColor(Color.white.opacity(0.85))
+                ChalNaColor.scrim
+                ChalNaIcon(.film, size: 40, weight: .light)
+                    .foregroundColor(ChalNaColor.textSecondary)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.md, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                .strokeBorder(ChalNaColor.Gray.g100, lineWidth: 1)
+            RoundedRectangle(cornerRadius: ChalNaRadius.md, style: .continuous)
+                .strokeBorder(ChalNaColor.border, lineWidth: 1)
         )
     }
 
     private func durationBadge(for film: Film) -> some View {
-        Text(Self.durationLabel(film.totalDurationSeconds))
-            .font(ChalNaTypography.mono(12, weight: .semibold))
-            .foregroundColor(Color.white)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(ChalNaColor.Gray.g900.opacity(0.85))
-            )
-            .accessibilityLabel("총 길이 \(Self.durationLabel(film.totalDurationSeconds))")
+        ChalNaTag(Self.durationLabel(film.totalDurationSeconds), variant: .neutral)
+            .accessibilityLabel(Text(verbatim: "총 길이 \(Self.durationLabel(film.totalDurationSeconds))"))
     }
 
     // MARK: - Title + date
 
     private func titleBlock(for film: Film) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(film.title)
-                .font(ChalNaTypography.title(ChalNaTypography.Size.h1, weight: .bold))
-                .foregroundColor(ChalNaColor.Gray.g900)
+            Text(verbatim: film.title)
+                .font(ChalNaTypography.display)
+                .foregroundColor(ChalNaColor.textPrimary)
                 .lineLimit(3)
 
             Text(film.createdAt, format: .dateTime.year().month().day().weekday())
-                .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
-                .foregroundColor(ChalNaColor.Gray.g500)
+                .font(ChalNaTypography.label)
+                .foregroundColor(ChalNaColor.textSecondary)
                 .lineLimit(2)
         }
     }
 
-    // MARK: - Meta grid (클립 / Live / Video — 길이는 포스터 배지로 이동)
+    // MARK: - Meta tags (클립 / Live / Video — 길이는 포스터 배지로 이동)
 
-    private func metaGrid(for film: Film) -> some View {
+    /// 클립 / Live / Video 를 태그 한 줄로. 카드 3개는 정보량 대비 과했고,
+    /// 그 공간을 포스터에 돌려준다.
+    private func metaTags(for film: Film) -> some View {
         let videoCount = max(film.clipCount - film.liveCount, 0)
-        let columns = [
-            GridItem(.flexible(), spacing: 12),
-            GridItem(.flexible(), spacing: 12),
-            GridItem(.flexible(), spacing: 12)
-        ]
-        return LazyVGrid(columns: columns, spacing: 12) {
-            metaCell(label: String(localized: "클립"), value: "\(film.clipCount)")
-            metaCell(label: String(localized: "Live"), value: "\(film.liveCount)")
-            metaCell(label: String(localized: "Video"), value: "\(videoCount)")
+        return HStack(spacing: 8) {
+            ChalNaTag("\(String(localized: "클립")) \(film.clipCount)", variant: .neutral)
+            ChalNaTag("\(String(localized: "Live")) \(film.liveCount)", variant: .live)
+            ChalNaTag("\(String(localized: "Video")) \(videoCount)", variant: .video, icon: .video)
+            Spacer(minLength: 0)
         }
-    }
-
-    private func metaCell(label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label)
-                .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
-                .foregroundColor(ChalNaColor.Gray.g500)
-            Text(value)
-                .font(ChalNaTypography.title(ChalNaTypography.Size.h2, weight: .bold))
-                .foregroundColor(ChalNaColor.Gray.g900)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                .fill(Color.white)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                .strokeBorder(ChalNaColor.Gray.g100, lineWidth: 1)
-        )
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(label) \(value)")
     }
 
     private var missingFileNotice: some View {
-        HStack(alignment: .top, spacing: 12) {
-            ChalNaIcon(.film, size: 20)
-                .foregroundColor(ChalNaColor.Gray.g500)
-            VStack(alignment: .leading, spacing: 4) {
-                Text("영상 파일을 찾을 수 없어요")
-                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.body, weight: .semibold))
-                    .foregroundColor(ChalNaColor.Gray.g900)
-                Text("앱을 다시 설치하셨거나 파일이 삭제되었어요. 재생과 공유는 불가능하고, 라이브러리에서 항목을 정리할 수 있어요.")
-                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
-                    .foregroundColor(ChalNaColor.Gray.g500)
-                    .lineSpacing(2)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                .fill(ChalNaColor.Gray.g50)
+        ChalNaNotice(
+            icon: .film,
+            title: "영상 파일을 찾을 수 없어요",
+            message: "앱을 다시 설치하셨거나 파일이 삭제되었어요. 재생과 공유는 불가능하고, 라이브러리에서 항목을 정리할 수 있어요."
         )
     }
 
     private func actionButtons(canPlayOrShare: Bool) -> some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 8) {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
                 Button {
                     store.send(.playTapped)
                 } label: {
                     HStack(spacing: 8) {
-                        ChalNaIcon(.play, size: 18)
+                        ChalNaIcon(.play, size: 16, weight: .semibold)
                         Text("재생")
                     }
                 }
-                .buttonStyle(.chalNa(.filled, size: .lg, fillWidth: true))
+                .buttonStyle(.chalNa(.primary, size: .lg, fillWidth: true))
                 .disabled(!canPlayOrShare)
-                .accessibilityLabel(canPlayOrShare ? "재생" : "재생 (파일 없음)")
+                .accessibilityLabel("재생")
+                .accessibilityHint(canPlayOrShare ? "" : "영상 파일을 찾을 수 없어요")
 
                 Button {
                     store.send(.shareTapped)
                 } label: {
                     HStack(spacing: 8) {
-                        ChalNaIcon(.share, size: 18)
+                        ChalNaIcon(.share, size: 16, weight: .semibold)
                         Text("공유")
                     }
                 }
-                .buttonStyle(.chalNa(.standardOutlined, size: .lg, fillWidth: true))
+                .buttonStyle(.chalNa(.secondary, size: .lg, fillWidth: true))
                 .disabled(!canPlayOrShare)
-                .accessibilityLabel(canPlayOrShare ? "공유" : "공유 (파일 없음)")
+                .accessibilityLabel("공유")
+                .accessibilityHint(canPlayOrShare ? "" : "영상 파일을 찾을 수 없어요")
             }
 
-            // 파괴적 액션: 면형 위계로 1차 CTA(재생)와 경쟁하지 않도록 danger 텍스트 버튼으로 분리.
-            // .chalNa(.text)는 coral 고정이라 danger 색을 못 살리므로, 커스텀 라벨 + contentShape 로
-            // 48pt 전체 탭 영역을 보장한다(코드베이스 표준 패턴).
+            // 파괴적 액션은 ghost + destructive 로 1차 CTA 와 위계를 분리한다.
+            // (기존에는 .chalNa(.text) 가 coral 고정이라 커스텀 라벨로 우회했다)
             Button {
                 store.send(.deleteTapped)
             } label: {
                 HStack(spacing: 8) {
-                    ChalNaIcon(.trash, size: 16)
+                    ChalNaIcon(.trash, size: 16, weight: .semibold)
                     Text("필름 삭제")
                 }
-                .font(ChalNaTypography.krBody(ChalNaTypography.Size.body2, weight: .semibold))
-                .foregroundColor(ChalNaColor.danger)
-                .frame(maxWidth: .infinity, minHeight: 48)
-                .contentShape(Rectangle())
+                .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.chalNa(.ghost, size: .lg, fillWidth: true, destructive: true))
             .accessibilityLabel("필름 삭제")
         }
     }
@@ -302,22 +261,15 @@ public struct FilmDetailView: View {
     // MARK: - Missing film fallback
 
     private var missingFilmState: some View {
-        VStack(alignment: .center, spacing: 12) {
-            Spacer()
-            Text("필름을 찾을 수 없어요")
-                .font(ChalNaTypography.title(ChalNaTypography.Size.h2, weight: .semibold))
-                .foregroundColor(ChalNaColor.Gray.g900)
-            Text("이미 삭제되었거나 다른 기기에서 동기화 중일 수 있어요.")
-                .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
-                .foregroundColor(ChalNaColor.Gray.g500)
-                .multilineTextAlignment(.center)
-            Button("홈으로") { store.send(.backTapped) }
-                .buttonStyle(.chalNa(.outlined, size: .md))
-                .padding(.top, 8)
-            Spacer()
+        ChalNaEmptyState(
+            icon: .film,
+            title: "필름을 찾을 수 없어요",
+            message: "이미 삭제되었거나 다른 기기에서 동기화 중일 수 있어요.",
+            actionTitle: "홈으로"
+        ) {
+            store.send(.backTapped)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Delete pipeline

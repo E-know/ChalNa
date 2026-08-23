@@ -15,7 +15,8 @@ public final class Film {
     /// `films/<id>.mp4` 형태의 Documents 기준 상대 경로. 절대 경로는 앱 재설치 시 바뀔 수 있음.
     public var movieFilename: String?
 
-    /// 표지 썸네일 (첫 클립). 큰 데이터 가능성이 있어 외부 저장소에 둔다.
+    /// 표지 썸네일 — 합성 결과물의 첫 프레임(9:16, `FilmCover`). 추출 실패 시 첫 클립 썸네일 폴백.
+    /// 큰 데이터 가능성이 있어 외부 저장소에 둔다.
     @Attribute(.externalStorage) public var thumbnailData: Data?
 
     public var clipCount: Int

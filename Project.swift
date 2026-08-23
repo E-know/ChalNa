@@ -6,7 +6,6 @@ let project = Project(
     targets: [
         Module.framework(
             name: "DesignSystem",
-            hasResources: true,
             isDynamic: true
         ),
         Module.framework(
@@ -124,7 +123,7 @@ let project = Project(
                     ],
                     "NSPhotoLibraryUsageDescription": "Live Photo 내부의 영상을 불러와 Vlog로 이어 붙이기 위해 사진 보관함 접근이 필요해요.",
                     "NSPhotoLibraryAddUsageDescription": "완성한 Vlog를 사진 보관함에 저장하려면 권한이 필요해요.",
-                    "UIUserInterfaceStyle": "Light",
+                    "UIUserInterfaceStyle": "Dark",
                     "UIAppFonts": [
                         "KERISKEDU_Line.otf",
                     ],
@@ -222,6 +221,7 @@ let project = Project(
                 .external(name: "ComposableArchitecture"),
             ]
         ),
+        Module.unitTests(for: "DesignSystem"),
     ],
     schemes: [
         .scheme(

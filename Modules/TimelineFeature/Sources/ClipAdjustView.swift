@@ -32,7 +32,7 @@ public struct ClipAdjustView: View {
     }
 
     private static let render = CGSize(width: 1080, height: 1920)
-    private static let snapBack: Animation = .spring(response: 0.35, dampingFraction: 0.85)
+    private static let snapBack: Animation = ChalNaMotion.spring
 
     private var clip: Clip? { session.clips.first { $0.id == store.clipID } }
     private var rotation: ClipRotation { session.rotation(for: store.clipID) }
@@ -57,57 +57,43 @@ public struct ClipAdjustView: View {
     }
 
     private var topBar: some View {
-        ChalNaNavigationBar(titleKey: "조정") {
-            ChalNaHeaderBackButton { store.send(.backTapped) }
-        } trailing: {
-            ChalNaHeaderTextAction("완료") {
-                store.send(.doneTapped)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .chalNaHeaderBar(scrollProgress: 1)
+        ChalNaNavBar(
+            title: "조정",
+            leading: .back { store.send(.backTapped) },
+            trailing: .text("완료") { store.send(.doneTapped) },
+            showsDivider: true
+        )
     }
 
     private var canvas: some View {
-        GeometryReader { proxy in
-            let box = LabelBoxGeometry.fittedBox(aspect: 9.0 / 16.0, in: proxy.size)
+        ChalNaCanvas { box in
             let factor = box.width / Self.render.width
             let live = working ?? committed
-            // 제스처 중에만 러버밴드 오버슛을 그대로 그리고(unclamped), 휴지 상태는
-            // 항상 clamp 된 사각형으로 렌더 — PreviewPanel/export 와 픽셀 일치(WYSIWYG).
+            // 제스처 중에만 러버밴드 오버슛을 그대로 그리고(unclamped),
+            // 휴지 상태는 항상 clamp 된 사각형으로 렌더 — 프리뷰/export 와 픽셀 일치.
             let rrect = raw != nil
                 ? resolvedRectUnclamped(transform: live)
-                : ClipFraming.resolvedRect(display: displaySize, rotation: rotation, render: Self.render, transform: live)
+                : ClipFraming.resolvedRect(display: displaySize, rotation: rotation,
+                                           render: Self.render, transform: live)
 
-            ZStack {
-                // 러버밴드 오버슛 순간 드러나는 배경 — 스크롤 바운스처럼 검정.
-                Color.black
-                RotatableContent(rotation: rotation) {
-                    foreground
-                }
-                .frame(width: rrect.width * factor, height: rrect.height * factor)
-                .position(x: rrect.midX * factor, y: rrect.midY * factor)
-
-                thirdsGrid(box: box)
-                    .opacity(isAdjusting ? 1 : 0)
-                    .animation(.easeInOut(duration: 0.15), value: isAdjusting)
+            RotatableContent(rotation: rotation) {
+                foreground
             }
-            .frame(width: box.width, height: box.height)
-            .clipped()
-            .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous))
-            .overlay(
-                PinchPanGesture(
-                    onChange: { handleGestureChange($0, $1, viewBox: box) },
-                    onEnded: { commitWorking() }
-                )
-                .frame(width: box.width, height: box.height)
+            .frame(width: rrect.width * factor, height: rrect.height * factor)
+            .position(x: rrect.midX * factor, y: rrect.midY * factor)
+
+            thirdsGrid(box: box)
+                .opacity(isAdjusting ? 1 : 0)
+                .animation(ChalNaMotion.fast, value: isAdjusting)
+        } overlay: { box in
+            PinchPanGesture(
+                onChange: { handleGestureChange($0, $1, viewBox: box) },
+                onEnded: { commitWorking() }
             )
+            .frame(width: box.width, height: box.height)
             .onTapGesture(count: 2) { resetToCenterCrop() }
-            .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
         }
-        .aspectRatio(9.0 / 16.0, contentMode: .fit)
-        .padding(.horizontal, 24)
+        .padding(.horizontal, 20)
     }
 
     /// 러버밴드 오버슛을 그대로 반영해야 하므로 clamp 없는 배치 사각형을 직접 계산한다.
@@ -134,7 +120,8 @@ public struct ClipAdjustView: View {
     }
 
     /// 3분할(rule of thirds) 그리드 — 드래그 중에만 표시.
-    /// 밝은/어두운 영상 모두에서 보이도록 이중 스트로크(어두운 밑선 + 흰 윗선).
+    /// 밝은/어두운 영상 모두에서 보이도록 이중 스트로크(어두운 밑선 + 밝은 윗선).
+    /// 이 이중 스트로크는 의도된 설계다 — 한 색만으로는 어느 한쪽에서 사라진다.
     private func thirdsGrid(box: CGSize) -> some View {
         Canvas { context, size in
             var path = Path()
@@ -146,47 +133,45 @@ public struct ClipAdjustView: View {
                 path.move(to: CGPoint(x: 0, y: y))
                 path.addLine(to: CGPoint(x: size.width, y: y))
             }
-            context.stroke(path, with: .color(.black.opacity(0.35)), lineWidth: 2.5)
-            context.stroke(path, with: .color(.white.opacity(0.85)), lineWidth: 1)
+            context.stroke(path, with: .color(ChalNaColor.onMediaDark.opacity(0.35)), lineWidth: 2.5)
+            context.stroke(path, with: .color(ChalNaColor.onMedia.opacity(0.85)), lineWidth: 1)
         }
         .frame(width: box.width, height: box.height)
         .allowsHitTesting(false)
     }
 
     private var controls: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             Button { rotate() } label: {
                 HStack(spacing: 6) {
-                    ChalNaIcon(.rotate, size: 16)
+                    ChalNaIcon(.rotate, size: 16, weight: .semibold)
                     Text("회전")
                 }
                 .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.chalNa(.standardOutlined, size: .lg, fillWidth: true))
-            .frame(maxWidth: .infinity)
+            .buttonStyle(.chalNa(.secondary, size: .lg, fillWidth: true))
 
             Button { resetToCenterCrop() } label: {
                 HStack(spacing: 6) {
-                    ChalNaIcon(.move, size: 16)
+                    ChalNaIcon(.move, size: 16, weight: .semibold)
                     Text("초기화")
                 }
                 .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.chalNa(.standardOutlined, size: .lg, fillWidth: true))
-            .frame(maxWidth: .infinity)
+            .buttonStyle(.chalNa(.secondary, size: .lg, fillWidth: true))
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 20)
         .padding(.top, 12)
-        .padding(.bottom, 24)
+        .padding(.bottom, 20)
     }
 
     private var adjustHint: some View {
         Text("드래그로 보이는 부분을 옮기고, 핀치로 확대해요. 더블탭 = 초기화")
-            .font(ChalNaTypography.krBody(ChalNaTypography.Size.small))
-            .foregroundColor(ChalNaColor.Gray.g500)
+            .font(ChalNaTypography.caption)
+            .foregroundColor(ChalNaColor.textSecondary)
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 20)
     }
 
     private func rotate() {

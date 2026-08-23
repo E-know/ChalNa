@@ -35,6 +35,7 @@ public struct RootView: View {
         .environment(session)
         .environment(languageStore)
         .environment(\.locale, languageStore.locale)
+        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
     }
 
     @ViewBuilder

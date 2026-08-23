@@ -7,6 +7,14 @@ public struct ContentView: View {
     public init() {}
 
     public var body: some View {
+        if AppMode.isShowcase {
+            DesignSystemShowcaseView()
+        } else {
+            mainContent
+        }
+    }
+
+    private var mainContent: some View {
         ZStack {
             // RootView 를 스플래시 뒤에서 미리 생성 → 페이드아웃 시 홈이 이미 준비됨.
             RootView()

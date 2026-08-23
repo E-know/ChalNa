@@ -36,10 +36,6 @@ struct LabelEditorView: View {
     @FocusState private var focused: Bool
     @State private var keyboard = KeyboardObserver()
 
-    /// 하단 크기 슬라이더 행에 예약하는 높이. 사진은 이 영역 위까지만 채운다.
-    private static let sliderRowHeight: CGFloat = 84
-    private static let moveAnimation: Animation = .easeInOut(duration: 0.24)
-
     private enum Phase { case idle, editing, adjusting }
 
     init(
@@ -60,22 +56,19 @@ struct LabelEditorView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .top) {
-            // 본문: 상단바 + 사진 캔버스 — 키보드에 밀리거나 리사이즈되지 않도록 키보드 세이프에어리어 무시.
-            VStack(spacing: 0) {
-                topBar
-                canvas
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.horizontal, 16)
-                Color.clear.frame(height: Self.sliderRowHeight)   // 하단 슬라이더 행 예약
-            }
-            .ignoresSafeArea(.keyboard, edges: .bottom)
-
-            // 크기 슬라이더 — IDLE/ADJUST 는 하단, EDIT 는 키보드 바로 위로.
-            sizeControls
+        VStack(spacing: 0) {
+            topBar
+            canvas
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, 20)
         }
+        // 본문은 키보드에 밀리거나 리사이즈되지 않아야 한다.
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .chalNaScreen()
-        // 라벨 외 영역 탭 → 키보드 내림 / ADJUST 종료 (요구 1). 라벨·슬라이더는 각자 제스처가 우선.
+        // 슬라이더는 실제 높이만 차지한다. 기존 84pt 고정 예약(Color.clear)은
+        // 키보드·세이프에어리어 조합에 따라 캔버스를 과하게 줄였다.
+        .safeAreaInset(edge: .bottom) { sizeControls }
+        // 라벨 외 영역 탭 → 키보드 내림 / ADJUST 종료. 라벨·슬라이더는 각자 제스처가 우선.
         .contentShape(Rectangle())
         .onTapGesture { backgroundTapped() }
         .onChange(of: focused) { _, isFocused in
@@ -88,54 +81,56 @@ struct LabelEditorView: View {
     // MARK: - Top bar
 
     private var topBar: some View {
-        ChalNaNavigationBar(titleKey: "라벨") {
-            ChalNaHeaderCloseButton(action: onCancel)
-        } trailing: {
-            ChalNaHeaderTextAction("저장") {
-                onCommit(committedLabel())
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .chalNaHeaderBar(scrollProgress: 1)
+        ChalNaNavBar(
+            title: "라벨",
+            leading: .close(action: onCancel),
+            trailing: .text("저장") { onCommit(committedLabel()) },
+            showsDivider: true
+        )
     }
 
     // MARK: - Canvas (사진 상단 고정 + 라벨 오버레이)
 
     private var canvas: some View {
         GeometryReader { proxy in
-            // 센터 크롭에서 보이는 클립 영역 = 9:16 캔버스 전체 → 라벨 좌표계도 캔버스 기준(export 와 동일).
-            let box = LabelBoxGeometry.fittedBox(aspect: 9.0 / 16.0, in: proxy.size)
+            // ChalNaCanvas 는 내부적으로 박스를 .center 정렬한다(공유 컴포넌트의 의도된 기본값 —
+            // ClipAdjustView 등 다른 소비자는 그 정렬에 의존한다). 이 화면만 boxTopGlobalY 가
+            // 박스의 실제 상단과 일치해야 하므로(displayCornerY·dragGesture 의 전제),
+            // 박스 크기를 미리 계산해 ChalNaCanvas 를 그 크기로 딱 맞게 제한한 뒤(슬랙 0 →
+            // 정렬 무관), 바깥에서 직접 상단 정렬한다 — 공유 컴포넌트의 기본 정렬은 바꾸지 않는다.
+            let box = LabelBoxGeometry.fittedBox(aspect: ChalNaCanvasGeometry.defaultAspect, in: proxy.size)
             let boxTopGlobalY = proxy.frame(in: .global).minY
-            ZStack(alignment: .top) {
-                clipCanvas(box: box)
-                    .overlay(AutoLabelsOverlay(box: box, capturedAt: clip.capturedAt))
-                    .overlay(labelLayer(box: box, boxTopGlobalY: boxTopGlobalY))
-                    .onAppear { reflow(from: .zero, to: box) }
-                    .onChange(of: box) { oldBox, newBox in reflow(from: oldBox, to: newBox) }
+            ChalNaCanvas { box in
+                clipContent(box: box)
+            } overlay: { box in
+                ZStack(alignment: .top) {
+                    AutoLabelsOverlay(box: box, capturedAt: clip.capturedAt)
+                        .frame(width: box.width, height: box.height)
+                        .allowsHitTesting(false)
+                    labelLayer(box: box, boxTopGlobalY: boxTopGlobalY)
+                }
+                .onAppear { reflow(from: .zero, to: box) }
+                .onChange(of: box) { oldBox, newBox in reflow(from: oldBox, to: newBox) }
             }
+            .frame(width: box.width, height: box.height)
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
         }
     }
 
-    /// 클립을 출력과 동일한 센터 크롭 프레이밍(ClipFraming SSOT)으로 9:16 박스에 배치.
-    private func clipCanvas(box: CGSize) -> some View {
+    /// 클립을 출력과 동일한 센터 크롭 프레이밍(ClipFraming SSOT)으로 배치.
+    @ViewBuilder
+    private func clipContent(box: CGSize) -> some View {
         let render = CGSize(width: 1080, height: 1920)
         let rrect = ClipFraming.resolvedRect(
             display: clip.displaySize ?? CGSize(width: 9, height: 16),
             rotation: rotation, render: render, transform: transform
         )
         let factor = box.width / render.width
-        return ZStack {
-            Color.black
-            RotatableContent(rotation: rotation) {
-                clip.thumbnailView(contentMode: .fill)
-            }
-            .frame(width: rrect.width * factor, height: rrect.height * factor)
-            .position(x: rrect.midX * factor, y: rrect.midY * factor)
+        RotatableContent(rotation: rotation) {
+            clip.thumbnailView(contentMode: .fill)
         }
-        .frame(width: box.width, height: box.height)
-        .clipped()
+        .frame(width: rrect.width * factor, height: rrect.height * factor)
+        .position(x: rrect.midX * factor, y: rrect.midY * factor)
     }
 
     // MARK: - Label layer
@@ -165,7 +160,7 @@ struct LabelEditorView: View {
             labelContent(fontPx: renderedFontPx, padded: padded, box: box, boxTopGlobalY: boxTopGlobalY)
                 .scaleEffect(liveScale, anchor: .topLeading)
                 .offset(y: floatDeltaY)
-                .animation(phase == .adjusting ? nil : Self.moveAnimation, value: floatDeltaY)
+                .animation(phase == .adjusting ? nil : ChalNaMotion.standard, value: floatDeltaY)
                 .offset(x: anchorCorner.x, y: anchorCorner.y)
         }
         .frame(width: box.width, height: box.height)
@@ -194,18 +189,21 @@ struct LabelEditorView: View {
         }
     }
 
-    /// 편집 상태: 같은 박스 스타일의 인라인 TextField. leading 정렬, 폭은 실제 글자 폭에 맞춘다.
-    /// (TextField 기본 최소폭이 커서 `.fixedSize()` 만으론 짧은 라벨도 길게 잡히는 문제를 측정값 frame 으로 해결.)
-    /// placeholder 는 SwiftUI 기본 것이 `.tracking`(음수 자간)을 반영하지 않아 측정 폭보다 넓게 렌더→잘리므로,
-    /// 동일 폰트·자간·측정으로 직접 오버레이한다(표시 라벨 placeholder 와도 일관).
+    /// 편집 상태: 같은 박스 스타일의 인라인 TextField.
+    ///
+    /// **다크 토큰 적용 예외.** 라벨 박스(흰 배경 · 검은 글자)는 영상 출력과
+    /// 픽셀 일치해야 하므로 UI 테마와 무관하다. `ClipLabel.BoxStyle` 이 SSOT 다.
+    /// 여기서 `.black` 리터럴을 쓰는 것은 의도된 것이며
+    /// `scripts/design-lint.sh` 의 검정 하드코딩 규칙 예외 경로에 이 파일이 등록돼 있다.
     private func inlineEditor(fontPx: CGFloat) -> some View {
         let textWidth = LabelAnchorMath.textSize(text: label.text, fontPx: fontPx).width
         let isEmpty = label.text.isEmpty
         return TextField("", text: $label.text)
-            .font(ChalNaTypography.krBody(fontPx, weight: .light))
+            // 역할 토큰(krBody 삭제됨) 대신 직접 시스템 폰트 — 위 함수 doc 참고: 영상 출력과 픽셀 일치 필요.
+            .font(.system(size: fontPx, weight: .light))
             .tracking(ClipLabel.BoxStyle.letterSpacing(for: fontPx))
             .foregroundColor(.black)
-            .tint(ChalNaColor.Purple.p600)
+            .tint(ChalNaColor.accentFill)
             .multilineTextAlignment(.leading)
             .lineLimit(1)
             .frame(width: textWidth + 4, alignment: .leading)   // +4: 커서 표시 여유
@@ -213,7 +211,7 @@ struct LabelEditorView: View {
             .overlay(alignment: .leading) {
                 if isEmpty {
                     Text("자막 입력")
-                        .font(ChalNaTypography.krBody(fontPx, weight: .light))
+                        .font(.system(size: fontPx, weight: .light))
                         .tracking(ClipLabel.BoxStyle.letterSpacing(for: fontPx))
                         .foregroundColor(.black.opacity(0.5))
                         .lineLimit(1)
@@ -229,7 +227,7 @@ struct LabelEditorView: View {
 
     private var selectionFrame: some View {
         Rectangle()
-            .strokeBorder(ChalNaColor.Purple.p600, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+            .strokeBorder(ChalNaColor.accent, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
             .padding(-3)
             .opacity(phase == .adjusting ? 1 : 0)
     }
@@ -237,12 +235,12 @@ struct LabelEditorView: View {
     @ViewBuilder
     private func alignmentGuides(box: CGSize) -> some View {
         if showVGuide {
-            Rectangle().fill(ChalNaColor.Purple.p600.opacity(0.7))
+            Rectangle().fill(ChalNaColor.accent.opacity(0.7))
                 .frame(width: 1, height: box.height)
                 .offset(x: box.width / 2 - 0.5, y: 0)
         }
         if showHGuide {
-            Rectangle().fill(ChalNaColor.Purple.p600.opacity(0.7))
+            Rectangle().fill(ChalNaColor.accent.opacity(0.7))
                 .frame(width: box.width, height: 1)
                 .offset(x: 0, y: box.height / 2 - 0.5)
         }
@@ -253,26 +251,34 @@ struct LabelEditorView: View {
     private var sizeControls: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("크기")
-                .font(ChalNaTypography.krBody(ChalNaTypography.Size.small, weight: .medium))
-                .foregroundColor(ChalNaColor.Gray.g900)
-            Slider(
-                value: $label.sizeFraction,
-                in: ClipLabel.minSizeFraction...ClipLabel.maxSizeFraction,
+                .font(ChalNaTypography.label)
+                .foregroundColor(ChalNaColor.textSecondary)
+            ChalNaSlider(
+                // ChalNaSlider 는 Binding<Double> — sizeFraction(CGFloat)을 브리징한다.
+                value: Binding(
+                    get: { Double(label.sizeFraction) },
+                    set: { label.sizeFraction = CGFloat($0) }
+                ),
+                range: Double(ClipLabel.minSizeFraction)...Double(ClipLabel.maxSizeFraction),
+                step: nil,
                 onEditingChanged: { editing in
                     // 드래그 종료 시 현재 크기로 베이크 → scaleEffect=1 로 글자를 선명하게 재렌더.
                     if !editing { renderedSizeFraction = label.clampedSizeFraction }
                 }
             )
-            .tint(ChalNaColor.Purple.p600)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-        // EDIT 중 키보드 위로 띄운다. iPhone 전체화면(fullScreenCover) 전제 — 하단 세이프에어리어(홈 인디케이터)만큼
-        // 여유를 두고 키보드 위에 떠서 항상 노출된다. keyboard.height 는 화면 하단 기준 높이(스크린 좌표).
+        .padding(.horizontal, 20)
+        .padding(.top, 10)
+        .padding(.bottom, 10)
+        .background(ChalNaColor.bg.ignoresSafeArea(edges: .bottom))
+        .overlay(alignment: .top) {
+            Rectangle().fill(ChalNaColor.border).frame(height: 1)
+        }
+        // EDIT 중에는 키보드 위로 띄운다.
         .padding(.bottom, phase == .editing ? keyboard.height : 0)
         .ignoresSafeArea(.keyboard, edges: .bottom)
-        .animation(Self.moveAnimation, value: keyboard.height)
-        .animation(Self.moveAnimation, value: phase)
+        .animation(ChalNaMotion.standard, value: keyboard.height)
+        .animation(ChalNaMotion.standard, value: phase)
     }
 
     // MARK: - Gestures / state transitions
@@ -379,4 +385,13 @@ struct LabelEditorView: View {
         onCommit: { _ in },
         onCancel: {}
     )
+}
+
+#Preview("LabelEditor · 상한 초과 시도") {
+    LabelEditorView(
+        clip: SampleData.jejuTimeline[0], rotation: .r0,
+        initialLabel: ClipLabel(text: "제주 바다"),
+        onCommit: { _ in }, onCancel: {}
+    )
+    .dynamicTypeSize(.accessibility5)
 }

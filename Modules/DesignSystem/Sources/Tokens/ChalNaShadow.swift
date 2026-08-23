@@ -14,24 +14,18 @@ public struct ChalNaShadowLayer {
     }
 }
 
-// Danawa DDS Mobile v2.0: drop shadow #000000 20% blur 6 표준.
+/// 섀도우 토큰.
+///
+/// 다크에서는 그림자가 거의 보이지 않으므로 깊이는
+/// `bg → surface → surfaceRaised` 3단 밝기 + 1px hairline 으로 표현한다.
+/// 그림자는 **떠 있는 툴바 하나**에만 쓴다.
+///
+/// 근거: docs/superpowers/specs/2026-07-28-app-redesign-design.md §4.2
 public enum ChalNaShadow {
 
-    private static let black10 = Color.black.opacity(0.10)
-    private static let black20 = Color.black.opacity(0.20)
-
-    public static let sm: [ChalNaShadowLayer] = [
-        .init(black10, radius: 2, y: 1),
-    ]
-
-    /// 다나와 탭바 표준: #000000 20% blur 6
-    public static let md: [ChalNaShadowLayer] = [
-        .init(black20, radius: 6, y: 2),
-    ]
-
-    public static let lg: [ChalNaShadowLayer] = [
-        .init(black10, radius: 4, y: 2),
-        .init(black20, radius: 16, y: 8),
+    /// 유일한 그림자. 플로팅 툴바 전용.
+    public static let floating: [ChalNaShadowLayer] = [
+        .init(Color.black.opacity(0.5), radius: 24, y: 8),
     ]
 }
 
@@ -40,9 +34,9 @@ public extension View {
     func chalNaShadow(_ layers: [ChalNaShadowLayer]) -> some View {
         layers.reduce(AnyView(self)) { partial, layer in
             AnyView(partial.shadow(color: layer.color,
-                                    radius: layer.radius,
-                                    x: layer.x,
-                                    y: layer.y))
+                                   radius: layer.radius,
+                                   x: layer.x,
+                                   y: layer.y))
         }
     }
 }

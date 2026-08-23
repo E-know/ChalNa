@@ -27,7 +27,10 @@ struct ClipLabelText: View {
 
     private var styledText: some View {
         Text(displayString)
-            .font(ChalNaTypography.krBody(fontPx, weight: .light))
+            // 다크 토큰 적용 예외: 합성(CATextLayer)과 동일한 UIFont(systemFont, ofSize: fontPx)로
+            // 픽셀 일치해야 하므로 역할 토큰(krBody 삭제됨) 대신 직접 시스템 폰트를 쓴다.
+            // `scripts/design-lint.sh` 규칙 1 예외에 이 파일이 등록돼 있다.
+            .font(.system(size: fontPx, weight: .light))
             .tracking(ClipLabel.BoxStyle.letterSpacing(for: fontPx))
             .lineLimit(1)
             .fixedSize()

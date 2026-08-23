@@ -68,8 +68,8 @@ final class FilmStripVC: UIViewController,
     private func setupCollectionView() {
         let layout = makeLayout()
         collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
-        collectionView.backgroundColor = UIColor(named: "ChalNaInk") ?? .black
-        collectionView.layer.cornerRadius = 16
+        collectionView.backgroundColor = UIColor(ChalNaColor.bg)
+        collectionView.layer.cornerRadius = ChalNaRadius.md
         collectionView.layer.cornerCurve = .continuous
         collectionView.showsHorizontalScrollIndicator = false
         collectionView.delegate = self
@@ -130,30 +130,32 @@ final class FilmStripVC: UIViewController,
         guard let clip = clips.first(where: { $0.id == clipID }) else { return }
         let userRotation = session?.rotation(for: clipID) ?? .r0
         let isCurrent = clipID == currentClipID
-        let visualState: ClipThumbState = isCurrent
+        let visualState: MediaThumbState = isCurrent
             ? (isPlaying ? .playing : .selected)
             : (isPlaying ? .dimmed : .normal)
         let flatIndex = clips.firstIndex(where: { $0.id == clipID }) ?? 0
 
         cell.contentConfiguration = UIHostingConfiguration {
             VStack(spacing: 4) {
-                ClipThumbCard(state: visualState) {
+                MediaThumb(state: visualState, size: CGSize(width: 40, height: 52)) {
                     ZStack {
                         RotatableContent(rotation: userRotation) {
                             clip.thumbnailView()
                         }
                         if clip.kind == .live {
-                            LiveBadge(size: 10)
+                            Circle()
+                                .fill(ChalNaColor.danger)
+                                .frame(width: 6, height: 6)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                                 .padding(2)
                         }
                     }
                 }
                 Text(clip.durationSecondsLabel)
-                    .font(ChalNaTypography.monoFallback(9, weight: .medium))
+                    .font(ChalNaTypography.mono(.caption, weight: .medium))
                     .foregroundColor(visualState == .selected || visualState == .playing
-                        ? ChalNaColor.Purple.p600
-                        : Color.white.opacity(0.7))
+                        ? ChalNaColor.accent
+                        : ChalNaColor.textSecondary)
             }
         }
         .margins(.all, 0)
@@ -362,7 +364,8 @@ final class FilmStripVC: UIViewController,
         let params = UIDragPreviewParameters()
         params.backgroundColor = .clear
         if let cell = collectionView.cellForItem(at: indexPath) {
-            params.visiblePath = UIBezierPath(roundedRect: cell.contentView.bounds, cornerRadius: 4)
+            params.visiblePath = UIBezierPath(roundedRect: cell.contentView.bounds,
+                                              cornerRadius: ChalNaRadius.xs)
         }
         return params
     }

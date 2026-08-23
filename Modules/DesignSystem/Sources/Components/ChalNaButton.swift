@@ -1,43 +1,45 @@
 import SwiftUI
 
-// Danawa DDS Mobile v2.0 버튼.
-// XLarge / Large / Medium / Small × 강조형(면형/선형) / 표준형(면형/선형) / 텍스트.
-
+/// 버튼 변형. 3종으로 줄이고 파괴적 여부를 **플래그로** 분리했다.
+///
+/// 이전에는 각 호출처가 "삭제는 무슨 색?"을 스스로 판단해서
+/// EditToolbar 는 Primary 보라, FilmDetail 은 danger 레드를 썼다.
+/// `destructive: true` 하나로 결정을 컴포넌트가 가져간다.
+///
+/// 근거: `docs/superpowers/specs/2026-07-28-app-redesign-design.md` §5.2
 public enum ChalNaButtonVariant {
-    case filled            // 강조형 면형: Purple-600 bg
-    case outlined          // 강조형 선형: Purple-600 border
-    case standardFilled    // 표준형 면형: Ink bg
-    case standardOutlined  // 표준형 선형: Gray-300 border
-    case text              // 텍스트 버튼
+    /// 면형. accentFill 배경 + onAccent 라벨.
+    case primary
+    /// 선형. surface 배경 + border.
+    case secondary
+    /// 텍스트만.
+    case ghost
 }
 
 public enum ChalNaButtonSize {
-    case xl   // 56pt
-    case lg   // 48pt (기본)
-    case md   // 40pt
-    case sm   // 32pt
+    case lg   // 52pt
+    case md   // 44pt
+    case sm   // 36pt
 
     fileprivate var height: CGFloat {
         switch self {
-        case .xl: return 56
-        case .lg: return 48
-        case .md: return 40
-        case .sm: return 32
+        case .lg: return 52
+        case .md: return 44
+        case .sm: return 36
         }
     }
 
     fileprivate var horizontalPadding: CGFloat {
         switch self {
-        case .xl, .lg, .md: return 16   // 16pt (다나와 권장 최소)
-        case .sm:           return 12   // 12pt
+        case .lg, .md: return 20
+        case .sm:      return 12
         }
     }
 
     fileprivate var font: Font {
         switch self {
-        case .xl, .lg: return ChalNaTypography.krBody(ChalNaTypography.Size.body, weight: .semibold)
-        case .md:      return ChalNaTypography.krBody(ChalNaTypography.Size.body2, weight: .semibold)
-        case .sm:      return ChalNaTypography.krBody(ChalNaTypography.Size.small, weight: .medium)
+        case .lg, .md: return ChalNaTypography.headline
+        case .sm:      return ChalNaTypography.label
         }
     }
 }
@@ -48,116 +50,110 @@ public struct ChalNaButtonStyle: ButtonStyle {
     public let variant: ChalNaButtonVariant
     public let size: ChalNaButtonSize
     public let fillWidth: Bool
+    public let destructive: Bool
 
-    public init(_ variant: ChalNaButtonVariant, size: ChalNaButtonSize = .lg, fillWidth: Bool = false) {
+    public init(
+        _ variant: ChalNaButtonVariant,
+        size: ChalNaButtonSize = .lg,
+        fillWidth: Bool = false,
+        destructive: Bool = false
+    ) {
         self.variant = variant
         self.size = size
         self.fillWidth = fillWidth
+        self.destructive = destructive
     }
 
     public func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(size.font)
-            .tracking(ChalNaTypography.Tracking.titleKR)
-            .foregroundColor(isEnabled ? foreground : disabledForeground)
+            .tracking(ChalNaTypography.Tracking.title)
+            .foregroundColor(foreground(pressed: configuration.isPressed))
             .frame(minHeight: size.height)
             .padding(.horizontal, size.horizontalPadding)
             .frame(maxWidth: fillWidth ? .infinity : nil)
-            .background(backgroundShape)
-            .overlay(borderShape)
-            .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous))
-            .opacity(configuration.isPressed && isEnabled ? 0.78 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .background(background(pressed: configuration.isPressed))
+            .overlay(border)
+            .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.sm, style: .continuous))
+            .animation(ChalNaMotion.fast, value: configuration.isPressed)
     }
 
-    private var foreground: Color {
-        switch variant {
-        case .filled:            return .white
-        case .standardFilled:    return .white
-        case .outlined:          return ChalNaColor.Purple.p600
-        case .standardOutlined:  return ChalNaColor.Gray.g900
-        case .text:              return ChalNaColor.Purple.p600
-        }
-    }
+    /// 강조색. `destructive` 면 danger 계열로 바뀐다.
+    private var tint: Color { destructive ? ChalNaColor.danger : ChalNaColor.accent }
+    private var tintFill: Color { destructive ? ChalNaColor.danger : ChalNaColor.accentFill }
 
-    private var disabledForeground: Color {
+    private func foreground(pressed: Bool) -> Color {
+        guard isEnabled else { return ChalNaColor.textTertiary }
         switch variant {
-        case .text:
-            return ChalNaColor.Gray.g400
-        default:
-            return ChalNaColor.Gray.g500
+        case .primary:
+            return ChalNaColor.onAccent
+        case .secondary:
+            return destructive ? ChalNaColor.danger : ChalNaColor.textPrimary
+        case .ghost:
+            // pressed 도 destructive 계열을 유지해야 한다. accentPressed 를 무조건 쓰면
+            // 파괴적 ghost 버튼이 눌린 동안 red -> 보라로 바뀐다(ChalNaMotion.fast 로 실제 보임).
+            return pressed
+                ? (destructive ? ChalNaColor.dangerPressed : ChalNaColor.accentPressed)
+                : tint
         }
     }
 
     @ViewBuilder
-    private var backgroundShape: some View {
-        if !isEnabled, variant != .text {
-            RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                .fill(ChalNaColor.Gray.g100)
-        } else {
-            switch variant {
-            case .filled:
-                RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                    .fill(ChalNaColor.Purple.p600)
-            case .standardFilled:
-                RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                    .fill(ChalNaColor.Gray.g900)
-            case .outlined, .standardOutlined:
-                RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                    .fill(Color.white)
-            case .text:
-                Color.clear
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var borderShape: some View {
+    private func background(pressed: Bool) -> some View {
+        let shape = RoundedRectangle(cornerRadius: ChalNaRadius.sm, style: .continuous)
         if !isEnabled {
             switch variant {
-            case .outlined, .standardOutlined:
-                RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                    .strokeBorder(ChalNaColor.Gray.g200, lineWidth: 1)
-            default:
-                Color.clear
+            case .primary:            shape.fill(ChalNaColor.surface)
+            case .secondary:          shape.fill(ChalNaColor.surface)
+            case .ghost:              shape.fill(Color.clear)
             }
         } else {
             switch variant {
-            case .outlined:
-                RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                    .strokeBorder(ChalNaColor.Purple.p600, lineWidth: 1.2)
-            case .standardOutlined:
-                RoundedRectangle(cornerRadius: ChalNaRadius.button, style: .continuous)
-                    .strokeBorder(ChalNaColor.Gray.g300, lineWidth: 1)
-            default:
-                Color.clear
+            case .primary:   shape.fill(pressed ? tint : tintFill)
+            case .secondary: shape.fill(pressed ? ChalNaColor.surfaceRaised : ChalNaColor.surface)
+            case .ghost:     shape.fill(Color.clear)
             }
+        }
+    }
+
+    @ViewBuilder
+    private var border: some View {
+        let shape = RoundedRectangle(cornerRadius: ChalNaRadius.sm, style: .continuous)
+        switch variant {
+        case .secondary:
+            shape.strokeBorder(isEnabled ? ChalNaColor.border : ChalNaColor.border.opacity(0.5), lineWidth: 1)
+        case .primary, .ghost:
+            Color.clear
         }
     }
 }
 
 public extension ButtonStyle where Self == ChalNaButtonStyle {
-    static var chalNaFilled:   ChalNaButtonStyle { .init(.filled) }
-    static var chalNaOutlined: ChalNaButtonStyle { .init(.outlined) }
-    static var chalNaText:     ChalNaButtonStyle { .init(.text) }
+    static var chalNaPrimary: ChalNaButtonStyle   { .init(.primary) }
+    static var chalNaSecondary: ChalNaButtonStyle { .init(.secondary) }
+    static var chalNaGhost: ChalNaButtonStyle     { .init(.ghost) }
 
-    // Legacy alias (Phase 5 호출처 정리 전까지 호환)
-    static var chalNaCoral:   ChalNaButtonStyle { .init(.filled) }
-    static var chalNaOutline: ChalNaButtonStyle { .init(.standardOutlined) }
-
-    static func chalNa(_ variant: ChalNaButtonVariant, size: ChalNaButtonSize = .lg, fillWidth: Bool = false) -> ChalNaButtonStyle {
-        .init(variant, size: size, fillWidth: fillWidth)
+    static func chalNa(
+        _ variant: ChalNaButtonVariant,
+        size: ChalNaButtonSize = .lg,
+        fillWidth: Bool = false,
+        destructive: Bool = false
+    ) -> ChalNaButtonStyle {
+        .init(variant, size: size, fillWidth: fillWidth, destructive: destructive)
     }
 }
 
 #Preview {
-    VStack(spacing: 16) {
-        Button("강조형 면형 (Filled · L)") {}.buttonStyle(.chalNa(.filled, size: .lg, fillWidth: true))
-        Button("강조형 선형 (Outlined · L)") {}.buttonStyle(.chalNa(.outlined, size: .lg, fillWidth: true))
-        Button("표준형 면형 (Standard Filled)") {}.buttonStyle(.chalNa(.standardFilled, size: .lg, fillWidth: true))
-        Button("표준형 선형 (Standard Outlined)") {}.buttonStyle(.chalNa(.standardOutlined, size: .lg, fillWidth: true))
-        Button("텍스트 버튼") {}.buttonStyle(.chalNaText)
+    VStack(spacing: 12) {
+        Button("저장하기") {}.buttonStyle(.chalNa(.primary, size: .lg, fillWidth: true))
+        Button("공유") {}.buttonStyle(.chalNa(.secondary, size: .lg, fillWidth: true))
+        Button("홈으로") {}.buttonStyle(.chalNaGhost)
+        Button("필름 삭제") {}.buttonStyle(.chalNa(.ghost, destructive: true))
+        Button("전부 삭제") {}.buttonStyle(.chalNa(.secondary, size: .md, destructive: true))
+        Button("비활성") {}.buttonStyle(.chalNa(.primary, size: .lg, fillWidth: true)).disabled(true)
+        Button("작은 버튼") {}.buttonStyle(.chalNa(.secondary, size: .sm))
     }
-    .padding(24)
-    .background(Color.white)
+    .padding(20)
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(ChalNaColor.bg)
 }

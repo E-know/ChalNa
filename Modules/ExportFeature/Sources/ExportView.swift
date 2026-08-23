@@ -25,30 +25,20 @@ public struct ExportView: View {
     public var body: some View {
         VStack(spacing: 0) {
             header
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .chalNaHeaderBar(scrollProgress: 1)
 
-            GeometryReader { proxy in
-                VStack(spacing: 0) {
-                    cover(width: coverWidth(forAvailableHeight: proxy.size.height))
-                        .padding(.top, 28)
-                        .padding(.horizontal, 32)
+            VStack(spacing: 0) {
+                Spacer(minLength: 12)
 
-                    statusBlock
-                        .padding(.horizontal, 24)
-                        .padding(.top, 32)
+                cover
+                    .padding(.horizontal, 20)
 
-                    Spacer(minLength: 16)
-
-                    bottomCTAs
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 24)
-                }
-                .frame(width: proxy.size.width, height: proxy.size.height)
+                Spacer(minLength: 12)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .chalNaScreen()
+        .safeAreaInset(edge: .bottom) { bottomCTAs }
+        .chalNaToast(message: store.saveToast) { store.send(.toastDismissed) }
         .onAppear {
             guard store.phase == .idle else { return }
             store.send(.startExport(clips: session.clips, rotations: session.rotations, transforms: session.transforms, clipLabels: session.labels))
@@ -67,29 +57,12 @@ public struct ExportView: View {
                 store.send(.markAddedToLibrary)
             }
         }
-        .overlay(alignment: .bottom) {
-            if let toast = store.saveToast {
-                Text(toast)
-                    .font(ChalNaTypography.krBody(13, weight: .medium))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Capsule().fill(ChalNaColor.Gray.g900.opacity(0.9)))
-                    .padding(.bottom, 64)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
-                    .task(id: toast) {
-                        try? await Task.sleep(nanoseconds: 2_200_000_000)
-                        store.send(.toastDismissed)
-                    }
-            }
-        }
-        .animation(.easeInOut(duration: 0.2), value: store.saveToast)
         .fullScreenCover(
             isPresented: $store.isPlayerPresented.sending(\.playerPresentedChanged)
         ) {
             if let url = store.exportedURL {
                 ZStack(alignment: .topTrailing) {
-                    Color.black.ignoresSafeArea()
+                    ChalNaColor.canvas.ignoresSafeArea()
 
                     ExportVideoPlayerCover(url: url) {
                         store.send(.playerPresentedChanged(false))
@@ -99,16 +72,19 @@ public struct ExportView: View {
                     Button {
                         store.send(.playerPresentedChanged(false))
                     } label: {
-                        ChalNaIcon(.close, size: 18)
-                            .foregroundColor(.white)
-                            .frame(width: 36, height: 36)
-                            .background(Circle().fill(Color.black.opacity(0.5)))
-                            .overlay(Circle().strokeBorder(Color.white.opacity(0.25), lineWidth: 1))
+                        ChalNaIcon(.close, size: 18, weight: .semibold)
+                            .foregroundColor(ChalNaColor.textPrimary)
+                            .frame(width: 44, height: 44)
+                            .background(Circle().fill(ChalNaColor.surfaceRaised.opacity(0.8)))
+                            .overlay(Circle().strokeBorder(ChalNaColor.border, lineWidth: 1))
                     }
                     .padding(.top, 12)
                     .padding(.trailing, 16)
                     .accessibilityLabel("재생 닫기")
                 }
+                // RootView 의 전역 Dynamic Type 상한(.dynamicTypeSize(...accessibility1))은
+                // fullScreenCover 경계를 넘어 전달되지 않는다(실측 확인) — 여기서 다시 건다.
+                .dynamicTypeSize(...DynamicTypeSize.accessibility1)
             }
         }
     }
@@ -128,108 +104,153 @@ public struct ExportView: View {
         let liveCount = clips.filter { $0.kind == .live }.count
         let totalDuration = clips.reduce(0) { $0 + $1.duration }
         let title = session.title.isEmpty ? "ChalNa" : session.title
-        let thumbnail = clips.first?.thumbnailData
 
         let film = Film(
             id: filmID,
             title: title,
             createdAt: .now,
             movieFilename: movieFilename,
-            thumbnailData: thumbnail,
+            thumbnailData: clips.first?.thumbnailData,
             clipCount: clips.count,
             liveCount: liveCount,
             totalDurationSeconds: totalDuration
         )
         modelContext.insert(film)
         try? modelContext.save()
+
+        // 표지를 결과물(합성 mp4) 첫 프레임으로 승격한다. 첫 클립 원본 썸네일(16:9·4:3 등)을
+        // 표지로 두면 홈/상세의 9:16 포스터가 scaledToFill 로 좌우를 잘라낸다.
+        // 추출 실패 시에는 위에서 넣은 첫 클립 썸네일이 폴백으로 남는다.
+        if let movieURL = film.movieURL {
+            Task {
+                if let cover = await FilmCover.firstFrameJPEG(fromMovieAt: movieURL) {
+                    film.thumbnailData = cover
+                    try? modelContext.save()
+                }
+            }
+        }
     }
 
     // MARK: - Header
 
     private var header: some View {
-        VStack(spacing: 2) {
-            Text(store.phase.title)
-                .font(ChalNaTypography.krSemibold(15))
-                .foregroundColor(ChalNaColor.Gray.g900)
-            Text(store.phase.tag)
-                .tagLabel(color: tagColor)
-        }
-        .frame(height: 44)
-        .frame(maxWidth: .infinity)
-    }
-
-    private var tagColor: Color {
-        switch store.phase {
-        case .idle, .exporting: return ChalNaColor.Purple.p600
-        case .done:             return ChalNaColor.info
-        case .failed:           return ChalNaColor.Gray.g500
-        }
+        // ExportPhase.title/.tag 는 String(localized:) 로 이미 해석된 String 이다
+        // (ExportFeature.swift:256,264). 다시 감싸면 이중 조회가 된다.
+        ChalNaNavBar(
+            verbatimTitle: store.phase.title,
+            caption: store.phase.tag,
+            showsDivider: true
+        )
     }
 
     // MARK: - Cover
 
-    private func coverWidth(forAvailableHeight available: CGFloat) -> CGFloat {
-        let reservedHeight: CGFloat = switch store.phase {
-        case .idle, .exporting: 210
-        case .done:             300
-        case .failed:           290
-        }
-        let envelope = max(available - reservedHeight, 200)
-        let widthFromHeight = (envelope - 60) * 9 / 16
-        return min(max(widthFromHeight, 240), 360)
-    }
-
+    /// 9:16 커버. 진행률·완료 배지를 **커버 위에** 얹어 시선을 한 곳에 모은다.
+    /// (기존에는 커버와 statusBlock 이 분리돼 시선이 두 곳으로 갈렸다)
     @ViewBuilder
-    private func cover(width: CGFloat) -> some View {
+    private var cover: some View {
         if let clip = session.clips.first {
             let canPlay = store.phase == .done && store.exportedURL != nil
-            VStack(alignment: .leading, spacing: 12) {
-                ZStack(alignment: .topTrailing) {
-                    Button {
-                        guard canPlay else { return }
-                        store.send(.playerPresentedChanged(true))
-                    } label: {
-                        clip.thumbnailView()
-                            .frame(width: width, height: width * 16 / 9)
-                            .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous)
-                                    .strokeBorder(ChalNaColor.Gray.g100, lineWidth: 0.5)
-                            )
-                            .overlay {
-                                if canPlay {
-                                    playOverlay
-                                }
-                            }
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(!canPlay)
-                    .accessibilityLabel(canPlay ? LocalizedStringKey("완성된 영상 재생") : "")
-                    .accessibilityAddTraits(canPlay ? .isButton : [])
 
-                    if store.phase == .done {
-                        ChalNaChip("DONE", variant: .selected, icon: .check)
-                            .padding(12)
-                            .allowsHitTesting(false)
-                    }
+            VStack(alignment: .leading, spacing: 12) {
+                ChalNaCanvas { box in
+                    clip.thumbnailView(contentMode: .fill)
+                        .frame(width: box.width, height: box.height)
+                } overlay: { _ in
+                    coverOverlay(canPlay: canPlay)
                 }
+                // 이 두 modifier 는 여기서 상한으로만 작동한다. `cover` 는 header + safeAreaInset
+                // 사이의 이미 제한된 높이 예산 안에 있고, `ChalNaCanvas` 내부 GeometryReader 가
+                // 그 높이를 그대로 받아 9:16 을 맞추기 때문이다(넓은 기기에서는 maxWidth 300 이 폭을 제한).
+                // 높이가 무제약인 컨텍스트(예: ScrollView) 에 이 조합을 그대로 옮기면
+                // aspectRatio(.fit) 가 무한 높이로 폭을 역산해 깨진다 — Task 19 FilmDetailView 가
+                // 그 사례(240×643 로 잘못 렌더링)이므로 그대로 복사하지 말 것.
+                .frame(maxWidth: 300)
+                .aspectRatio(9.0 / 16.0, contentMode: .fit)
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    guard canPlay else { return }
+                    store.send(.playerPresentedChanged(true))
+                }
+                .accessibilityAddTraits(canPlay ? .isButton : [])
+                .accessibilityLabel(canPlay ? "완성된 영상 재생" : "")
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(session.title.isEmpty ? SampleData.filmTitle : session.title)
-                        .font(ChalNaTypography.title(ChalNaTypography.Size.h2, weight: .semibold))
-                        .foregroundColor(ChalNaColor.Gray.g900)
+                    Text(verbatim: session.title.isEmpty ? SampleData.filmTitle : session.title)
+                        .font(ChalNaTypography.title)
+                        .foregroundColor(ChalNaColor.textPrimary)
                         .lineLimit(1)
-                    Text(metaLine)
-                        .font(ChalNaTypography.monoFallback(ChalNaTypography.Size.caption))
-                        .foregroundColor(ChalNaColor.Gray.g500)
+                    Text(verbatim: metaLine)
+                        .font(ChalNaTypography.mono())
+                        .foregroundColor(ChalNaColor.textSecondary)
+                    Text(statusLine)
+                        .font(ChalNaTypography.label)
+                        // 실패 상태의 문구는 오류다 — 진행률 바(:220)가 이미 danger 로 바뀌는데
+                        // 설명 텍스트만 textSecondary 로 남아 둘이 어긋났다.
+                        .foregroundColor(store.phase == .failed ? ChalNaColor.danger : ChalNaColor.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                .frame(maxWidth: 300, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .center)
             }
-            .frame(width: width)
-            .frame(maxWidth: .infinity)
         } else {
             Text("내보낼 클립이 없어요")
-                .font(ChalNaTypography.krBody(ChalNaTypography.Size.body, weight: .semibold))
-                .foregroundColor(ChalNaColor.Gray.g500)
+                .font(ChalNaTypography.headline)
+                .foregroundColor(ChalNaColor.textSecondary)
+        }
+    }
+
+    /// 커버 위 오버레이: 진행 중이면 하단 진행률 바 + 퍼센트, 완료면 재생 버튼 + DONE 태그.
+    @ViewBuilder
+    private func coverOverlay(canPlay: Bool) -> some View {
+        ZStack {
+            if canPlay {
+                playOverlay
+            }
+
+            VStack(spacing: 0) {
+                HStack {
+                    Spacer()
+                    if store.phase == .done {
+                        ChalNaTag("DONE", variant: .accent, icon: .check)
+                    }
+                }
+                .padding(12)
+
+                Spacer()
+
+                if store.phase != .done {
+                    VStack(spacing: 6) {
+                        HStack {
+                            Text(verbatim: "\(Int(store.progress * 100))%")
+                                .font(ChalNaTypography.mono(.footnote, weight: .semibold))
+                                .foregroundColor(ChalNaColor.textPrimary)
+                            Spacer()
+                        }
+                        ChalNaProgressBar(
+                            progress: store.progress,
+                            tint: store.phase == .failed ? ChalNaColor.danger : ChalNaColor.accent
+                        )
+                    }
+                    .padding(12)
+                    .background(ChalNaColor.scrim)
+                }
+            }
+        }
+    }
+
+    private var playOverlay: some View {
+        ZStack {
+            ChalNaColor.scrim.opacity(0.4)
+            Circle()
+                .fill(ChalNaColor.surfaceRaised.opacity(0.9))
+                .frame(width: 64, height: 64)
+                .overlay(Circle().strokeBorder(ChalNaColor.border, lineWidth: 1))
+                .overlay(
+                    ChalNaIcon(.play, size: 26, weight: .semibold)
+                        .foregroundColor(ChalNaColor.textPrimary)
+                )
         }
     }
 
@@ -243,48 +264,6 @@ public struct ExportView: View {
     }
 
     // MARK: - Status
-
-    @ViewBuilder
-    private var statusBlock: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(statusLabelLeft).tagLabel(color: tagColor)
-                Spacer()
-                if store.phase != .failed {
-                    Text("\(Int(store.progress * 100))%")
-                        .font(ChalNaTypography.monoFallback(12, weight: .semibold))
-                        .foregroundColor(ChalNaColor.Gray.g900)
-                }
-            }
-
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(ChalNaColor.Gray.g50)
-                        .frame(height: 6)
-                    Capsule()
-                        .fill(store.phase == .failed ? ChalNaColor.Gray.g500 : ChalNaColor.Purple.p600)
-                        .frame(width: max(0, proxy.size.width * store.progress), height: 6)
-                }
-            }
-            .frame(height: 6)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("내보내기 진행률")
-            .accessibilityValue(String(localized: "\(Int(store.progress * 100))퍼센트"))
-
-            Text(statusLine)
-                .font(ChalNaTypography.krBody(13))
-                .foregroundColor(ChalNaColor.Gray.g500)
-        }
-    }
-
-    private var statusLabelLeft: String {
-        switch store.phase {
-        case .idle, .exporting: return String(localized: "EXPORT · IN PROGRESS")
-        case .done:             return String(localized: "EXPORT · COMPLETE")
-        case .failed:           return String(localized: "EXPORT · FAILED")
-        }
-    }
 
     private var statusLine: String {
         switch store.phase {
@@ -301,126 +280,99 @@ public struct ExportView: View {
 
     @ViewBuilder
     private var bottomCTAs: some View {
-        switch store.phase {
-        case .idle, .exporting:
-            HStack(spacing: 8) {
-                ChalNaIcon(.film, size: 14).foregroundColor(ChalNaColor.Gray.g500)
-                Text("잠깐만 기다려주세요")
-                    .font(ChalNaTypography.krBody(ChalNaTypography.Size.body))
-                    .foregroundColor(ChalNaColor.Gray.g500)
+        Group {
+            switch store.phase {
+            case .idle, .exporting:
+                HStack(spacing: 8) {
+                    ChalNaIcon(.film, size: 14)
+                    Text("잠깐만 기다려주세요")
+                }
+                .font(ChalNaTypography.label)
+                .foregroundColor(ChalNaColor.textSecondary)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 52)
+
+            case .done:
+                completedCTAs
+
+            case .failed:
+                failedCTAs
             }
-            .frame(maxWidth: .infinity, alignment: .center)
-        case .done:
-            completedCTAs
-        case .failed:
-            failedCTAs
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 12)
+        .background(ChalNaColor.bg.ignoresSafeArea(edges: .bottom))
+        .overlay(alignment: .top) {
+            Rectangle().fill(ChalNaColor.border).frame(height: 1)
         }
     }
 
-    @ViewBuilder
+    /// 주 액션 2개(저장·공유)를 면형/선형으로, 보조 2개는 ghost 텍스트로 내려
+    /// 위계를 분리한다. 기존에는 4개가 2×2 로 동등해 무엇이 주인지 불명확했다.
     private var completedCTAs: some View {
-        paperCompletedCTAs
-    }
-
-    private var paperCompletedCTAs: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 8) {
             if let url = store.exportedURL {
-                HStack(spacing: 12) {
-                    ShareLink(item: url) {
-                        HStack(spacing: 6) {
-                            ChalNaIcon(.share, size: 14)
-                            Text("공유하기")
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.chalNaOutline)
-                    .frame(maxWidth: .infinity)
-
+                HStack(spacing: 10) {
                     Button {
                         store.send(.saveToPhotoLibraryTapped)
                     } label: {
                         HStack(spacing: 6) {
                             if store.isSaving {
-                                ProgressView().controlSize(.small).tint(ChalNaColor.Gray.g900)
+                                ProgressView().controlSize(.small).tint(ChalNaColor.onAccent)
                             } else {
-                                ChalNaIcon(.download, size: 14)
+                                ChalNaIcon(.download, size: 16, weight: .semibold)
                             }
                             Text(store.isSaving ? LocalizedStringKey("저장 중…") : LocalizedStringKey("저장하기"))
                         }
                         .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.chalNaCoral)
-                    .frame(maxWidth: .infinity)
+                    .buttonStyle(.chalNa(.primary, size: .lg, fillWidth: true))
                     .disabled(store.isSaving)
+
+                    ShareLink(item: url) {
+                        HStack(spacing: 6) {
+                            ChalNaIcon(.share, size: 16, weight: .semibold)
+                            Text("공유")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.chalNa(.secondary, size: .lg, fillWidth: true))
                 }
             }
 
-            HStack(spacing: 12) {
-                Button("다른 영상 만들기") { startAnotherFilm() }
-                    .buttonStyle(.chalNaOutline)
-                    .frame(maxWidth: .infinity)
-
+            HStack(spacing: 4) {
+                Button("다른 영상 만들기") { store.send(.startAnotherTapped) }
+                    .buttonStyle(.chalNa(.ghost, size: .md, fillWidth: true))
                 Button {
                     store.send(.homeTapped)
                 } label: {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 4) {
                         Text("홈으로")
-                        ChalNaIcon(.chevronRight, size: 14)
+                        ChalNaIcon(.chevronRight, size: 13, weight: .semibold)
                     }
+                    .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.chalNaText)
-                .frame(maxWidth: .infinity)
+                .buttonStyle(.chalNa(.ghost, size: .md, fillWidth: true))
             }
         }
     }
 
-    @ViewBuilder
     private var failedCTAs: some View {
-        paperFailedCTAs
-    }
-
-    private var paperFailedCTAs: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 8) {
             Button {
-                store.send(.retryTapped(clips: session.clips, rotations: session.rotations, transforms: session.transforms, clipLabels: session.labels))
+                store.send(.retryTapped(clips: session.clips,
+                                        rotations: session.rotations,
+                                        transforms: session.transforms,
+                                        clipLabels: session.labels))
             } label: {
-                HStack(spacing: 8) {
-                    ChalNaIcon(.plus, size: 14)
-                    Text("다시 시도")
-                }
-                .frame(maxWidth: .infinity)
+                Text("다시 시도").frame(maxWidth: .infinity)
             }
-            .buttonStyle(.chalNaCoral)
+            .buttonStyle(.chalNa(.primary, size: .lg, fillWidth: true))
 
             Button("편집으로 돌아가기") { store.send(.backToEditTapped) }
-                .buttonStyle(.chalNaOutline)
-                .frame(maxWidth: .infinity)
+                .buttonStyle(.chalNa(.ghost, size: .md, fillWidth: true))
         }
-    }
-
-    private func startAnotherFilm() {
-        store.send(.startAnotherTapped)
-    }
-
-    // MARK: - Play overlay
-
-    private var playOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.18)
-            Circle()
-                .fill(.ultraThinMaterial)
-                .frame(width: 64, height: 64)
-                .overlay(
-                    Circle().strokeBorder(Color.white.opacity(0.55), lineWidth: 1)
-                )
-                .overlay(
-                    ChalNaIcon(.play, size: 28)
-                        .foregroundColor(ChalNaColor.Gray.g900)
-                        .offset(x: 2)
-                )
-                .shadow(color: Color.black.opacity(0.18), radius: 8, x: 0, y: 4)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.card, style: .continuous))
     }
 }
 

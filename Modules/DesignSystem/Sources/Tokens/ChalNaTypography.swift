@@ -3,58 +3,59 @@ import SwiftUI
 import UIKit
 #endif
 
-// Danawa DDS Mobile v2.0 타이포 토큰. 한글 본문은 시스템 폰트, Spec/숫자는 SF Mono.
-// 다나와 가이드:
-//   본문 15~16px, 14px 이하 사용 제한, 11px 이하 컨텐츠 금지.
-//   Title Big1/Big2 24px bold/regular (LH 32, tracking -0.2px)
-//   Title Big3/Big4 22px (LH 32) / Medium 20px (LH 30)
-//   Header 19px / List 16px
-//   Body1 16px (LH 22) / Body2 15px (LH 20) / Spec 14px (LH 22)
+/// 역할 기반 타이포 토큰.
+///
+/// 6개 역할이 **표준 iOS 텍스트 스타일에 정확히 대응**한다 —
+/// display 28=`.title`, title 22=`.title2`, headline 17=`.headline`,
+/// body 16=`.callout`, label 13=`.footnote`, caption 12=`.caption`.
+/// 그래서 별도 스케일링 코드 없이 Dynamic Type 을 그대로 따른다.
+///
+/// 앱 전역 상한은 `RootView` 의 `.dynamicTypeSize(...DynamicTypeSize.accessibility1)`.
+///
+/// 근거: `docs/superpowers/specs/2026-07-28-app-redesign-design.md` §4.3
 public enum ChalNaTypography {
 
-    private enum FontName {
-        static let systemMono = "SF Mono"
+    // MARK: - Roles
+
+    /// 화면 대제목 (28pt bold 상당).
+    public static var display: Font  { .system(.title,    design: .default, weight: .bold) }
+    /// 섹션 제목 (22pt semibold 상당).
+    public static var title: Font    { .system(.title2,   design: .default, weight: .semibold) }
+    /// 카드 제목 · 버튼 라벨 (17pt semibold 상당).
+    public static var headline: Font { .system(.headline, design: .default, weight: .semibold) }
+    /// 본문 (16pt 상당).
+    public static var body: Font     { .system(.callout,  design: .default, weight: .regular) }
+    /// 메타 · 태그 (13pt medium 상당). 구 `tagLabel()` 대체.
+    public static var label: Font    { .system(.footnote, design: .default, weight: .medium) }
+    /// 캡션 · 힌트 (12pt 상당). 최소 크기.
+    public static var caption: Font  { .system(.caption,  design: .default, weight: .regular) }
+
+    // MARK: - Mono (타임코드 · 퍼센트 등 순수 숫자 전용)
+
+    /// **한글에 쓰지 않는다.** SF Mono 에 한글 글리프가 없어 폴백되며 자간이 어긋난다.
+    public static func mono(_ style: Font.TextStyle = .footnote,
+                            weight: Font.Weight = .regular) -> Font {
+        .system(style, design: .monospaced, weight: weight)
     }
 
-    // MARK: - KR (기본 시스템 폰트)
+    // MARK: - Tracking
 
-    public static func displayKR(_ size: CGFloat, weight: Font.Weight = .bold) -> Font {
-        Font.system(size: size, weight: weight, design: .default)
+    public enum Tracking {
+        /// 제목류 자간.
+        public static let title: CGFloat = -0.20
     }
 
-    public static func krSemibold(_ size: CGFloat) -> Font {
-        Font.system(size: size, weight: .semibold, design: .default)
-    }
+    // MARK: - KERISKEDU (브랜드 순간 · 영상 라벨 WYSIWYG 전용)
 
-    public static func krBody(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        Font.system(size: size, weight: weight, design: .default)
-    }
-
-    /// 다나와 Title (Big1/Big2) 기본 24pt bold
-    public static func title(_ size: CGFloat = Size.h1, weight: Font.Weight = .bold) -> Font {
-        Font.system(size: size, weight: weight, design: .default)
-    }
-
-    // MARK: - Mono (Spec / Price / 코드용)
-
-    public static func mono(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        Font.custom(FontName.systemMono, size: size, relativeTo: textStyle(for: size)).weight(weight)
-    }
-
-    public static func monoFallback(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        Font.custom(FontName.systemMono, size: size, relativeTo: textStyle(for: size)).weight(weight)
-    }
-
-    // MARK: - KERISKEDU (영상 오버레이와 동일 폰트)
-    // UIAppFonts 로 앱에 등록된 KERISKEDU 패밀리의 Line(outline) 변형을 우선 사용.
-    // CompositionService 의 영상 라벨 폰트 해석과 동일 규칙 — 매칭 실패 시 시스템 bold fallback.
+    /// Splash 브랜드 라벨과 영상 오버레이 미리보기에만 쓴다.
+    /// 영상 출력과 픽셀 일치해야 하므로 **여기만 pt 를 직접 받는다**(Dynamic Type 비적용).
     public static func keris(_ size: CGFloat, weight: Font.Weight = .bold) -> Font {
         #if canImport(UIKit)
         if let name = kerisFontName, UIFont(name: name, size: size) != nil {
             return Font.custom(name, size: size)
         }
         #endif
-        return Font.system(size: size, weight: weight, design: .default)
+        return .system(size: size, weight: weight, design: .default)
     }
 
     #if canImport(UIKit)
@@ -73,81 +74,10 @@ public enum ChalNaTypography {
         return nil
     }()
 
-    /// 측정/합성용 UIFont — `keris()` Font 와 같은 family. 실패 시 시스템 bold.
+    /// 측정·합성용 UIFont — `keris()` 와 같은 family. 실패 시 시스템 bold.
     public static func kerisUIFont(_ size: CGFloat) -> UIFont {
         if let name = kerisFontName, let f = UIFont(name: name, size: size) { return f }
         return .systemFont(ofSize: size, weight: .bold)
     }
     #endif
-
-    // MARK: - Legacy stubs (ChalNa 무드 제거: Fraunces/Caveat/BradleyHand 의존 삭제, 시스템 폰트 krBody 로 매핑)
-    // Phase 2~5 에서 호출처 정리될 때까지 빌드 호환용으로 둔다.
-
-    public static func displayEN(_ size: CGFloat, italic: Bool = false, weight: Font.Weight = .regular) -> Font {
-        krBody(size, weight: weight)
-    }
-
-    public static func serifFallback(_ size: CGFloat, italic: Bool = false) -> Font {
-        krBody(size, weight: .regular)
-    }
-
-    public static func hand(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        krBody(size, weight: weight)
-    }
-
-    public static func handFallback(_ size: CGFloat) -> Font {
-        krBody(size, weight: .regular)
-    }
-
-    private static func textStyle(for size: CGFloat) -> Font.TextStyle {
-        switch size {
-        case ..<12: return .caption2
-        case ..<15: return .caption
-        case ..<18: return .body
-        case ..<23: return .title3
-        case ..<30: return .title2
-        case ..<44: return .title
-        default: return .largeTitle
-        }
-    }
-
-    // MARK: - Scale (다나와 가이드 기준)
-    public enum Size {
-        // 다나와 11px 이하 컨텐츠 금지 — 최소 12pt
-        public static let tag: CGFloat       = 12
-        public static let caption: CGFloat   = 12   // Etc 13 → 안전치 12
-        public static let small: CGFloat     = 14   // Spec / Menu 2depth (14px 이하 사용 제한)
-        public static let body2: CGFloat     = 15   // Body2 (LH 20)
-        public static let body: CGFloat      = 16   // Body1 / List / Menu Big (LH 22)
-        public static let bodyLg: CGFloat    = 18
-        public static let header: CGFloat    = 19   // Mobile Header
-        public static let h2: CGFloat        = 20   // Medium1/2 (LH 30)
-        public static let big: CGFloat       = 22   // Big3/4 (LH 32)
-        public static let h1: CGFloat        = 24   // Big1/2 Title (LH 32)
-        public static let displayS: CGFloat  = 28
-        public static let displayL: CGFloat  = 32
-    }
-
-    // MARK: - Tracking (letter-spacing in points)
-    public enum Tracking {
-        public static let titleKR: CGFloat   = -0.20   // Big titles
-        public static let bodyKR: CGFloat    = -0.30   // Body1/2/Spec
-        public static let priceKR: CGFloat   = -0.40   // Price labels
-
-        // Legacy alias (호환)
-        public static let displayEN: CGFloat = -0.20
-        public static let displayKR: CGFloat = -0.20
-        public static let h2KR: CGFloat      = -0.20
-        public static let tagLabel: CGFloat  =  0.00
-    }
-}
-
-// MARK: - View helpers for tag labels
-
-public extension Text {
-    func tagLabel(color: Color = ChalNaColor.Gray.g500) -> Text {
-        self.font(ChalNaTypography.monoFallback(ChalNaTypography.Size.tag, weight: .medium))
-            .tracking(ChalNaTypography.Tracking.tagLabel)
-            .foregroundColor(color)
-    }
 }
