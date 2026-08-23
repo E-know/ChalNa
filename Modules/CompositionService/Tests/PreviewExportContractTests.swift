@@ -8,7 +8,7 @@ import CompositionService
 /// **같은 배치 사각형**을 만들어내는지 잠그는 계약 테스트.
 ///
 /// 두 경로는 서로 독립적으로 구현돼 있다 — 프리뷰는 `CGRect`, export 는 AVFoundation 이 요구하는
-/// `CGAffineTransform` — 이지만 둘 다 배율/오프셋 원시값은 `ClipFraming.fillScale`·`clampedOffset`
+/// `CGAffineTransform` — 이지만 둘 다 배율/오프셋 원시값은 `ClipFraming.fillScale` 과 `ClipTransform.sanitized`
 /// 을 그대로 호출해 공유한다. 그런데 이 둘을 실제로 비교하는 테스트는 지금까지 없었다.
 /// Task 25 의 회귀(a6251a4 가 공유 캔버스의 `.frame(alignment:)` 를 top→center 로 바꿔
 /// 라벨 드래그 좌표가 0.889pt 어긋난 사례, 84fdc1c 에서 테스트 없이 수정됨)가 정확히 이 지점에서
@@ -37,7 +37,7 @@ struct PreviewExportContractTests {
         return CGRect(x: xs.min()!, y: ys.min()!, width: xs.max()! - xs.min()!, height: ys.max()! - ys.min()!)
     }
 
-    /// 두 경로 모두 같은 `fillScale`/`clampedOffset` 값을 쓰지만, 이를 최종 좌표로 환산하는
+    /// 두 경로 모두 같은 `fillScale`/`sanitized` 값을 쓰지만, 이를 최종 좌표로 환산하는
     /// 곱셈 결합 순서가 다르다 — `resolvedRect` 는 `(size × fill) × scale`, `transform()` 은
     /// `size × (fill × scale)`(totalScale 을 먼저 합쳐서). 부동소수점 곱은 결합법칙이 없어
     /// 이 재결합만으로도 ULP 수준 잔차가 생길 수 있다. render 좌표 규모(~천 단위)에서 double
@@ -81,18 +81,24 @@ struct PreviewExportContractTests {
                        transform: ClipTransform(scale: 2, offset: CGPoint(x: 0.2, y: 0)))
     }
 
-    // MARK: - clampedOffset 이 실제로 clamp 되는 경로
+    // MARK: - 극단 offset / 축소 (clamp 가 없어진 경로)
 
-    /// 가로 클립 scale=1: 이동 한계 ≈1.08025(ClipFramingTests 와 동일 값). offset.x=2.0 은 한계 초과.
-    @Test func testContract_Landscape_R0_OffsetClamps() {
+    /// 예전 이동 한계(≈1.08025)를 크게 넘는 offset. 두 경로가 똑같이 clamp 없이 반영해야 한다.
+    @Test func testContract_Landscape_R0_ExtremeOffset() {
         expectContract(display: CGSize(width: 1920, height: 1080), rotation: .r0,
                        transform: ClipTransform(scale: 1, offset: CGPoint(x: 2.0, y: -0.5)))
     }
 
-    /// 회전 + scale + clamp 조합 — 회전이 이동 한계 자체를 바꾸는 경로(ClipFramingTests 의
-    /// `testMaxOffsetFraction_R90_Portrait_BecomesHorizontal` 참고)에서도 두 경로가 같은 clamp 를 본다.
-    @Test func testContract_Portrait_R90_ScaleAndOffsetClamps() {
+    /// 회전 + scale + 극단 offset 조합 — 회전이 오리엔티드 축을 바꾸는 경로에서도 일치.
+    @Test func testContract_Portrait_R90_ScaleAndExtremeOffset() {
         expectContract(display: CGSize(width: 1080, height: 1920), rotation: .r90,
                        transform: ClipTransform(scale: 2, offset: CGPoint(x: 5.0, y: 5.0)))
+    }
+
+    /// 축소(scale < 1) — 전경이 캔버스를 못 덮는 새 영역. 프리뷰가 그리는 여백 위치와
+    /// export 가 만드는 여백 위치가 어긋나면 WYSIWYG 가 깨지는 지점이다.
+    @Test func testContract_Portrait_R0_ScaleBelowFill() {
+        expectContract(display: CGSize(width: 1080, height: 1920), rotation: .r0,
+                       transform: ClipTransform(scale: 0.5, offset: CGPoint(x: 0.2, y: -0.3)))
     }
 }

@@ -526,6 +526,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
     /// 한 클립을 renderSize 에 aspectFill(=센터 크롭)로 배치하고, 사용자 변환(scale·offset)을 추가 적용한 affine transform.
     /// framing == .fill 이면 추가 조작 없는 기본 센터 크롭.
+    /// scale·offset 에 제약은 없다 — 전경이 캔버스를 못 덮으면 남는 영역은 컴포지터의 검정 베이스가 받는다.
     public static func transform(
         naturalSize: CGSize,
         preferredTransform: CGAffineTransform,
@@ -548,11 +549,12 @@ public actor AVFoundationCompositionService: CompositionServicing {
         let rotatedRect = CGRect(origin: .zero, size: displaySize).applying(rotationMatrix)
         let rotationNormalize = CGAffineTransform(translationX: -rotatedRect.minX, y: -rotatedRect.minY)
 
-        // ④ fill(센터 크롭) 배율은 ClipFraming 과 공유. 사용자 배율은 [1, 4] 로 clamp —
-        //    1 미만이면 캔버스 여백이 드러나므로 금지(블러 배경 없음).
+        // ④ fill(센터 크롭) 배율은 ClipFraming 과 공유. 사용자 배율에는 UX 제약이 없고
+        //    `sanitized` 의 산술 안전 가드([0.1, 10] + non-finite 방어)만 적용된다 —
+        //    1 미만이면 캔버스에 검정 여백이 드러난다(컴포지터의 검정 베이스가 받는다).
+        let safeFraming = framing.sanitized
         let fillScale = ClipFraming.fillScale(display: displaySize, rotation: rotation, render: renderSize)
-        let userScale = min(max(framing.scale, ClipTransform.minScale), ClipTransform.maxScale)
-        let totalScale = fillScale * userScale
+        let totalScale = fillScale * safeFraming.scale
 
         let scaledSize = CGSize(width: postRotationSize.width * totalScale,
                                 height: postRotationSize.height * totalScale)
@@ -561,11 +563,9 @@ public actor AVFoundationCompositionService: CompositionServicing {
         let centerTranslate = CGAffineTransform(translationX: (renderSize.width - scaledSize.width) / 2,
                                                 y: (renderSize.height - scaledSize.height) / 2)
 
-        // ⑥ 사용자 이동(정규화 비율 → 픽셀). 화면 밖으로 못 나가게 clamp 도 ClipFraming 공유.
-        let clampedFrac = ClipFraming.clampedOffset(framing.offset, display: displaySize,
-                                                    rotation: rotation, render: renderSize, scale: userScale)
-        let offsetTranslate = CGAffineTransform(translationX: clampedFrac.x * renderSize.width,
-                                                y: clampedFrac.y * renderSize.height)
+        // ⑥ 사용자 이동(정규화 비율 → 픽셀). clamp 없음 — 전경이 캔버스 밖으로 나갈 수 있다.
+        let offsetTranslate = CGAffineTransform(translationX: safeFraming.offset.x * renderSize.width,
+                                                y: safeFraming.offset.y * renderSize.height)
 
         // 순서대로 곱한다 — 이 순서가 곧 의미(①보정 → ③회전 → ④배율 → ⑤중앙 → ⑥이동).
         return preferredTransform
