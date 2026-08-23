@@ -130,8 +130,9 @@ Derived/**
 ### Project specific (ChalNa / Tuist) ###
 # Tuist 가 generate 마다 재생성하는 워크스페이스 — commit 대상 아님 (xcodeproj 는 위 *.xcodeproj 로 무시)
 *.xcworkspace
-# tuist graph 가 루트에 만드는 임시 PNG (정식본은 docs/architecture-graph.png)
+# tuist graph 가 루트에 만드는 임시 산출물 (정식본은 docs/architecture-graph.png)
 /graph.png
+/graph.dot
 # understand/ 로컬 설명 HTML 산출물
 understand/
 
