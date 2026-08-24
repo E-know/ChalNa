@@ -89,7 +89,7 @@ struct PreviewPanel: View {
     private func labelOverlay(box: CGSize) -> some View {
         let label = currentLabel
         if store.currentClip != nil, label.isVisible {
-            ClipLabelText(label: label, fontPx: label.clampedSizeFraction * box.height)
+            ClipLabelText(label: label, fontPx: label.fontPx(canvasHeight: box.height))
                 .position(x: label.position.x * box.width,
                           y: label.position.y * box.height)
                 .frame(width: box.width, height: box.height)

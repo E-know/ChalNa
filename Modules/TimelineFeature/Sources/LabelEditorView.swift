@@ -35,9 +35,12 @@ struct LabelEditorView: View {
     /// 드래그 시작 시점의 코너(기준점).
     @State private var dragBaseCorner: CGPoint = .zero
     @State private var boxSize: CGSize = .zero
-    /// 글자를 실제로 래스터화해 둔 '베이크' 크기 비율. 슬라이더 드래그 중에는 이 값으로 그린 박스를
+    /// 글자를 실제로 래스터화해 둔 '베이크' 비율. 슬라이더 드래그 중에는 이 값으로 그린 박스를
     /// scaleEffect 로만 부드럽게 키우고, 드래그가 끝나면 현재 값으로 베이크해 선명하게 다시 그린다.
-    @State private var renderedSizeFraction: CGFloat
+    ///
+    /// 담는 값은 **맞춤 결과**(`ClipLabel.renderedSizeFraction`)이지 사용자 의도(`sizeFraction`)가
+    /// 아니다 — 이름이 `ClipLabel.renderedSizeFraction` 과 겹치면 둘을 구별할 수 없어 `baked` 로 둔다.
+    @State private var bakedSizeFraction: CGFloat
     @State private var didInit = false
     @State private var showVGuide = false
     @State private var showHGuide = false
@@ -62,7 +65,7 @@ struct LabelEditorView: View {
         self.onCommit = onCommit
         self.onCancel = onCancel
         _label = State(initialValue: initialLabel)
-        _renderedSizeFraction = State(initialValue: initialLabel.clampedSizeFraction)
+        _bakedSizeFraction = State(initialValue: initialLabel.renderedSizeFraction)
     }
 
     var body: some View {
@@ -84,6 +87,10 @@ struct LabelEditorView: View {
         .onTapGesture { backgroundTapped() }
         .onAppear { keyboard.start() }
         .onDisappear { keyboard.stop() }
+        // 문구가 바뀌면 맞춤 폰트가 달라진다. 타이핑은 연속 제스처가 아니므로 매 입력마다 다시
+        // 래스터화해도 문제없다 — 이걸 안 하면 입력 중에는 scaleEffect 로 흐릿하게 커졌다가
+        // `[다음]` 에서 갑자기 선명해지는 불연속이 생긴다.
+        .onChange(of: label.text) { _, _ in bakedSizeFraction = label.renderedSizeFraction }
         // 키보드가 내려갔다는 **사실 하나만** 자동 전환 트리거로 쓴다. 가드 3개가 필요하다:
         //  ① step == .text — goToStyle() 이 focused=false 로 키보드를 내리므로, `[다음]` 탭 →
         //     전환 → 하강 → 다시 전환 시도가 되는 이중 발화를 막는다.
@@ -169,13 +176,14 @@ struct LabelEditorView: View {
 
     @ViewBuilder
     private func labelLayer(box: CGSize, boxTopGlobalY: CGFloat) -> some View {
-        // 위치/드래그/플로팅은 '최종 표시 크기'(true fontPx) 기준으로 계산한다.
-        let fontPx = label.clampedSizeFraction * box.height
+        // 위치/드래그/플로팅은 '최종 표시 크기'(맞춤 fontPx) 기준으로 계산한다 —
+        // 문구가 길면 `ClipLabelMetrics` 가 가용폭에 맞춰 자동 축소한 값이 들어온다.
+        let fontPx = label.fontPx(canvasHeight: box.height)
         let padded = LabelAnchorMath.paddedBoxSize(text: label.text, fontPx: fontPx)
         // 글자는 '베이크' 크기로만 래스터화하고, 슬라이더 드래그 중 차이는 scaleEffect 로 부드럽게 메운다.
         // (매 프레임 폰트 재래스터화/박스 ceil 반올림으로 생기는 '뚝뚝 끊김'을 GPU 기하 변환으로 대체)
-        let renderedFontPx = renderedSizeFraction * box.height
-        let liveScale = renderedSizeFraction > 0 ? label.clampedSizeFraction / renderedSizeFraction : 1
+        let renderedFontPx = bakedSizeFraction * box.height
+        let liveScale = bakedSizeFraction > 0 ? label.renderedSizeFraction / bakedSizeFraction : 1
         // 편집 진입 시 가시영역 중앙으로 올리는 '플로팅' 델타. 이 델타만 애니메이션하고,
         // 위치(anchorCorner) 오프셋은 애니메이션 밖에 둬 드래그가 손가락을 1:1 로 따라가게 한다.
         let floatDeltaY = displayCornerY(box: box, boxTopGlobalY: boxTopGlobalY, padded: padded) - anchorCorner.y
@@ -345,7 +353,7 @@ struct LabelEditorView: View {
                     step: nil,
                     onEditingChanged: { editing in
                         // 드래그 종료 시 현재 크기로 베이크 → scaleEffect=1 로 글자를 선명하게 재렌더.
-                        if !editing { renderedSizeFraction = label.clampedSizeFraction }
+                        if !editing { bakedSizeFraction = label.renderedSizeFraction }
                     }
                 )
             }
@@ -432,7 +440,7 @@ struct LabelEditorView: View {
         guard newBox.width > 0, newBox.height > 0 else { return }
         boxSize = newBox
         guard didInit else {
-            let fontPx = label.clampedSizeFraction * newBox.height
+            let fontPx = label.fontPx(canvasHeight: newBox.height)
             let padded = LabelAnchorMath.paddedBoxSize(text: label.text, fontPx: fontPx)
             anchorCorner = LabelAnchorMath.topLeft(center: label.position, in: newBox, paddedSize: padded)
             didInit = true
@@ -443,11 +451,11 @@ struct LabelEditorView: View {
         guard oldBox.width > 0, oldBox.height > 0, newBox != oldBox else { return }
         let centerNorm = LabelAnchorMath.center(
             topLeft: anchorCorner, in: oldBox,
-            paddedSize: LabelAnchorMath.paddedBoxSize(text: label.text, fontPx: label.clampedSizeFraction * oldBox.height)
+            paddedSize: LabelAnchorMath.paddedBoxSize(text: label.text, fontPx: label.fontPx(canvasHeight: oldBox.height))
         )
         anchorCorner = LabelAnchorMath.topLeft(
             center: centerNorm, in: newBox,
-            paddedSize: LabelAnchorMath.paddedBoxSize(text: label.text, fontPx: label.clampedSizeFraction * newBox.height)
+            paddedSize: LabelAnchorMath.paddedBoxSize(text: label.text, fontPx: label.fontPx(canvasHeight: newBox.height))
         )
     }
 
@@ -455,7 +463,7 @@ struct LabelEditorView: View {
     private func committedLabel() -> ClipLabel {
         var result = label
         if boxSize.width > 0, boxSize.height > 0 {
-            let fontPx = label.clampedSizeFraction * boxSize.height
+            let fontPx = label.fontPx(canvasHeight: boxSize.height)
             let padded = LabelAnchorMath.paddedBoxSize(text: label.text, fontPx: fontPx)
             result.position = LabelAnchorMath.center(topLeft: anchorCorner, in: boxSize, paddedSize: padded)
         }

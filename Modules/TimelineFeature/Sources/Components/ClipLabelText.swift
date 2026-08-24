@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 import Models
 import DesignSystem
 
@@ -37,15 +36,8 @@ struct ClipLabelText: View {
 
     private var displayString: String { placeholder ? String(localized: "자막 입력") : label.text }
 
-    /// 합성 measureCustomText 와 동일한 UIFont(시스템 light) 로 측정한 텍스트 크기.
-    private var measuredSize: CGSize {
-        let ui = UIFont.systemFont(ofSize: fontPx, weight: .light)
-        let s = NSAttributedString(string: displayString, attributes: [
-            .font: ui,
-            .kern: ClipLabel.BoxStyle.letterSpacing(for: fontPx),
-        ]).size()
-        return CGSize(width: ceil(s.width), height: ceil(s.height))
-    }
+    /// 합성과 동일한 실측 — `Models.ClipLabelMetrics` 가 단일 출처다.
+    private var measuredSize: CGSize { ClipLabelMetrics.textSize(displayString, fontPx: fontPx) }
 
     private var styledText: some View {
         Text(displayString)

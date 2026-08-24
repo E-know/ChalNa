@@ -446,23 +446,10 @@ public actor AVFoundationCompositionService: CompositionServicing {
     }
 
     #if canImport(UIKit)
-    /// 박스 자막 라벨용 UIFont — 시스템 light 고정.
-    private static func overlayCustomUIFont(fontSize: CGFloat) -> UIFont {
-        .systemFont(ofSize: fontSize, weight: .light)
-    }
-
-    /// 박스 자막 텍스트 실측(시스템 light + 자간 기준).
-    private static func measureCustomText(_ text: String, fontSize: CGFloat) -> CGSize {
-        let attributed = NSAttributedString(
-            string: text,
-            attributes: [
-                .font: overlayCustomUIFont(fontSize: fontSize),
-                .kern: ClipLabel.BoxStyle.letterSpacing(for: fontSize),
-            ]
-        )
-        let m = attributed.size()
-        return CGSize(width: ceil(m.width), height: ceil(m.height))
-    }
+    // 박스 자막의 폰트·실측·자동 축소는 `Models.ClipLabelMetrics` 가 단일 출처다.
+    // 예전엔 이 파일에 `overlayCustomUIFont`/`measureCustomText` 로 복제돼 있었고,
+    // 프리뷰(`ClipLabelText`)·에디터(`LabelAnchorMath`)에도 같은 코드가 또 있었다 —
+    // 한쪽만 고치면 미리보기와 출력이 다른 폭을 갖는데 컴파일도 테스트도 조용했다.
 
     /// 박스 자막 라벨 한 개를 그릴 레이어들.
     ///
@@ -477,15 +464,21 @@ public actor AVFoundationCompositionService: CompositionServicing {
         placedRect: CGRect,
         renderSize: CGSize
     ) -> [CALayer] {
-        let fontSize = max(8, label.clampedSizeFraction * placedRect.height)
-        let textSize = measureCustomText(label.text, fontSize: fontSize)
+        // 문구가 길면 가용폭(캔버스 폭 92%)에 맞춰 자동 축소된다. 하한(8px)도 SSOT 안에 있으므로
+        // 여기서 `max(8, …)` 를 따로 걸지 않는다 — 걸면 축소 규칙이 두 곳으로 갈라진다.
+        let fontSize = ClipLabelMetrics.fontPx(
+            text: label.text,
+            userSizeFraction: label.clampedSizeFraction,
+            canvasHeight: placedRect.height
+        )
+        let textSize = ClipLabelMetrics.textSize(label.text, fontPx: fontSize)
         let origin = customLabelOrigin(placedRect: placedRect, position: label.position, textSize: textSize, renderSize: renderSize)
 
         let textLayer = CATextLayer()
         textLayer.string = NSAttributedString(
             string: label.text,
             attributes: [
-                .font: overlayCustomUIFont(fontSize: fontSize),
+                .font: ClipLabelMetrics.uiFont(px: fontSize),
                 // 흰 박스 위면 검정, 영상 위에 직접 올리면 흰색. 프리뷰의 ClipLabelBoxPalette 와 같은 규칙.
                 .foregroundColor: label.hasBackground ? UIColor.black : UIColor.white,
                 .kern: ClipLabel.BoxStyle.letterSpacing(for: fontSize),
