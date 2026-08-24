@@ -37,4 +37,26 @@ struct ClipLabelTests {
         let off = ClipLabel(text: "제주 바다", hasBackground: false)
         #expect(on != off)
     }
+
+    // MARK: - 회전
+
+    /// 회전 기본값은 0 — 기존 라벨의 외형이 그대로 유지되어야 한다.
+    @Test func defaultRotationIsZero() {
+        #expect(ClipLabel().rotationRadians == 0)
+        #expect(ClipLabel.default.rotationRadians == 0)
+    }
+
+    /// 회전은 값 동등성에 참여한다 — 참여하지 않으면 제스처가 뷰 갱신도,
+    /// 오버레이 캐시(`OverlayKey`) 무효화도 못 만든다.
+    @Test func rotationParticipatesInEquality() {
+        #expect(ClipLabel(text: "제주 바다", rotationRadians: 0)
+                != ClipLabel(text: "제주 바다", rotationRadians: 0.3))
+    }
+
+    /// −180°…180° 자유 회전. 그 밖은 clamp.
+    @Test func rotationClampsToHalfTurn() {
+        #expect(ClipLabel(rotationRadians: 10).clampedRotationRadians == .pi)
+        #expect(ClipLabel(rotationRadians: -10).clampedRotationRadians == -.pi)
+        #expect(ClipLabel(rotationRadians: 0.5).clampedRotationRadians == 0.5)
+    }
 }

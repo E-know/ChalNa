@@ -3,9 +3,11 @@ import Models
 
 /// 라벨 박스의 "좌상단(top-leading) 코너 ↔ 중심(center)" 변환 + 박스 표시 크기 측정.
 ///
-/// 편집/크기 조정 중에는 **좌상단 코너 `(minX, minY)` 를 고정**하고 우·하로만 확장한다.
-/// 다만 저장 모델(`ClipLabel.position`)은 지금처럼 **박스 중심** 기준을 유지하므로,
-/// 합성(`CompositionService.customLabelOrigin`)·미리보기(`PreviewPanel`)와 WYSIWYG 가 어긋나지 않는다.
+/// **순수 변환 함수 모음이며 "어느 코너를 고정한다"는 정책을 담지 않는다.** 에디터
+/// (`LabelEditorView`)는 정규화 **중심**을 배치의 단일 출처로 쓰고(크기가 바뀌어도 중심 고정),
+/// 여기서는 그 중심을 화면 오프셋(좌상단 코너)으로 환산하고 드래그 결과를 되돌리는 일만 한다.
+/// 저장 모델(`ClipLabel.position`)도 박스 중심 기준이라 합성
+/// (`CompositionService.customLabelOrigin`)·미리보기(`PreviewPanel`)와 WYSIWYG 가 어긋나지 않는다.
 /// 코너↔중심 변환은 측정한 박스 크기를 그대로 역산하므로 왕복(round-trip) 무손실이다.
 enum LabelAnchorMath {
     /// 빈 문구는 placeholder 로 실측한다 — 편집 중 인라인 TextField 폭을 글자에 맞추기 위함

@@ -159,6 +159,39 @@ final class LabelEditorUITests: XCTestCase {
         XCTAssertTrue(app.buttons["저장"].firstMatch.exists, "자동 전환 후 저장 버튼 없음")
     }
 
+    /// `.style` 스텝에서 두 손가락 확대/회전 후 크래시 없이 컨트롤에 도달하고 저장까지 되는지.
+    /// devMock 은 시각 검증 채널이 아니므로 **기하 단언을 걸지 않는다** — 도달성·무크래시만 본다.
+    func testLabelEditor_PinchAndRotate_NoCrashControlsReachable() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["CHALNA_APP_MODE"] = "devMock"
+        app.launchArguments += ["-AppleLanguages", "(ko)"]
+        app.launch()
+
+        navigateToLabelEditor(app)
+
+        let textField = app.textFields.firstMatch
+        XCTAssertTrue(textField.waitForExistence(timeout: 10), "라벨 인라인 TextField")
+        textField.typeText("제주 바다")
+
+        let next = app.buttons["다음"].firstMatch
+        XCTAssertTrue(next.exists && next.isHittable, "키보드 위 다음 버튼 도달 불가")
+        next.tap()
+
+        let slider = app.sliders.firstMatch
+        XCTAssertTrue(slider.waitForExistence(timeout: 5), "스텝 2 크기 슬라이더")
+
+        app.pinch(withScale: 1.5, velocity: 1.0)
+        app.rotate(0.5, withVelocity: 1.0)
+
+        XCTAssertTrue(slider.isHittable, "제스처 후 크기 슬라이더 도달 불가")
+        let save = app.buttons["저장"].firstMatch
+        XCTAssertTrue(save.isHittable, "제스처 후 저장 버튼 도달 불가")
+        save.tap()
+
+        XCTAssertTrue(app.buttons["라벨"].firstMatch.waitForExistence(timeout: 10),
+                      "저장 후 타임라인 복귀 실패")
+    }
+
     // MARK: - Helpers
 
     /// dev fixture 2개 선택 → Timeline → 하단 툴바 "라벨" 버튼으로 LabelEditorView 진입.

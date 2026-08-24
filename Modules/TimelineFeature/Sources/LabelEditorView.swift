@@ -16,8 +16,12 @@ import DesignSystem
 /// `ClipLabel.isVisible == false` 로 라벨 없음이 되며, 이것이 라벨을 지우는 유일한 경로다
 /// (그래서 `[다음]` 을 비활성화하지 않는다).
 ///
-/// 배치는 box-local **좌상단 코너 `anchorCorner`(point)** 를 단일 출처로 삼고(요구: leading/top 고정·우하 확장),
-/// 저장 모델 `ClipLabel.position`(중심)은 커밋 시 코너에서 역산한다 → 합성/미리보기와 WYSIWYG 유지.
+/// 배치는 **정규화 중심 `anchorCenter`(0…1)** 를 단일 출처로 삼는다 — 저장 모델
+/// `ClipLabel.position` 과 같은 좌표계라 커밋 시 역산이 없고, box 크기가 바뀌어도 재산출할 것이
+/// 없다. 크기(슬라이더·핀치)가 바뀌어도 중심이 그대로이므로 라벨은 **중심 고정으로 확대/축소**된다
+/// (좌상단 코너를 고정하던 예전 규칙을 핀치 도입과 함께 중심 고정으로 통일했다).
+/// `.style` 스텝에서는 **두 손가락으로 크기와 기울기를 동시에** 조절할 수 있고, 크기는 슬라이더와
+/// 같은 `sizeFraction` 을 공유해 서로 동기화된다.
 struct LabelEditorView: View {
     let clip: Clip
     let rotation: ClipRotation
@@ -30,10 +34,14 @@ struct LabelEditorView: View {
     @State private var step: Step = .text
     /// 드래그 진행 중 여부 — 정렬 가이드 표시 조건.
     @State private var isDragging = false
-    /// box-local 좌상단 코너(point). 배치의 단일 출처.
-    @State private var anchorCorner: CGPoint = .zero
-    /// 드래그 시작 시점의 코너(기준점).
-    @State private var dragBaseCorner: CGPoint = .zero
+    /// 정규화 중심(0…1). 배치의 단일 출처 — 저장 모델 `ClipLabel.position` 과 같은 좌표계다.
+    @State private var anchorCenter = CGPoint(x: 0.5, y: 0.5)
+    /// 드래그 시작 시점의 중심(기준점).
+    @State private var dragBaseCenter = CGPoint(x: 0.5, y: 0.5)
+    /// 두 손가락 제스처 진행 중 여부 + 시작 시점 기준값.
+    @State private var isTransforming = false
+    @State private var pinchBaseFraction: CGFloat = 0
+    @State private var rotateBaseRadians: CGFloat = 0
     @State private var boxSize: CGSize = .zero
     /// 글자를 실제로 래스터화해 둔 '베이크' 비율. 슬라이더 드래그 중에는 이 값으로 그린 박스를
     /// scaleEffect 로만 부드럽게 키우고, 드래그가 끝나면 현재 값으로 베이크해 선명하게 다시 그린다.
@@ -148,8 +156,8 @@ struct LabelEditorView: View {
                         .allowsHitTesting(false)
                     labelLayer(box: box, boxTopGlobalY: boxTopGlobalY)
                 }
-                .onAppear { reflow(from: .zero, to: box) }
-                .onChange(of: box) { oldBox, newBox in reflow(from: oldBox, to: newBox) }
+                .onAppear { reflow(to: box) }
+                .onChange(of: box) { _, newBox in reflow(to: newBox) }
             }
             .frame(width: box.width, height: box.height)
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
@@ -184,9 +192,13 @@ struct LabelEditorView: View {
         // (매 프레임 폰트 재래스터화/박스 ceil 반올림으로 생기는 '뚝뚝 끊김'을 GPU 기하 변환으로 대체)
         let renderedFontPx = bakedSizeFraction * box.height
         let liveScale = bakedSizeFraction > 0 ? label.renderedSizeFraction / bakedSizeFraction : 1
+        // 배치 단일 출처는 정규화 중심이다 — 화면 오프셋(좌상단 코너)은 매 렌더에 환산한다.
+        // 그래서 크기가 바뀌어도 중심이 유지된다(중심 고정 확대/축소).
+        let corner = LabelAnchorMath.topLeft(center: anchorCenter, in: box, paddedSize: padded)
         // 편집 진입 시 가시영역 중앙으로 올리는 '플로팅' 델타. 이 델타만 애니메이션하고,
-        // 위치(anchorCorner) 오프셋은 애니메이션 밖에 둬 드래그가 손가락을 1:1 로 따라가게 한다.
-        let floatDeltaY = displayCornerY(box: box, boxTopGlobalY: boxTopGlobalY, padded: padded) - anchorCorner.y
+        // 위치 오프셋은 애니메이션 밖에 둬 드래그가 손가락을 1:1 로 따라가게 한다.
+        let floatDeltaY = displayCornerY(box: box, boxTopGlobalY: boxTopGlobalY,
+                                         padded: padded, cornerY: corner.y) - corner.y
 
         ZStack(alignment: .topLeading) {
             Color.clear.frame(width: box.width, height: box.height)
@@ -196,34 +208,37 @@ struct LabelEditorView: View {
             }
 
             // fontPx 는 베이크 크기(선명 렌더), padded 는 true 크기(드래그/위치 계산용)로 분리해 전달.
-            labelContent(fontPx: renderedFontPx, padded: padded, box: box)
+            labelContent(fontPx: renderedFontPx, box: box)
                 .scaleEffect(liveScale, anchor: .topLeading)
                 .offset(y: floatDeltaY)
                 .animation(ChalNaMotion.standard, value: floatDeltaY)
-                .offset(x: anchorCorner.x, y: anchorCorner.y)
+                .offset(x: corner.x, y: corner.y)
         }
         .frame(width: box.width, height: box.height)
     }
 
     /// 표시용 코너 Y. `.text` 스텝에서는 가시영역(상단바~키보드) 높이의 정중앙으로 올린다.
-    private func displayCornerY(box: CGSize, boxTopGlobalY: CGFloat, padded: CGSize) -> CGFloat {
-        guard step == .text, keyboard.height > 0 else { return anchorCorner.y }
+    private func displayCornerY(box: CGSize, boxTopGlobalY: CGFloat,
+                                padded: CGSize, cornerY: CGFloat) -> CGFloat {
+        guard step == .text, keyboard.height > 0 else { return cornerY }
         let visibleCenterLocalY = (keyboard.topY - boxTopGlobalY) / 2   // 박스 상단=상단바 아래 기준
         return visibleCenterLocalY - padded.height / 2
     }
 
     @ViewBuilder
-    private func labelContent(fontPx: CGFloat, padded: CGSize, box: CGSize) -> some View {
+    private func labelContent(fontPx: CGFloat, box: CGSize) -> some View {
         switch step {
         case .text:
             inlineEditor(fontPx: fontPx)
         case .style:
             let isEmpty = label.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            ClipLabelText(label: label, fontPx: fontPx, placeholder: isEmpty)
-                .overlay(selectionFrame)
+            ClipLabelText(label: label, fontPx: fontPx, placeholder: isEmpty, selected: true)
                 .contentShape(Rectangle())
                 .onTapGesture { goToText() }
-                .gesture(dragGesture(box: box, padded: padded))
+                .gesture(dragGesture(box: box))
+                // 한 손가락 드래그(위치)와 두 손가락 확대/회전은 필요한 터치 수가 달라 서로
+                // 가로채지 않는다. 확대와 회전은 **동시 인식**해야 한 동작으로 느껴진다.
+                .simultaneousGesture(magnifyAndRotateGesture)
         }
     }
 
@@ -265,13 +280,6 @@ struct LabelEditorView: View {
             .submitLabel(.done)
             .onSubmit { focused = false }
             .boxSubtitleStyle(fontPx: fontPx, hasBackground: label.hasBackground)
-    }
-
-    // `labelContent` 가 `.style` 케이스에서만 이 오버레이를 붙이므로 step 분기가 필요 없다.
-    private var selectionFrame: some View {
-        Rectangle()
-            .strokeBorder(ChalNaColor.accent, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
-            .padding(-3)
     }
 
     @ViewBuilder
@@ -369,20 +377,16 @@ struct LabelEditorView: View {
 
     // MARK: - Gestures / state transitions
 
-    private func dragGesture(box: CGSize, padded: CGSize) -> some Gesture {
+    private func dragGesture(box: CGSize) -> some Gesture {
         // minimumDistance 16: 같은 요소에 탭(→ 문구 스텝)과 드래그(위치 조정)가 함께 걸려 있어
         // 구분이 필요하다. 짧은 제스처가 위치 조정으로 오인되는 것을 줄인다.
         DragGesture(minimumDistance: 16, coordinateSpace: .global)
             .onChanged { value in
                 if !isDragging {
                     isDragging = true
-                    dragBaseCorner = anchorCorner
+                    dragBaseCenter = anchorCenter
                 }
-                applyDrag(
-                    proposed: CGPoint(x: dragBaseCorner.x + value.translation.width,
-                                      y: dragBaseCorner.y + value.translation.height),
-                    box: box, padded: padded
-                )
+                applyDrag(translation: value.translation, box: box)
             }
             .onEnded { _ in
                 isDragging = false
@@ -391,15 +395,52 @@ struct LabelEditorView: View {
             }
     }
 
-    /// 드래그 결과 코너에 중심 스냅 + 0…1 clamp 적용.
-    private func applyDrag(proposed: CGPoint, box: CGSize, padded: CGSize) {
-        var center = LabelAnchorMath.center(topLeft: proposed, in: box, paddedSize: padded)
+    /// 드래그 결과 중심에 중심 스냅 + 0…1 clamp 적용.
+    /// 중심을 직접 옮기므로 **기울기와 무관**하다(회전된 박스의 코너를 환산할 필요가 없다).
+    private func applyDrag(translation: CGSize, box: CGSize) {
+        guard box.width > 0, box.height > 0 else { return }
+        var center = CGPoint(x: dragBaseCenter.x + translation.width / box.width,
+                             y: dragBaseCenter.y + translation.height / box.height)
+        center.x = min(max(center.x, 0), 1)
+        center.y = min(max(center.y, 0), 1)
         let eps: CGFloat = 0.02
         showVGuide = abs(center.x - 0.5) < eps
         showHGuide = abs(center.y - 0.5) < eps
         if showVGuide { center.x = 0.5 }
         if showHGuide { center.y = 0.5 }
-        anchorCorner = LabelAnchorMath.topLeft(center: center, in: box, paddedSize: padded)
+        anchorCenter = center
+    }
+
+    /// 두 손가락: 확대/축소(크기) + 기울기(회전)를 동시에. iOS 18 API(`MagnifyGesture`/`RotateGesture`).
+    /// 크기는 슬라이더와 **같은 `sizeFraction`** 을 공유하므로 두 컨트롤이 자동으로 동기화된다.
+    /// 중심(`anchorCenter`)은 건드리지 않으므로 확대·회전이 라벨을 이동시키지 않는다.
+    private var magnifyAndRotateGesture: some Gesture {
+        MagnifyGesture(minimumScaleDelta: 0.01)
+            .simultaneously(with: RotateGesture(minimumAngleDelta: .degrees(1)))
+            .onChanged { value in
+                if !isTransforming {
+                    isTransforming = true
+                    pinchBaseFraction = label.clampedSizeFraction
+                    rotateBaseRadians = label.clampedRotationRadians
+                }
+                if let magnification = value.first?.magnification {
+                    let proposed = pinchBaseFraction * magnification
+                    label.sizeFraction = min(max(proposed, ClipLabel.minSizeFraction),
+                                             ClipLabel.maxSizeFraction)
+                }
+                if let rotation = value.second?.rotation {
+                    let proposed = rotateBaseRadians + CGFloat(rotation.radians)
+                    let clamped = min(max(proposed, -ClipLabel.rotationLimit), ClipLabel.rotationLimit)
+                    // 0° 스냅 — 위치 드래그의 중심 스냅(eps 0.02)과 같은 패턴.
+                    label.rotationRadians = abs(clamped) < ClipLabel.rotationSnapRadians ? 0 : clamped
+                }
+            }
+            .onEnded { _ in
+                isTransforming = false
+                // 제스처 종료 시 현재 크기로 베이크 → scaleEffect=1 로 글자를 선명하게 재렌더
+                // (크기 슬라이더의 onEditingChanged 와 같은 규칙).
+                bakedSizeFraction = label.renderedSizeFraction
+            }
     }
 
     private func goToStyle() {
@@ -432,40 +473,25 @@ struct LabelEditorView: View {
 
     // MARK: - Init / commit
 
-    /// box(가용 영역) 확정·변경에 맞춰 배치를 갱신한다.
-    /// - 최초 1회: 저장된 position(center) → anchorCorner 로 변환(진입은 항상 문구 스텝에서 시작).
-    /// - 이후 box 변경(예: 디바이스 회전으로 fittedBox 가 달라질 때): 정규화 center 를 보존하도록
-    ///   anchorCorner 를 재산출 → 라벨 위치/저장값(committedLabel)이 어긋나지 않게 한다.
-    private func reflow(from oldBox: CGSize, to newBox: CGSize) {
+    /// box(가용 영역) 확정에 맞춰 배치를 초기화한다.
+    ///
+    /// 배치 단일 출처가 **정규화 중심**이라 box 크기가 바뀌어도 재산출할 것이 없다 —
+    /// 좌상단 코너를 저장하던 시절에는 box 마다 코너를 다시 계산해야 했다.
+    private func reflow(to newBox: CGSize) {
         guard newBox.width > 0, newBox.height > 0 else { return }
         boxSize = newBox
-        guard didInit else {
-            let fontPx = label.fontPx(canvasHeight: newBox.height)
-            let padded = LabelAnchorMath.paddedBoxSize(text: label.text, fontPx: fontPx)
-            anchorCorner = LabelAnchorMath.topLeft(center: label.position, in: newBox, paddedSize: padded)
-            didInit = true
-            // 진입은 항상 문구 스텝(`step` 기본값 `.text`)이다 — 기존 라벨 재편집도 마찬가지.
-            focused = true
-            return
-        }
-        guard oldBox.width > 0, oldBox.height > 0, newBox != oldBox else { return }
-        let centerNorm = LabelAnchorMath.center(
-            topLeft: anchorCorner, in: oldBox,
-            paddedSize: LabelAnchorMath.paddedBoxSize(text: label.text, fontPx: label.fontPx(canvasHeight: oldBox.height))
-        )
-        anchorCorner = LabelAnchorMath.topLeft(
-            center: centerNorm, in: newBox,
-            paddedSize: LabelAnchorMath.paddedBoxSize(text: label.text, fontPx: label.fontPx(canvasHeight: newBox.height))
-        )
+        guard !didInit else { return }
+        anchorCenter = label.position
+        didInit = true
+        // 진입은 항상 문구 스텝(`step` 기본값 `.text`)이다 — 기존 라벨 재편집도 마찬가지.
+        focused = true
     }
 
-    /// 저장용 라벨: 현재 좌상단 코너에서 중심을 역산해 `position` 갱신.
+    /// 저장용 라벨: 배치 단일 출처가 저장 좌표계(정규화 중심)와 같아 역산이 없다.
     private func committedLabel() -> ClipLabel {
         var result = label
         if boxSize.width > 0, boxSize.height > 0 {
-            let fontPx = label.fontPx(canvasHeight: boxSize.height)
-            let padded = LabelAnchorMath.paddedBoxSize(text: label.text, fontPx: fontPx)
-            result.position = LabelAnchorMath.center(topLeft: anchorCorner, in: boxSize, paddedSize: padded)
+            result.position = anchorCenter
         }
         return result
     }

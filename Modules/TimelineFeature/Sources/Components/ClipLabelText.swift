@@ -26,13 +26,20 @@ enum ClipLabelBoxPalette {
 /// ClipLabel 한 개를 박스 자막 스타일로 그리는 공용 텍스트 뷰.
 /// `label.hasBackground` 가 true 면 흰 배경·검정 글씨·검정 테두리, false 면 흰 글씨만.
 /// 자막 에디터와 타임라인 미리보기가 공유한다. 위치/드래그는 호출 측 담당.
-/// `fontPx` = 표시 박스 높이 × clampedSizeFraction.
+/// `fontPx` = 표시 박스 높이 × 맞춤 크기 비율(`ClipLabel.fontPx(canvasHeight:)`).
 /// 텍스트 박스를 합성(CATextLayer)과 동일한 UIFont 측정값·박스 스타일(ClipLabel.BoxStyle)로 고정해,
 /// `.position` 중심 기준과 박스 외형을 영상 출력과 맞춘다.
+///
+/// **기울기(`label.rotationRadians`)도 여기서 적용한다** — 호출처마다 `.rotationEffect` 를 붙이면
+/// 에디터와 `PreviewPanel` 이 또 갈라진다. 회전 각도·부호 규약은 `ClipLabel.previewRotation` 하나뿐이다.
 struct ClipLabelText: View {
     let label: ClipLabel
     let fontPx: CGFloat
     var placeholder: Bool = false
+    /// 에디터 선택 상태 표시(점선 프레임). **회전 안쪽**에 그려야 프레임이 라벨과 같이 기운다 —
+    /// `.rotationEffect` 는 레이아웃 크기를 바꾸지 않으므로, 호출처가 바깥 `.overlay` 로 붙이면
+    /// 축 정렬된 사각형이 되어 기운 라벨과 어긋난다.
+    var selected: Bool = false
 
     private var displayString: String { placeholder ? String(localized: "자막 입력") : label.text }
 
@@ -55,7 +62,16 @@ struct ClipLabelText: View {
     }
 
     var body: some View {
-        styledText.boxSubtitleStyle(fontPx: fontPx, hasBackground: label.hasBackground)
+        styledText
+            .boxSubtitleStyle(fontPx: fontPx, hasBackground: label.hasBackground)
+            .overlay {
+                if selected {
+                    Rectangle()
+                        .strokeBorder(ChalNaColor.accent, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                        .padding(-3)
+                }
+            }
+            .rotationEffect(label.previewRotation)
     }
 }
 
