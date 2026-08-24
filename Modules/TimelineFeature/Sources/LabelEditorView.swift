@@ -6,7 +6,9 @@ import DesignSystem
 ///
 /// **2스텝 플로우** (`Step`):
 /// - `.text`  : 키보드 ↑. 인라인 TextField 로 문구만 입력한다. 라벨은 가시영역(상단바~키보드)
-///              높이 정중앙으로 띄운다. 하단 컨트롤 없음. `[다음]` → `.style`.
+///              높이 정중앙으로 띄운다. 하단 컨트롤 없음. `[다음]` 은 **키보드 바로 위
+///              (accessory)** 에 있고, `[다음]` 을 누르지 않고 **키보드를 내려도** `.style` 로
+///              자동 전환된다 — 트리거는 "키보드 높이가 0 이 되었다" 하나뿐이다.
 /// - `.style` : 키보드 ↓. 라벨을 드래그로 자유 배치(중심 정렬 가이드 + 스냅)하고,
 ///              하단에서 배경 ON/OFF · 크기를 정한다. `[‹]`/라벨 탭 → `.text`, `[저장]` → 커밋.
 ///
@@ -41,6 +43,8 @@ struct LabelEditorView: View {
     @State private var showHGuide = false
     @FocusState private var focused: Bool
     @State private var keyboard = KeyboardObserver()
+    /// 커밋/취소로 화면이 닫히는 중인지. 닫히는 동안의 키보드 하강이 스텝 자동 전환을 일으키면 안 된다.
+    @State private var isClosing = false
 
     private enum Step { case text, style }
 
@@ -74,12 +78,24 @@ struct LabelEditorView: View {
         // 슬라이더는 실제 높이만 차지한다. 기존 84pt 고정 예약(Color.clear)은
         // 키보드·세이프에어리어 조합에 따라 캔버스를 과하게 줄였다.
         .safeAreaInset(edge: .bottom) { bottomControls }
-        // 라벨 외 영역 탭 → `.text` 에서는 키보드만 내린다. `.style` 에서는 할 일이 없다(backgroundTapped 참고).
+        // 라벨 외 영역 탭 → `.text` 에서는 키보드를 내린다(그 하강이 `.style` 자동 전환을 일으킨다).
         // 라벨·슬라이더는 각자 제스처가 우선.
         .contentShape(Rectangle())
         .onTapGesture { backgroundTapped() }
         .onAppear { keyboard.start() }
         .onDisappear { keyboard.stop() }
+        // 키보드가 내려갔다는 **사실 하나만** 자동 전환 트리거로 쓴다. 가드 3개가 필요하다:
+        //  ① step == .text — goToStyle() 이 focused=false 로 키보드를 내리므로, `[다음]` 탭 →
+        //     전환 → 하강 → 다시 전환 시도가 되는 이중 발화를 막는다.
+        //  ② !isClosing    — onCancel/onCommit 으로 화면이 닫힐 때도 키보드가 내려간다.
+        //     사라지는 중에 스텝을 바꾸지 않는다.
+        //  ③ didInit       — box 확정(=진입) 전 프레임에서 튀지 않게 한다.
+        // `[‹]` 복귀는 안전하다: 복귀 시점 height 는 이미 0 이라 onChange 가 발화하지 않고,
+        // goToText() 의 focused=true 로 0 → 실제 높이로 **올라가는** 변화만 관측된다.
+        .onChange(of: keyboard.height) { _, newHeight in
+            guard newHeight == 0, step == .text, !isClosing, didInit else { return }
+            step = .style
+        }
     }
 
     // MARK: - Top bar
@@ -88,17 +104,18 @@ struct LabelEditorView: View {
     private var topBar: some View {
         switch step {
         case .text:
+            // `[다음]` 은 키보드 바로 위(accessory)로 옮겼다 — 문구 입력 중 시선·엄지 이동을 줄인다.
+            // 문자열("다음")은 그대로 유지한다: `LabelEditorUITests` 가 `app.buttons["다음"]` 으로 찾는다.
             ChalNaNavBar(
                 title: "라벨",
-                leading: .close(action: onCancel),
-                trailing: .text("다음") { goToStyle() },
+                leading: .close(action: cancel),
                 showsDivider: true
             )
         case .style:
             ChalNaNavBar(
                 title: "라벨",
                 leading: .back { goToText() },
-                trailing: .text("저장") { onCommit(committedLabel()) },
+                trailing: .text("저장") { commit() },
                 showsDivider: true
             )
         }
@@ -263,48 +280,82 @@ struct LabelEditorView: View {
         }
     }
 
-    // MARK: - Bottom controls (스텝 2 전용)
+    // MARK: - Bottom controls
 
     @ViewBuilder
     private var bottomControls: some View {
-        if step == .style {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 8) {
-                    Text("배경")
-                        .font(ChalNaTypography.label)
-                        .foregroundColor(ChalNaColor.textSecondary)
-                    Spacer(minLength: 0)
-                    Toggle("", isOn: $label.hasBackground)
-                        .labelsHidden()
-                        .tint(ChalNaColor.accentFill)
-                }
+        switch step {
+        case .text:  nextAccessoryBar
+        case .style: styleControls
+        }
+    }
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("크기")
-                        .font(ChalNaTypography.label)
-                        .foregroundColor(ChalNaColor.textSecondary)
-                    ChalNaSlider(
-                        // ChalNaSlider 는 Binding<Double> — sizeFraction(CGFloat)을 브리징한다.
-                        value: Binding(
-                            get: { Double(label.sizeFraction) },
-                            set: { label.sizeFraction = CGFloat($0) }
-                        ),
-                        range: Double(ClipLabel.minSizeFraction)...Double(ClipLabel.maxSizeFraction),
-                        step: nil,
-                        onEditingChanged: { editing in
-                            // 드래그 종료 시 현재 크기로 베이크 → scaleEffect=1 로 글자를 선명하게 재렌더.
-                            if !editing { renderedSizeFraction = label.clampedSizeFraction }
-                        }
-                    )
-                }
+    /// 문구 스텝의 `[다음]` — 키보드 바로 위에 뜬다.
+    ///
+    /// **왜 SwiftUI 표준 경로가 아닌가(실측 근거).** `ToolbarItemGroup(placement: .keyboard)` 를
+    /// 먼저 시도했고, 커버 콘텐츠 루트와 포커스된 `TextField` 양쪽에 각각 붙여 확인했다 —
+    /// 두 경우 모두 **아무것도 렌더되지 않았다**(XCUITest 요소 덤프: `toolbars=0`, `다음` 버튼 부재).
+    /// 이 화면은 `NavigationStack` 없는 `fullScreenCover` 콘텐츠라 toolbar 호스트가 없다.
+    /// 그렇다고 `UIViewRepresentable`(inputAccessoryView) 로 내려가지는 않는다 — 이미 있는
+    /// `KeyboardObserver.height` 로 직접 띄우면 SwiftUI 전용 규약을 지키면서 바 스타일까지
+    /// 토큰으로 잡을 수 있다(시스템 크롬은 토큰을 못 쓴다).
+    private var nextAccessoryBar: some View {
+        HStack(spacing: 0) {
+            Spacer(minLength: 0)
+            Button("다음") { goToStyle() }
+                .font(ChalNaTypography.headline)
+                .foregroundColor(ChalNaColor.accent)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+        }
+        .background(ChalNaColor.surfaceRaised)
+        .overlay(alignment: .top) {
+            Rectangle().fill(ChalNaColor.border).frame(height: 1)
+        }
+        // 본문이 `.ignoresSafeArea(.keyboard)` 라 이 바도 키보드에 밀리지 않는다 —
+        // 관찰한 키보드 높이만큼 직접 올린다.
+        .offset(y: -keyboard.height)
+        .animation(ChalNaMotion.standard, value: keyboard.height)
+    }
+
+    @ViewBuilder
+    private var styleControls: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Text("배경")
+                    .font(ChalNaTypography.label)
+                    .foregroundColor(ChalNaColor.textSecondary)
+                Spacer(minLength: 0)
+                Toggle("", isOn: $label.hasBackground)
+                    .labelsHidden()
+                    .tint(ChalNaColor.accentFill)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 10)
-            .padding(.bottom, 10)
-            .background(ChalNaColor.bg.ignoresSafeArea(edges: .bottom))
-            .overlay(alignment: .top) {
-                Rectangle().fill(ChalNaColor.border).frame(height: 1)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("크기")
+                    .font(ChalNaTypography.label)
+                    .foregroundColor(ChalNaColor.textSecondary)
+                ChalNaSlider(
+                    // ChalNaSlider 는 Binding<Double> — sizeFraction(CGFloat)을 브리징한다.
+                    value: Binding(
+                        get: { Double(label.sizeFraction) },
+                        set: { label.sizeFraction = CGFloat($0) }
+                    ),
+                    range: Double(ClipLabel.minSizeFraction)...Double(ClipLabel.maxSizeFraction),
+                    step: nil,
+                    onEditingChanged: { editing in
+                        // 드래그 종료 시 현재 크기로 베이크 → scaleEffect=1 로 글자를 선명하게 재렌더.
+                        if !editing { renderedSizeFraction = label.clampedSizeFraction }
+                    }
+                )
             }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 10)
+        .padding(.bottom, 10)
+        .background(ChalNaColor.bg.ignoresSafeArea(edges: .bottom))
+        .overlay(alignment: .top) {
+            Rectangle().fill(ChalNaColor.border).frame(height: 1)
         }
     }
 
@@ -353,10 +404,22 @@ struct LabelEditorView: View {
         focused = true
     }
 
-    /// 라벨 외 영역 탭. `.text` 에서는 키보드만 내린다(스텝은 유지 — 라벨을 다시 탭하면 재포커스).
-    /// `.style` 에서는 할 일이 없다.
+    /// 라벨 외 영역 탭 → 키보드만 내린다.
+    /// `.text` 에서는 그 하강이 `onChange(of: keyboard.height)` 를 통해 `.style` 자동 전환으로
+    /// 이어진다 — 즉 이 함수는 더 이상 "스텝 유지"를 뜻하지 않는다. `.style` 에서는 할 일이 없다.
     private func backgroundTapped() {
         if step == .text { focused = false }
+    }
+
+    /// 화면을 닫는 두 경로. 닫히는 동안의 키보드 하강이 자동 전환을 일으키지 않도록 먼저 표시한다.
+    private func cancel() {
+        isClosing = true
+        onCancel()
+    }
+
+    private func commit() {
+        isClosing = true
+        onCommit(committedLabel())
     }
 
     // MARK: - Init / commit

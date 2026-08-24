@@ -23,6 +23,11 @@ import XCTest
 /// + `.ignoresSafeArea(.keyboard)` + 이중 `.animation(value:)` 상호작용 때문에 애니메이션 중간
 /// 프레임을 다시 집어내는 등 불안정했다 — 그래서 아래 테스트는 그 수치 assert 대신 도달성(exists/
 /// isHittable) assert 와 XCTContext 액티비티 로그로 이 정정된 사실을 CI 출력에 남긴다.
+/// **정정 기록(라벨 accessory):** 문구 스텝의 `[다음]` 을 키보드 위로 옮길 때
+/// `ToolbarItemGroup(placement: .keyboard)` 를 먼저 시도했으나, 이 화면(`NavigationStack` 없는
+/// `fullScreenCover` 콘텐츠)에서는 **아무것도 렌더되지 않았다** — 커버 루트와 포커스된 TextField
+/// 양쪽에 붙여 각각 확인했고, XCUITest 요소 덤프가 `toolbars=0` · `다음` 버튼 부재였다.
+/// 그래서 `KeyboardObserver.height` 로 직접 올리는 SwiftUI 바(`nextAccessoryBar`)를 쓴다.
 final class LabelEditorUITests: XCTestCase {
 
     override func setUpWithError() throws {
@@ -30,6 +35,10 @@ final class LabelEditorUITests: XCTestCase {
     }
 
     /// 스텝 1(문구) 진입 → `[다음]` → 스텝 2(스타일) 컨트롤 도달성 → `[‹]` 로 복귀.
+    ///
+    /// `[다음]` 은 상단바가 아니라 **키보드 바로 위 accessory 바**에 있다(`nextAccessoryBar`).
+    /// 아래 assert 는 존재/탭 가능만 보므로 위치와 무관하게 유효하다 — 오히려 키보드에 가려지지
+    /// 않는지가 이 테스트의 핵심이다.
     ///
     /// 클래스 doc 의 계측 정정 기록 참고: 키보드 알림은 실제로 발생하고 `keyboard.height` 도
     /// 실측값(SE 260pt / 17 계열 335pt)에 도달한다. 다만 소프트 키보드 그래픽은 스크린샷에
@@ -122,6 +131,32 @@ final class LabelEditorUITests: XCTestCase {
             height, 34,
             "\"크기\" 캡션이 accessibility5 수준까지 커짐(측정 \(height)pt) — 전역 Dynamic Type 상한이 fullScreenCover 로 전달되지 않는 것으로 보임"
         )
+    }
+
+    /// `[다음]` 을 누르지 않고 **키보드만 내려도** 위치·배경·크기 스텝으로 넘어간다.
+    /// devMock 은 시각 검증 채널이 아니므로 도달성(exists/isHittable) 만 본다.
+    func testLabelEditor_KeyboardDismiss_AdvancesToStyleStep() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["CHALNA_APP_MODE"] = "devMock"
+        app.launchArguments += ["-AppleLanguages", "(ko)"]
+        app.launch()
+
+        navigateToLabelEditor(app)
+
+        let textField = app.textFields.firstMatch
+        XCTAssertTrue(textField.waitForExistence(timeout: 10), "라벨 인라인 TextField")
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5), "스텝 1 키보드")
+        XCTAssertFalse(app.sliders.firstMatch.exists, "스텝 1 에 크기 슬라이더가 있으면 안 됨")
+
+        textField.typeText("제주 바다")
+        // 리턴(.done)으로 키보드만 내린다 — `[다음]` 은 누르지 않는다.
+        textField.typeText("\n")
+
+        let slider = app.sliders.firstMatch
+        XCTAssertTrue(slider.waitForExistence(timeout: 5),
+                      "키보드 하강만으로 스텝 2(크기 슬라이더)에 도달하지 못했다")
+        XCTAssertTrue(slider.isHittable, "자동 전환 후 크기 슬라이더를 탭할 수 없음")
+        XCTAssertTrue(app.buttons["저장"].firstMatch.exists, "자동 전환 후 저장 버튼 없음")
     }
 
     // MARK: - Helpers
