@@ -37,4 +37,14 @@ struct ClipLabelTests {
         let off = ClipLabel(text: "제주 바다", hasBackground: false)
         #expect(on != off)
     }
+
+    /// 배경 유무는 해시에도 반영된다. `ClipLabel` 은 합성 오버레이 캐시 키(`CompositionService`
+    /// 의 `OverlayKey`)의 필드라, `hash(into:)` 를 손으로 쓰면서 이 필드를 빠뜨리면 ON/OFF 가
+    /// 한 버킷에 몰린다. 해시 불일치 자체는 `Hashable` 계약이 보장하지 않지만(충돌은 합법),
+    /// 합성 구현에서 1비트 차이가 충돌할 확률은 무시할 수준이라 실질 가드로 쓴다.
+    @Test func hasBackgroundParticipatesInHashing() {
+        let on = ClipLabel(text: "제주 바다", hasBackground: true)
+        let off = ClipLabel(text: "제주 바다", hasBackground: false)
+        #expect(on.hashValue != off.hashValue)
+    }
 }
