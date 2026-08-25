@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Live Photo와 동영상을 촬영일 순서로 이어붙여 Vlog를 만드는 iOS 앱.
 
-> **네이밍**: Tuist 타겟·Xcode 프로젝트·번들 ID·디자인 시스템 brand prefix 모두 `ChalNa`(`ios.inho.ChalNa`, `ChalNaColor`, `ChalNaTypography`, `ChalNaButton` 등)로 통일. **디자인 토큰 값은 2026-07-28 다크 리디자인으로 전면 교체됐다** — 과거엔 식별자만 ChalNa, 값은 라이트 톤의 "Danawa DDS Mobile v2.0"였으나 지금은 값도 자체 다크 시맨틱 팔레트다 (근거: `docs/superpowers/specs/2026-07-28-app-redesign-design.md`). 디자인은 **다크 시네마틱**이며, 액센트(`.accent`)는 새로 발명한 색이 아니라 **앱 아이콘의 인디고(`brandDeep` `#462DE2`)에서 밝기를 올려 역산**한 것이다(아이콘 원색은 `bg` 대비 2.4:1 라 인터랙션에 못 쓴다 — 아래 Colors 참고). 앱은 **다크 전용**이며 `Project.swift` 의 `infoPlist` 에 박아넣은 `UIUserInterfaceStyle: "Dark"` 가 라이트 모드 전환을 막는다 — 아래 디자인 시스템 참고.
+> **네이밍**: Tuist 타겟·Xcode 프로젝트·번들 ID·디자인 시스템 brand prefix 모두 `ChalNa`(`ios.inho.ChalNa`, `ChalNaColor`, `ChalNaTypography`, `ChalNaButton` 등)로 통일. **디자인 토큰 값은 2026-07-28 다크 리디자인으로 전면 교체됐다** — 과거엔 식별자만 ChalNa, 값은 라이트 톤의 "Danawa DDS Mobile v2.0"였으나 지금은 값도 자체 다크 시맨틱 팔레트다. 디자인은 **다크 시네마틱**이며, 액센트(`.accent`)는 새로 발명한 색이 아니라 **앱 아이콘의 인디고(`brandDeep` `#462DE2`)에서 밝기를 올려 역산**한 것이다(아이콘 원색은 `bg` 대비 2.4:1 라 인터랙션에 못 쓴다 — 아래 Colors 참고). 앱은 **다크 전용**이며 `Project.swift` 의 `infoPlist` 에 박아넣은 `UIUserInterfaceStyle: "Dark"` 가 라이트 모드 전환을 막는다 — 아래 디자인 시스템 참고.
 
 ## 빌드 / 실행 / 테스트
 
@@ -43,7 +43,7 @@ xcodebuild ... test \
   - `ChalNa` — 실제 사진 라이브러리 사용(`AppMode.real`).
   - `ChalNa Dev` — `CHALNA_APP_MODE=devMock` 환경변수를 주입해 **번들 고정 fixture 미디어**(`BundledDevMediaSource`)로 동작. 사진 권한 없이 전체 플로우를 돌릴 때 사용 (DEBUG 빌드 한정).
 - 단일 모듈만 빌드/포커스: `tuist focus <Module>` (예: `tuist focus DesignSystem`).
-- 의존성 그래프: `tuist graph` → `docs/architecture-graph.png`.
+- 의존성 그래프: `tuist graph`. 그래프 출력물·설계 문서를 두는 `docs/` 는 `.gitignore` 대상인 임시 디렉터리라 저장소에 없다 — 그래서 이 문서는 설계 문서 링크 대신 **코드를 근거로 인용한다**.
 - iOS 빌드/시뮬레이터 실행은 가능하면 `ios-build-run` 서브에이전트에 위임한다 (매번 fresh build → 설치/실행으로 시각 검증).
 - **유닛 테스트 타겟은 8개** (`Project.swift`의 `Module.unitTests(for:)` 8회 호출): `AppCoreTests` · `ExportFeatureTests` · `CompositionServiceTests` · `PhotosServiceTests` · `TimelineFeatureTests` · `MediaPickerFeatureTests` · `SettingsFeatureTests` · `DesignSystemTests`. 케이스는 SwiftUI Preview 보조용 `SampleData`를 적극 활용한다.
 - **Tuist 는 테스트 타겟을 위한 별도 스킴을 만들지 않는다.** `<Module>Tests` 타겟은 베이스 모듈(`<Module>`) 이 자동 생성하는 스킴에 Test 액션으로 붙는다. 즉 `-scheme DesignSystemTests` 는 존재하지 않고, `-scheme DesignSystem` · `-scheme SettingsFeature` · `-scheme TimelineFeature` 처럼 **베이스 모듈명**으로 실행해야 한다 (`-only-testing:` 의 대상은 타겟명 `<모듈>Tests` 그대로 맞다).
@@ -191,7 +191,7 @@ DesignSystem/Sources/
 | `.brandDeep` | `#462DE2` | 앱 아이콘 색 그 자체. `bg` 대비 **2.4:1** — **인터랙션(버튼·텍스트)에 절대 쓰지 않는다.** Splash·브랜드 면 전용 |
 | `.scrim` | `Color.black.opacity(0.6)` | 오버레이 |
 
-- 대비 근거: `docs/superpowers/specs/2026-07-28-app-redesign-design.md` §4.1. 정확한 hex 는 위 표보다 `ChalNaColor.swift` 를 단일 출처로 본다.
+- 정확한 hex 는 위 표보다 `ChalNaColor.swift` 를 단일 출처로 본다.
 - 대비 규칙은 프로즈로 끝나지 않는다 — `DesignSystemTests/ChalNaColorContrastTests` 가 강제한다. 값을 바꾸면 이 테스트가 잡는다.
 - 과거의 `Purple/Blue/Gray` 수치 스케일과 `.cream/.ivory/.coral/.sage/.denim/.ink/.taupe`, `.Chip.*` 는 Task 26 에서 전부 삭제됐다 — 화면은 역할 이름(시맨틱 토큰)만 쓴다.
 
@@ -268,8 +268,8 @@ DesignSystem/Sources/
 - 서비스/모델은 **Swift Testing**(`@Test`/`#expect`)으로 작성, `SampleData` 활용. actor/Client 는 프로토콜 + `testValue` 로 격리.
 - 모델·서비스를 직접(예: `TimelineModel`, `AVFoundationCompositionService().export(...)`) 테스트하거나, 필요 시 TCA `TestStore` 사용 가능.
 - UI 는 스냅샷 대신 `#Preview` 적극 활용 (각 뷰 상태별).
-- 2026-08-24 기준 8개 유닛 스위트 전부 그린(17 Pro, 총 166 케이스): `DesignSystem` 22 · `TimelineFeature` 25 · `SettingsFeature` 13 · `MediaPickerFeature` 2 · `ExportFeature` 7 · `CompositionService` 64 · `AppCore` 29 · `PhotosService` 4. 이후 태스크가 이 수치를 크게 벗어나면 회귀를 의심한다.
-  - 직전 기재값(160)에서 **+6**: `AppCore` +2(`ClipLabelTests`에 `hasBackground` 케이스 추가), `TimelineFeature` +4(신규 `ClipLabelBoxPaletteTests`). `CompositionService` 는 64 로 그대로인데 내부적으로는 상쇄가 있었다 — 크롭 러버밴드 제거로 `RubberBandTests` 7케이스, `ClipFraming` offset clamp 삭제로 그 전용 케이스(`testClampedOffset_*`/`testMaxOffsetFraction_*`) 7케이스가 없어졌고, 같은 타겟에 신규 라벨·렌더 테스트(`CompositorLabelTests`·`CompositorRenderTests`·`CustomLabelLayoutTests`·`PreviewExportContractTests`의 축소 계약 케이스)가 정확히 그만큼 늘어 순변동 0이다.
+- 2026-08-25 기준 8개 유닛 스위트 전부 그린(17 Pro Max, 총 168 케이스): `DesignSystem` 22 · `TimelineFeature` 26 · `SettingsFeature` 13 · `MediaPickerFeature` 2 · `ExportFeature` 7 · `CompositionService` 64 · `AppCore` 30 · `PhotosService` 4. 이후 태스크가 이 수치를 크게 벗어나면 회귀를 의심한다.
+  - `develop`(160) 대비 **+8**: `AppCore` +3(`ClipLabelTests` 의 `hasBackground` 케이스 — 기본값 ON · Equatable · Hashable), `TimelineFeature` +5(신규 `ClipLabelBoxPaletteTests`). `CompositionService` 는 64 로 그대로인데 내부적으로 **−14/+14** 상쇄가 있었다 — 러버밴드 제거로 `RubberBandTests` 7, `ClipFraming` offset clamp 삭제로 그 전용 케이스(`testClampedOffset_*` 5 · `testMaxOffsetFraction_*` 2) 7 이 없어졌고, 대신 `ClipFramingTests` +8(자유 크롭·`sanitized`) · `CustomLabelLayoutTests` +3 · `CompositorLabelTests`/`CompositorRenderTests`/`PreviewExportContractTests` 각 +1 이 들어왔다.
   - 라벨 설정 삭제로 SettingsFeature 는 **28→13** 으로 줄었다(삭제분: `LabelPositionFeatureTests` 2 · `LabelPositionTests` 7 · `LabelSettingsFeatureTests` 5 · `labelMenuTapEmitsDelegate` 1 = 15). 한때 이 문단이 "직전 기재값 28 은 스테일이고 실제로는 26→13" 이라고 적었는데 **28 이 맞았다** — 세어보면 13+15=28 이다.
   - PR #38 리뷰 후속으로 10 케이스가 늘었다: `AppCore/RemovedSettingsCleanupTests` 3 · `CompositionService/LabelTextTests` 5(대신 change-detector 였던 `fontFractionsAreCornerStampSized` 1 삭제) · `TimelineFeature/AutoLabelsOverlayFidelityTests` 3.
 
@@ -283,7 +283,7 @@ DesignSystem/Sources/
 - **`LocalizedStringKey` 에 카탈로그 항목이 없으면 한국어 키를 그대로 렌더링한다** — 개발 언어(한국어)로 테스트하면 안 보인다. `-AppleLanguages "(en)"` 로 한 번은 꼭 실행한다.
 - **`RenderPreview` 캔버스에서 점(pt) 측정을 하지 않는다**(~0.583 pt/px 스케일 차이 관측) — 시뮬레이터에 설치 후 스크린샷하고, 표시 좌표 → 원본 좌표 환산을 거쳐서 계산한다.
 - **`.aspectRatio(.fit)` 는 높이 제안이 무한(예: `ScrollView` 내부)이면 무한 높이로부터 너비를 유도해 오동작한다** — 높이가 유한한 컨테이너에선 상한으로만 작동해 무해하다. `ChalNaCanvas` 는 내부에서 이미 fit 하므로 절대 바깥에서 다시 `aspectRatio` 로 감싸지 않는다.
-- **devMock(`BundledDevMediaSource`) fixture 는 시각 검증 채널로 쓰지 않는다** — 실제 미디어(사진 라이브러리)와 차이가 커서, 여기서 관찰한 결과로 시각·기하 결론을 내리면 안 된다(사용자 지시). 실측: `ChalNaUITests/CropAdjustUITests` 의 스크린샷 체크포인트가 핀치·드래그 제스처 전후로 **두 번의 독립 실행 모두 바이트 단위로 완전히 동일**했다. **이 관찰은 완전히 설명된다.** dev fixture 4개(`Modules/PhotosService/Resources/DevFixtures/*.mp4`)는 전부 `mdls`/`AVAssetTrack.naturalSize` 로 교차 확인한 **360×640 세로(9:16)** 라 1080×1920 캔버스와 **종횡비가 정확히 일치**한다 — `fillScale = max(1080/360, 1920/640) = max(3.0, 3.0) = 3.0` 이라 스케일된 전경(1080×1920)이 캔버스와 정확히 같고, 옛 `maxOffsetFraction`(scale 1 기준)은 **양축 모두 (0, 0)** 이었다. 즉 어느 방향으로 드래그해도 crop 결과가 달라질 수 없었다. 핀치도 옛 `ClipAdjustView` 의 `min(max(scale, 1.0), 4.0)` 클램프 때문에 `app.pinch(withScale: 0.5)`(핀치 인)가 scale 1.0 으로 커밋됐다. 즉 그 스크린샷들은 **당시 코드의 명세된 동작 그 자체**였다 — "XCUITest 합성 제스처가 뷰에 관측 가능한 변화를 못 만든다"는 식의 결론은 이 관찰로 뒷받침되지 않고, 진짜 원인이 이렇게 밝혀졌으니 이제 그런 결론을 낼 필요도 없다(다음 사람이 다시 그 방향으로 가지 않도록 명시해 둔다). 원인과 무관하게 유지되는 결론은 하나다 — **devMock 은 시각 검증 채널이 아니므로**(위 사용자 지시), 이 UI 테스트는 도달성(reachability)·무크래시 스모크 테스트로만 취급한다. 이번 조사로 그 근거가 하나 더 늘었다 — dev fixture 가 캔버스와 종횡비가 정확히 같아서 크롭 동작 자체를 여기서는 관측할 수 없기 때문이다(실제 사진 라이브러리는 종횡비가 다양하다). 실제 크롭·라벨 기하 가드는 유닛 테스트가 담당한다: `CompositionServiceTests/ClipFramingTests`(offset 이 clamp 없이 반영되는지, 축소가 전경을 캔버스보다 작게 만드는지), `CompositionServiceTests/CompositorRenderTests.testCompositor_ScaleBelowFill_LeavesBlackMargin`(실제 export 프레임을 픽셀 샘플링해 축소 여백이 검정인지 확인), `CompositionServiceTests/CustomLabelLayoutTests` + `CompositorLabelTests`(라벨 배경 ON/OFF 분기). 이 때문에 유닛 테스트 실행 명령에는 `-skip-testing:ChalNaUITests` 가 필요하다 — `ChalNa-Workspace` 스킴의 test 액션은 이를 지정하지 않으면 이 devMock UI 테스트까지 함께 돌린다.
+- **devMock(`BundledDevMediaSource`) fixture 는 시각 검증 채널로 쓰지 않는다** — 실제 미디어(사진 라이브러리)와 차이가 커서, 여기서 관찰한 결과로 시각·기하 결론을 내리면 안 된다(사용자 지시). dev fixture 4개(`Modules/PhotosService/Resources/DevFixtures/*.mp4`)는 전부 `mdls`/`AVAssetTrack.naturalSize` 로 교차 확인한 **360×640 세로(9:16)** 라 1080×1920 캔버스와 **종횡비가 정확히 일치**한다(`fillScale = max(1080/360, 1920/640) = 3.0`) — 종횡비가 다양하게 섞이는 실제 사진 라이브러리와 여기가 가장 크게 갈리는 지점이다. 한때 이 불릿에는 `CropAdjustUITests` 스크린샷 체크포인트가 두 번의 독립 실행 모두 바이트 단위로 동일했다는 실측과 그 인과(옛 `maxOffsetFraction` 이 양축 모두 0 · 옛 핀치 클램프 `min(max(scale, 1.0), 4.0)`)가 적혀 있었지만, **그 두 제약은 자유 크롭 전환으로 삭제됐으므로 지금 코드에서는 재현되지 않는다** — 축소와 캔버스 밖 이동이 실제로 화면에 나타난다. 당시 기록은 `ChalNaUITests/CropAdjustUITests` 클래스 doc 에 과거형으로 남겨뒀다. 그래도 결론은 그대로다 — **devMock 은 시각 검증 채널이 아니므로**(위 사용자 지시), 이 UI 테스트는 도달성(reachability)·무크래시 스모크 테스트로만 취급한다. 실제 크롭·라벨 기하 가드는 유닛 테스트가 담당한다: `CompositionServiceTests/ClipFramingTests`(offset 이 clamp 없이 반영되는지, 축소가 전경을 캔버스보다 작게 만드는지), `CompositionServiceTests/CompositorRenderTests.testCompositor_ScaleBelowFill_LeavesBlackMargin`(실제 export 프레임을 픽셀 샘플링해 축소 여백이 검정인지 확인), `CompositionServiceTests/CustomLabelLayoutTests` + `CompositorLabelTests`(라벨 배경 ON/OFF 분기). 이 때문에 유닛 테스트 실행 명령에는 `-skip-testing:ChalNaUITests` 가 필요하다 — `ChalNa-Workspace` 스킴의 test 액션은 이를 지정하지 않으면 이 devMock UI 테스트까지 함께 돌린다.
 - **이 저장소의 interactive shell 에서 `grep` 은 셸 함수로 재정의되어 내부적으로 `ugrep -G`(기본 정규식)를 실행한다** — `-E` 확장 정규식 패턴을 그대로 쓰면 파싱이 조용히 실패할 수 있는데, `&&`/`||` 체인 뒤에 있으면 아무것도 검증하지 않았는데 성공 메시지만 찍히는 조용한 거짓 통과가 된다. 검증용 grep 은 `command grep` 으로 이 재정의를 우회해서 쓴다.
 
 ## 커밋 / PR
