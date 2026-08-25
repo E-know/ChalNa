@@ -766,6 +766,23 @@
         }
       }
     },
+    "다음" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次へ"
+          }
+        }
+      }
+    },
     "다음 클립" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -834,19 +851,19 @@
         }
       }
     },
-    "드래그로 보이는 부분을 옮기고, 핀치로 확대해요. 더블탭 = 초기화" : {
+    "드래그로 옮기고 핀치로 크기를 바꿔요. 더블탭 = 초기화" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Drag to reposition, pinch to zoom. Double-tap to reset."
+            "state" : "translated",
+            "value" : "Drag to move, pinch to resize. Double-tap to reset."
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ドラッグで位置を調整、ピンチで拡大。ダブルタップでリセット。"
+            "state" : "translated",
+            "value" : "ドラッグで移動、ピンチでサイズ変更。ダブルタップでリセット。"
           }
         }
       }
@@ -983,6 +1000,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "メディアを選択"
+          }
+        }
+      }
+    },
+    "배경" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Background"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "背景"
           }
         }
       }
