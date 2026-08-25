@@ -1,34 +1,31 @@
 import CoreGraphics
-import UIKit
 import Models
 
 /// 라벨 박스의 "좌상단(top-leading) 코너 ↔ 중심(center)" 변환 + 박스 표시 크기 측정.
 ///
-/// 편집/크기 조정 중에는 **좌상단 코너 `(minX, minY)` 를 고정**하고 우·하로만 확장한다.
-/// 다만 저장 모델(`ClipLabel.position`)은 지금처럼 **박스 중심** 기준을 유지하므로,
-/// 합성(`CompositionService.customLabelOrigin`)·미리보기(`PreviewPanel`)와 WYSIWYG 가 어긋나지 않는다.
+/// **순수 변환 함수 모음이며 "어느 코너를 고정한다"는 정책을 담지 않는다.** 에디터
+/// (`LabelEditorView`)는 정규화 **중심**을 배치의 단일 출처로 쓰고(크기가 바뀌어도 중심 고정),
+/// 여기서는 그 중심을 화면 오프셋(좌상단 코너)으로 환산하고 드래그 결과를 되돌리는 일만 한다.
+/// 저장 모델(`ClipLabel.position`)도 박스 중심 기준이라 합성
+/// (`CompositionService.customLabelOrigin`)·미리보기(`PreviewPanel`)와 WYSIWYG 가 어긋나지 않는다.
 /// 코너↔중심 변환은 측정한 박스 크기를 그대로 역산하므로 왕복(round-trip) 무손실이다.
 enum LabelAnchorMath {
+    /// 빈 문구는 placeholder 로 실측한다 — 편집 중 인라인 TextField 폭을 글자에 맞추기 위함
+    /// (기본 최소폭 제거). placeholder 치환이 이 타입의 유일한 실측 책임이다.
+    static func displayText(_ text: String) -> String {
+        text.isEmpty ? String(localized: "자막 입력") : text
+    }
+
     /// 텍스트(패딩 제외)만의 표시 크기(point). 빈 문자열이면 placeholder("자막 입력") 기준.
-    /// 합성(`measureCustomText`)·프리뷰(`ClipLabelText`)와 동일한 UIFont(시스템 light)·자간으로 측정한다.
-    /// 편집 중 인라인 TextField 폭을 글자에 딱 맞추는 데도 쓴다(기본 최소폭 제거).
+    /// 실측 자체는 `Models.ClipLabelMetrics` 가 단일 출처다 — 합성·프리뷰와 같은 함수를 부른다.
     static func textSize(text: String, fontPx: CGFloat) -> CGSize {
-        let display = text.isEmpty ? String(localized: "자막 입력") : text
-        let ui = UIFont.systemFont(ofSize: fontPx, weight: .light)
-        let measured = NSAttributedString(string: display, attributes: [
-            .font: ui,
-            .kern: ClipLabel.BoxStyle.letterSpacing(for: fontPx),
-        ]).size()
-        return CGSize(width: ceil(measured.width), height: ceil(measured.height))
+        ClipLabelMetrics.textSize(displayText(text), fontPx: fontPx)
     }
 
     /// 텍스트 박스(흰 배경 + 검정 테두리 + 패딩 포함)의 표시 크기(point).
-    /// `BoxStyle` 패딩을 텍스트 크기에 더한 값으로, 화면과 출력 영상의 박스 크기가 맞는다.
+    /// 화면과 출력 영상의 박스 크기가 맞도록 `ClipLabelMetrics` 를 그대로 경유한다.
     static func paddedBoxSize(text: String, fontPx: CGFloat) -> CGSize {
-        let t = textSize(text: text, fontPx: fontPx)
-        let padX = fontPx * ClipLabel.BoxStyle.horizontalPaddingFraction
-        let padY = fontPx * ClipLabel.BoxStyle.verticalPaddingFraction
-        return CGSize(width: t.width + padX * 2, height: t.height + padY * 2)
+        ClipLabelMetrics.paddedBoxSize(displayText(text), fontPx: fontPx)
     }
 
     /// 정규화 중심(center, x·y ∈ 0…1) → box-local 좌상단 코너(point).

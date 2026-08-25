@@ -32,7 +32,7 @@ public enum ChalNaColor {
     /// 순백이 아니다 — 다크에서 순백은 헐레이션을 만든다.
     public static let textPrimary   = Color(hex: 0xF5F4F7)
     public static let textSecondary = Color(hex: 0xA3A0AE)
-    /// **disabled 전용.** `bg` 대비 3.7:1 로 본문 기준(4.5)에 미달한다.
+    /// **disabled 전용.** `bg` 대비 3.6:1 로 본문 기준(4.5)에 미달한다.
     /// 활성 텍스트에 쓰지 않는다.
     public static let textTertiary  = Color(hex: 0x6B6878)
 
@@ -56,7 +56,7 @@ public enum ChalNaColor {
 
     // MARK: - Brand
 
-    /// 앱 아이콘 색 그 자체. `bg` 대비 2.4:1 이므로
+    /// 앱 아이콘 색 그 자체. `bg` 대비 2.6:1 이므로
     /// **인터랙션(버튼·텍스트)에 쓰지 않는다.** Splash · 브랜드 면 전용.
     public static let brandDeep = Color(hex: 0x462DE2)
 

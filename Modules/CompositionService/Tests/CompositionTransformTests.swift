@@ -238,20 +238,18 @@ struct CompositionTransformTests {
         #expect(abs(center.y - 960) < 0.5, "cy \(center.y)")
     }
 
-    /// 가로 클립 + offset 한계값: 좌측 크롭이 전부 풀려 소스 좌측 끝이 캔버스 좌측에 닿는다.
-    /// 1920×1080 → fill 1.77778, maxFracX = (3413.33-1080)/2/1080 = 1.08025.
-    @Test func testTransform_LandscapeOffsetAtLimit_RevealsSourceEdge() {
+    /// 가로 1920×1080 클립을 offset.x = 1.08025 로 밀면 소스 좌측 끝이 캔버스 좌측(0)에 정확히 닿는다.
+    /// 유도: fillScale = 1920/1080 = 1.77778 → scaledW = 3413.33.
+    ///       (3413.33 - 1080) / 2 / 1080 = 1.08025. (예전 이동 한계값이었고 지금은 그냥 기준점이다.)
+    @Test func testTransform_LandscapeOffsetAtCoverEdge_RevealsSourceEdge() {
         let natural = CGSize(width: 1920, height: 1080)
         let render = CGSize(width: 1080, height: 1920)
-        let maxFrac = ClipFraming.maxOffsetFraction(
-            display: natural, rotation: .r0, render: render, scale: 1.0
-        )
         let t = AVFoundationCompositionService.transform(
             naturalSize: natural, preferredTransform: .identity, rotation: .r0,
-            renderSize: render, framing: ClipTransform(scale: 1, offset: CGPoint(x: maxFrac.x, y: 0))
+            renderSize: render, framing: ClipTransform(scale: 1, offset: CGPoint(x: 1.08025, y: 0))
         )
         let topLeft = CGPoint(x: 0, y: 0).applying(t)
-        #expect(abs(topLeft.x - 0) < 0.5, "한계 offset 에서 소스 좌측 끝 = 캔버스 좌측: \(topLeft.x)")
+        #expect(abs(topLeft.x - 0) < 0.5, "offset 1.08025 에서 소스 좌측 끝 = 캔버스 좌측: \(topLeft.x)")
     }
 
     /// preferredTransform 90°(세로로 녹화된 트랙): naturalSize 1920×1080 이지만 표시 크기는
@@ -283,9 +281,10 @@ struct CompositionTransformTests {
         #expect(abs((ys.max() ?? -1) - 1920) < 0.5, "maxY \(ys.max() ?? -1)")
     }
 
-    /// 한계를 크게 초과한 offset(x=2.0)은 export 안전망에서 한계값으로 clamp —
-    /// 결과가 정확히 한계 offset 과 동일해야 한다(소스 좌측 끝 = 캔버스 좌측).
-    @Test func testTransform_OffsetBeyondLimit_ClampsToLimit() {
+    /// 한계를 크게 초과한 offset(x=2.0)도 clamp 되지 않고 그대로 반영된다.
+    /// centerTranslate.x = (1080 - 3413.33)/2 = -1166.67, offsetTranslate.x = 2.0 × 1080 = 2160
+    /// → topLeft.x = -1166.67 + 2160 = 993.33 (전경이 캔버스 우측 밖으로 밀려남).
+    @Test func testTransform_OffsetBeyondCover_MovesFreely() {
         let natural = CGSize(width: 1920, height: 1080)
         let render = CGSize(width: 1080, height: 1920)
         let t = AVFoundationCompositionService.transform(
@@ -293,11 +292,13 @@ struct CompositionTransformTests {
             renderSize: render, framing: ClipTransform(scale: 1, offset: CGPoint(x: 2.0, y: 0))
         )
         let topLeft = CGPoint(x: 0, y: 0).applying(t)
-        #expect(abs(topLeft.x - 0) < 0.5, "한계 초과 offset 은 한계로 clamp: \(topLeft.x)")
+        #expect(abs(topLeft.x - 993.33) < 0.5, "clamp 없이 그대로 이동: \(topLeft.x)")
     }
 
-    /// 축소(scale 0.5): 하한 1.0 으로 clamp → fill 그대로 렌더(여백/블러 배경이 없으므로 축소 금지).
-    @Test func testTransform_UserScaleBelowMin_ClampsToFill() {
+    /// 축소(scale 0.5): 하한이 없어졌으므로 그대로 0.5 배로 렌더된다 —
+    /// 세로 1080×1920 클립이 540×960 으로 줄고 캔버스 중앙에 놓여 상하좌우에 여백이 생긴다.
+    /// fillScale = 1, totalScale = 0.5, centerTranslate = ((1080-540)/2, (1920-960)/2) = (270, 480).
+    @Test func testTransform_UserScaleBelowFill_ShrinksWithMargin() {
         let natural = CGSize(width: 1080, height: 1920)
         let render = CGSize(width: 1080, height: 1920)
         let t = AVFoundationCompositionService.transform(
@@ -306,8 +307,8 @@ struct CompositionTransformTests {
         )
         let topLeft = CGPoint(x: 0, y: 0).applying(t)
         let bottomRight = CGPoint(x: natural.width, y: natural.height).applying(t)
-        #expect(abs(topLeft.x - 0) < 0.5 && abs(topLeft.y - 0) < 0.5, "좌상단 (0,0): \(topLeft)")
-        #expect(abs(bottomRight.x - 1080) < 0.5 && abs(bottomRight.y - 1920) < 0.5,
-                "우하단 (1080,1920): \(bottomRight)")
+        #expect(abs(topLeft.x - 270) < 0.5 && abs(topLeft.y - 480) < 0.5, "좌상단 (270,480): \(topLeft)")
+        #expect(abs(bottomRight.x - 810) < 0.5 && abs(bottomRight.y - 1440) < 0.5,
+                "우하단 (810,1440): \(bottomRight)")
     }
 }

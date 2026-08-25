@@ -93,6 +93,90 @@ struct CompositorLabelTests {
         #expect(brWhite > blWhite, "라벨이 우측 정렬이어야 함: br=\(brWhite) bl=\(blWhite)")
     }
 
+    /// 배경 OFF 라벨: 흰 **박스**가 아니라 흰 **글자**만 올라간다.
+    /// 회색 영상 중앙 200×200 영역의 near-white 픽셀 수가
+    /// 배경 ON 보다 확연히 적어야 한다(박스 면적이 사라졌으므로).
+    @Test func testCompositor_BackgroundOffLabel_NoWhiteBox() async throws {
+        let srcURL = try await makeSolidGrayVideo(width: 640, height: 360, seconds: 0.5, fps: 24)
+        defer { try? FileManager.default.removeItem(at: srcURL) }
+
+        let clip = Clip(
+            kind: .video,
+            capturedAt: Date(),
+            duration: 0.5,
+            preset: .jejuSea,
+            thumbnailData: nil,
+            videoURL: srcURL,
+            displaySize: CGSize(width: 640, height: 360)
+        )
+
+        let on = ClipLabel(text: "TEST", sizeFraction: 0.12,
+                           position: CGPoint(x: 0.5, y: 0.5), hasBackground: true)
+        let off = ClipLabel(text: "TEST", sizeFraction: 0.12,
+                            position: CGPoint(x: 0.5, y: 0.5), hasBackground: false)
+
+        let samplerOn = try await exportAndSample(clip: clip, clipLabels: [clip.id: on])
+        let samplerOff = try await exportAndSample(clip: clip, clipLabels: [clip.id: off])
+
+        let region = CGRect(x: 440, y: 860, width: 200, height: 200)
+        expectClearOfAutoLabelStamp(
+            [(Int(region.minX), Int(region.minY)), (Int(region.maxX), Int(region.maxY))],
+            capturedAt: clip.capturedAt
+        )
+        let whiteOn = samplerOn.countNearWhite(in: region, threshold: 220)
+        let whiteOff = samplerOff.countNearWhite(in: region, threshold: 220)
+
+        print("[CompositorLabelTests] whiteOn=\(whiteOn) whiteOff=\(whiteOff)")
+
+        // 흰 글자만 남으므로 near-white 픽셀은 있지만(글리프), 박스 면적만큼은 없다.
+        #expect(whiteOff > 0, "배경 OFF 도 흰 글자는 보여야 함: \(whiteOff)")
+        #expect(whiteOff < whiteOn / 2,
+                "배경 OFF 는 박스 면적만큼 흰 픽셀이 줄어야 함: on=\(whiteOn) off=\(whiteOff)")
+    }
+
+    /// 회전된 라벨이 오버레이 비트맵 크롭에서 **잘리지 않는지** 실제 export 프레임으로 확인한다.
+    ///
+    /// 판정 기준은 "고정 사각형 안의 흰 픽셀"이 아니라 **면적 보존**이다 — 45° 회전은 축 정렬
+    /// 영역을 벗어나므로 좁은 사각형으로 재면 잘림이 없어도 수가 줄어든다. 회전은 박스 면적을
+    /// 보존하므로, 두 박스를 모두 감싸는 넓은 영역에서 흰 픽셀 총량이 거의 같아야 한다.
+    /// 크롭이 회전 바운딩을 반영하지 않으면 모서리가 날아가 총량이 뚝 떨어진다.
+    @Test func testCompositor_RotatedLabel_AreaPreserved_NotClipped() async throws {
+        let srcURL = try await makeSolidGrayVideo(width: 640, height: 360, seconds: 0.5, fps: 24)
+        defer { try? FileManager.default.removeItem(at: srcURL) }
+
+        let clip = Clip(
+            kind: .video,
+            capturedAt: Date(),
+            duration: 0.5,
+            preset: .jejuSea,
+            thumbnailData: nil,
+            videoURL: srcURL,
+            displaySize: CGSize(width: 640, height: 360)
+        )
+
+        let upright = ClipLabel(text: "TEST", sizeFraction: 0.12, position: CGPoint(x: 0.5, y: 0.5))
+        var tilted = upright
+        tilted.rotationRadians = .pi / 4
+
+        let samplerUpright = try await exportAndSample(clip: clip, clipLabels: [clip.id: upright])
+        let samplerTilted = try await exportAndSample(clip: clip, clipLabels: [clip.id: tilted])
+
+        // 두 박스(축 정렬 ≈721×376, 45° 바운딩 ≈776×776)를 모두 감싸는 영역.
+        let region = CGRect(x: 80, y: 480, width: 920, height: 960)
+        expectClearOfAutoLabelStamp(
+            [(Int(region.minX), Int(region.minY)), (Int(region.maxX), Int(region.minY)),
+             (Int(region.minX), Int(region.maxY)), (Int(region.maxX), Int(region.maxY))],
+            capturedAt: clip.capturedAt
+        )
+        let whiteUpright = samplerUpright.countNearWhite(in: region, threshold: 220)
+        let whiteTilted = samplerTilted.countNearWhite(in: region, threshold: 220)
+        print("[CompositorLabelTests] rotated=\(whiteTilted) upright=\(whiteUpright)")
+
+        #expect(whiteUpright > 1000, "기준(비회전) 라벨이 검출되지 않았다: \(whiteUpright)")
+        #expect(whiteTilted > Int(Double(whiteUpright) * 0.9),
+                "회전된 라벨이 잘린 것으로 보인다(면적 미보존): rotated=\(whiteTilted) upright=\(whiteUpright)")
+    }
+
     // MARK: - Export + sample
 
     private func exportAndSample(

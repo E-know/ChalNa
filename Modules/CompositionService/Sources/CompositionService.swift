@@ -309,7 +309,9 @@ public actor AVFoundationCompositionService: CompositionServicing {
     /// 좌표계: 라벨 origin 들은 CoreAnimation y-UP(좌하단 원점)으로 계산된다. 이를 top-left 원점
     /// CGContext 로 렌더하면 상하가 뒤집히므로 `parentLayer.isGeometryFlipped = true` 로 보정한다
     /// → y-up 으로 계산한 TOP 라벨이 이미지 위쪽에 실제로 그려진다.
-    private static func renderLabelOverlayImage(
+    /// `internal`(테스트 도달용) — `ClipLabelRotationTests` 가 이 비트맵을 픽셀로 검사해
+    /// 회전 부호의 **시각 방향**을 잠근다(`isGeometryFlipped` 와 회전이 겹치는 지점).
+    static func renderLabelOverlayImage(
         renderSize: CGSize,
         capturedAt: Date,
         clipLabel: ClipLabel
@@ -340,26 +342,39 @@ public actor AVFoundationCompositionService: CompositionServicing {
             makeOverlayTextLayer(text: dateText, fontSize: dateFontSize) { _ in origins.date },
             makeOverlayTextLayer(text: timeText, fontSize: timeFontSize) { _ in origins.time },
         ]
+        // 크롭 계산용 y-up 사각형. 자동 라벨은 항등 변환이라 frame 이 곧 바운딩이지만,
+        // 박스 자막은 회전이 걸릴 수 있어 `customLabelStampRect` 로 명시 계산한다.
+        var yUpRects: [CGRect] = layers.map(\.frame)
         if clipLabel.isVisible {
-            // 센터 크롭에서는 보이는 클립 영역 = 캔버스 전체 → 자막 앵커도 캔버스 기준.
+            // 자막 앵커는 크롭 상태와 무관하게 항상 캔버스 전체 기준이다 — placedRect 를
+            // 늘 origin .zero, size renderSize(캔버스 전체)로 넘기기 때문이다(자유 크롭으로
+            // 전경이 캔버스보다 작아져도 앵커는 그대로 캔버스 코너에 고정된다).
+            let placedRect = CGRect(origin: .zero, size: renderSize)
             layers += makeCustomLabelLayers(
-                label: clipLabel, placedRect: CGRect(origin: .zero, size: renderSize), renderSize: renderSize
+                label: clipLabel, placedRect: placedRect, renderSize: renderSize
             )
+            yUpRects.append(customLabelStampRect(
+                label: clipLabel, placedRect: placedRect, renderSize: renderSize
+            ))
         }
 
         // 라벨이 실제로 덮는 사각형만 렌더한다. 캔버스 전체(1080×1920 RGBA ≈ 8MB)를 클립마다
         // 만들면 instructions 가 그걸 전부 붙들고 있어 30클립 vlog 가 ≈240MB 를 export 내내 유지한다.
         // 코너 스탬프만 있는 일반적인 경우 이 박스는 ≈200×121 (≈97KB) 로 두 자릿수 배 작다.
-        guard let cropRect = stampBounds(of: layers, renderSize: renderSize) else { return nil }
+        guard let cropRect = stampBounds(yUpRects: yUpRects, renderSize: renderSize) else { return nil }
 
         // 서브렉트를 새 캔버스로 삼아 레이어 좌표를 평행이동한다.
         // **컨텍스트를 translate 하면 안 된다** — `isGeometryFlipped` 의 뒤집기 기준이
         // 레이어 bounds 가 아니라 그리기 컨텍스트를 따라가면서 전체가 화면 밖으로 나간다
         // (실측: 서브렉트 컨텍스트 + CTM translate 조합은 완전히 빈 이미지를 만들었다).
         // 좌표를 옮기면 원본과 같은 코드 경로 위에서 캔버스만 작아진다.
+        // 좌표를 옮길 때 **frame 을 대입하지 않는다** — 회전이 걸린 레이어에 frame 대입은
+        // 동작이 정의되지 않는다. `position` 이동은 transform 과 무관하게 정의돼 있고,
+        // 항등 변환에서는 frame 평행이동과 결과가 같다.
         let yUpBottom = renderSize.height - cropRect.maxY
         for layer in layers {
-            layer.frame = layer.frame.offsetBy(dx: -cropRect.minX, dy: -yUpBottom)
+            layer.position = CGPoint(x: layer.position.x - cropRect.minX,
+                                     y: layer.position.y - yUpBottom)
         }
 
         let parentLayer = CALayer()
@@ -383,16 +398,17 @@ public actor AVFoundationCompositionService: CompositionServicing {
         return (cg, cropRect.origin)
     }
 
-    /// 라벨 레이어들이 최종 이미지에서 덮는 영역(**top-left 원점**, 그림자 여유 포함, 캔버스로 클램프).
+    /// 라벨이 최종 이미지에서 덮는 영역(**top-left 원점**, 그림자 여유 포함, 캔버스로 클램프).
     ///
-    /// 레이어 `frame` 은 y-up(좌하단) 으로 작성돼 있고 `isGeometryFlipped` 가 렌더 시점에
-    /// 뒤집으므로, top-left 로 환산할 때 `renderH - maxY` 를 쓴다 —
-    /// `LabelText.stampRect` 가 테스트용으로 하는 환산과 같은 규칙이다.
-    private static func stampBounds(of layers: [CALayer], renderSize: CGSize) -> CGRect? {
-        guard !layers.isEmpty else { return nil }
-        let union = layers.reduce(CGRect.null) { acc, layer in
-            let f = layer.frame
-            return acc.union(CGRect(x: f.minX, y: renderSize.height - f.maxY, width: f.width, height: f.height))
+    /// 입력은 **y-up(좌하단)** 사각형들이고 `isGeometryFlipped` 가 렌더 시점에 뒤집으므로,
+    /// top-left 로 환산할 때 `renderH - maxY` 를 쓴다 — `LabelText.stampRect` 가 테스트용으로
+    /// 하는 환산과 같은 규칙이다. **`layer.frame` 을 직접 읽지 않고 사각형을 받는 이유**:
+    /// 회전(비항등 transform)이 걸린 레이어의 `frame` 이 바운딩을 어떻게 반영하는지에
+    /// 의존하면 안 되기 때문이다(모서리가 잘린다).
+    private static func stampBounds(yUpRects: [CGRect], renderSize: CGSize) -> CGRect? {
+        guard !yUpRects.isEmpty else { return nil }
+        let union = yUpRects.reduce(CGRect.null) { acc, f in
+            acc.union(CGRect(x: f.minX, y: renderSize.height - f.maxY, width: f.width, height: f.height))
         }
         guard !union.isNull else { return nil }
         let padded = union.insetBy(dx: -LabelText.shadowSlack, dy: -LabelText.shadowSlack).integral
@@ -444,41 +460,41 @@ public actor AVFoundationCompositionService: CompositionServicing {
     }
 
     #if canImport(UIKit)
-    /// 박스 자막 라벨용 UIFont — 시스템 light 고정.
-    private static func overlayCustomUIFont(fontSize: CGFloat) -> UIFont {
-        .systemFont(ofSize: fontSize, weight: .light)
-    }
+    // 박스 자막의 폰트·실측·자동 축소는 `Models.ClipLabelMetrics` 가 단일 출처다.
+    // 예전엔 이 파일에 `overlayCustomUIFont`/`measureCustomText` 로 복제돼 있었고,
+    // 프리뷰(`ClipLabelText`)·에디터(`LabelAnchorMath`)에도 같은 코드가 또 있었다 —
+    // 한쪽만 고치면 미리보기와 출력이 다른 폭을 갖는데 컴파일도 테스트도 조용했다.
 
-    /// 박스 자막 텍스트 실측(시스템 light + 자간 기준).
-    private static func measureCustomText(_ text: String, fontSize: CGFloat) -> CGSize {
-        let attributed = NSAttributedString(
-            string: text,
-            attributes: [
-                .font: overlayCustomUIFont(fontSize: fontSize),
-                .kern: ClipLabel.BoxStyle.letterSpacing(for: fontSize),
-            ]
-        )
-        let m = attributed.size()
-        return CGSize(width: ceil(m.width), height: ceil(m.height))
-    }
-
-    /// 박스 자막 라벨 한 개를 그릴 레이어들([배경 박스, 텍스트]).
-    /// 스타일은 흰 배경 + 검정 글씨 + 검정 테두리로 고정.
-    private static func makeCustomLabelLayers(
+    /// 박스 자막 라벨 한 개를 그릴 레이어들.
+    ///
+    /// - `label.hasBackground == true`  → `[배경 박스, 텍스트]` (흰 면 · 검정 테두리 · 검정 글씨)
+    /// - `label.hasBackground == false` → `[텍스트]` (흰 글씨, 장식 없음)
+    ///
+    /// **두 경우 `textLayer.frame` 은 동일하다** — 패딩을 유지하므로 토글이 위치를 움직이지 않는다.
+    /// 프리뷰의 `BoxSubtitleStyle`/`ClipLabelBoxPalette` 가 같은 규칙·같은 색을 쓴다(WYSIWYG).
+    /// `internal`(테스트 도달용) — `CustomLabelLayoutTests` 가 레이어 구성과 글자 프레임을 잠근다.
+    static func makeCustomLabelLayers(
         label: ClipLabel,
         placedRect: CGRect,
         renderSize: CGSize
     ) -> [CALayer] {
-        let fontSize = max(8, label.clampedSizeFraction * placedRect.height)
-        let textSize = measureCustomText(label.text, fontSize: fontSize)
+        // 문구가 길면 가용폭(캔버스 폭 92%)에 맞춰 자동 축소된다. 하한(8px)도 SSOT 안에 있으므로
+        // 여기서 `max(8, …)` 를 따로 걸지 않는다 — 걸면 축소 규칙이 두 곳으로 갈라진다.
+        let fontSize = ClipLabelMetrics.fontPx(
+            text: label.text,
+            userSizeFraction: label.clampedSizeFraction,
+            canvasHeight: placedRect.height
+        )
+        let textSize = ClipLabelMetrics.textSize(label.text, fontPx: fontSize)
         let origin = customLabelOrigin(placedRect: placedRect, position: label.position, textSize: textSize, renderSize: renderSize)
 
         let textLayer = CATextLayer()
         textLayer.string = NSAttributedString(
             string: label.text,
             attributes: [
-                .font: overlayCustomUIFont(fontSize: fontSize),
-                .foregroundColor: UIColor.black,
+                .font: ClipLabelMetrics.uiFont(px: fontSize),
+                // 흰 박스 위면 검정, 영상 위에 직접 올리면 흰색. 프리뷰의 ClipLabelBoxPalette 와 같은 규칙.
+                .foregroundColor: label.hasBackground ? UIColor.black : UIColor.white,
                 .kern: ClipLabel.BoxStyle.letterSpacing(for: fontSize),
             ]
         )
@@ -488,22 +504,58 @@ public actor AVFoundationCompositionService: CompositionServicing {
         textLayer.frame = CGRect(origin: origin, size: textSize)
         textLayer.opacity = 1
 
-        // 흰 배경 + 검정 테두리 박스. (프리뷰 ClipLabelText 와 동일한 ClipLabel.BoxStyle 사용)
-        let padX = fontSize * ClipLabel.BoxStyle.horizontalPaddingFraction
-        let padY = fontSize * ClipLabel.BoxStyle.verticalPaddingFraction
-        let bgLayer = CALayer()
-        bgLayer.frame = CGRect(
-            x: origin.x - padX,
-            y: origin.y - padY,
-            width: textSize.width + padX * 2,
-            height: textSize.height + padY * 2
-        )
-        bgLayer.backgroundColor = UIColor.white.cgColor
-        bgLayer.borderColor = UIColor.black.cgColor
-        bgLayer.borderWidth = fontSize * ClipLabel.BoxStyle.borderWidthFraction
-        bgLayer.opacity = 1
+        // 배경 OFF: 장식 없이 텍스트만. (패딩은 계산에 쓰지 않으므로 frame 은 위와 동일하게 유지된다.)
+        var result: [CALayer] = [textLayer]
+        if label.hasBackground {
+            // 흰 배경 + 검정 테두리 박스. (프리뷰 ClipLabelText 와 동일한 ClipLabel.BoxStyle 사용)
+            let padX = fontSize * ClipLabel.BoxStyle.horizontalPaddingFraction
+            let padY = fontSize * ClipLabel.BoxStyle.verticalPaddingFraction
+            let bgLayer = CALayer()
+            bgLayer.frame = CGRect(
+                x: origin.x - padX,
+                y: origin.y - padY,
+                width: textSize.width + padX * 2,
+                height: textSize.height + padY * 2
+            )
+            bgLayer.backgroundColor = UIColor.white.cgColor
+            bgLayer.borderColor = UIColor.black.cgColor
+            bgLayer.borderWidth = fontSize * ClipLabel.BoxStyle.borderWidthFraction
+            bgLayer.opacity = 1
+            result.insert(bgLayer, at: 0)
+        }
 
-        return [bgLayer, textLayer]
+        // 회전은 **frame 을 모두 세팅한 뒤** 마지막에 건다 — 비항등 transform 이 걸린 레이어에
+        // frame 을 대입하는 것은 동작이 정의되지 않는다.
+        //
+        // 컨테이너 레이어로 감싸지 않는 이유: `bgLayer` 중심 = origin − pad + paddedSize/2
+        // = origin + textSize/2 = `textLayer` 중심 이 **항등식으로** 성립하고, CALayer 변환은
+        // 자기 anchorPoint(기본 중심) 기준이므로 두 레이어에 같은 아핀을 걸면 컨테이너와 결과가
+        // 같다. 중심 일치는 `ClipLabelRotationTests.rotatedBackgroundAndTextShareCenter` 가 잠근다.
+        let rotation = label.layerRotationTransform
+        for layer in result { layer.setAffineTransform(rotation) }
+        return result
+    }
+
+    /// 박스 자막이 캔버스에서 덮는 사각형(**CoreAnimation y-up**, 회전 반영).
+    ///
+    /// `layer.frame` 이 비항등 transform 을 어떻게 반영하는지에 의존하지 않고 회전 바운딩을
+    /// 직접 계산한다 — 이걸 빼먹으면 오버레이 비트맵 크롭이 회전된 라벨 **모서리를 잘라낸다.**
+    /// 배경 OFF 라도 패딩 포함 박스를 쓴다(패딩을 ON/OFF 동일하게 두는 규칙과 같은 근거이고,
+    /// 여유가 큰 쪽이 안전하다). `internal`(테스트 도달용).
+    static func customLabelStampRect(label: ClipLabel, placedRect: CGRect, renderSize: CGSize) -> CGRect {
+        let fontPx = ClipLabelMetrics.fontPx(
+            text: label.text, userSizeFraction: label.clampedSizeFraction, canvasHeight: placedRect.height
+        )
+        let textSize = ClipLabelMetrics.textSize(label.text, fontPx: fontPx)
+        let padded = ClipLabelMetrics.paddedBoxSize(label.text, fontPx: fontPx)
+        let origin = customLabelOrigin(
+            placedRect: placedRect, position: label.position, textSize: textSize, renderSize: renderSize
+        )
+        // 박스 중심 = 텍스트 중심(패딩이 대칭이므로).
+        let center = CGPoint(x: origin.x + textSize.width / 2, y: origin.y + textSize.height / 2)
+        let rotated = CGRect(origin: CGPoint(x: -padded.width / 2, y: -padded.height / 2), size: padded)
+            .applying(label.layerRotationTransform)
+        return rotated.offsetBy(dx: center.x, dy: center.y)
     }
     #endif
 
@@ -526,6 +578,7 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
     /// 한 클립을 renderSize 에 aspectFill(=센터 크롭)로 배치하고, 사용자 변환(scale·offset)을 추가 적용한 affine transform.
     /// framing == .fill 이면 추가 조작 없는 기본 센터 크롭.
+    /// scale·offset 에 제약은 없다 — 전경이 캔버스를 못 덮으면 남는 영역은 컴포지터의 검정 베이스가 받는다.
     public static func transform(
         naturalSize: CGSize,
         preferredTransform: CGAffineTransform,
@@ -548,11 +601,12 @@ public actor AVFoundationCompositionService: CompositionServicing {
         let rotatedRect = CGRect(origin: .zero, size: displaySize).applying(rotationMatrix)
         let rotationNormalize = CGAffineTransform(translationX: -rotatedRect.minX, y: -rotatedRect.minY)
 
-        // ④ fill(센터 크롭) 배율은 ClipFraming 과 공유. 사용자 배율은 [1, 4] 로 clamp —
-        //    1 미만이면 캔버스 여백이 드러나므로 금지(블러 배경 없음).
+        // ④ fill(센터 크롭) 배율은 ClipFraming 과 공유. 사용자 배율에는 UX 제약이 없고
+        //    `sanitized` 의 산술 안전 가드([0.1, 10] + non-finite 방어)만 적용된다 —
+        //    1 미만이면 캔버스에 검정 여백이 드러난다(컴포지터의 검정 베이스가 받는다).
+        let safeFraming = framing.sanitized
         let fillScale = ClipFraming.fillScale(display: displaySize, rotation: rotation, render: renderSize)
-        let userScale = min(max(framing.scale, ClipTransform.minScale), ClipTransform.maxScale)
-        let totalScale = fillScale * userScale
+        let totalScale = fillScale * safeFraming.scale
 
         let scaledSize = CGSize(width: postRotationSize.width * totalScale,
                                 height: postRotationSize.height * totalScale)
@@ -561,11 +615,9 @@ public actor AVFoundationCompositionService: CompositionServicing {
         let centerTranslate = CGAffineTransform(translationX: (renderSize.width - scaledSize.width) / 2,
                                                 y: (renderSize.height - scaledSize.height) / 2)
 
-        // ⑥ 사용자 이동(정규화 비율 → 픽셀). 화면 밖으로 못 나가게 clamp 도 ClipFraming 공유.
-        let clampedFrac = ClipFraming.clampedOffset(framing.offset, display: displaySize,
-                                                    rotation: rotation, render: renderSize, scale: userScale)
-        let offsetTranslate = CGAffineTransform(translationX: clampedFrac.x * renderSize.width,
-                                                y: clampedFrac.y * renderSize.height)
+        // ⑥ 사용자 이동(정규화 비율 → 픽셀). clamp 없음 — 전경이 캔버스 밖으로 나갈 수 있다.
+        let offsetTranslate = CGAffineTransform(translationX: safeFraming.offset.x * renderSize.width,
+                                                y: safeFraming.offset.y * renderSize.height)
 
         // 순서대로 곱한다 — 이 순서가 곧 의미(①보정 → ③회전 → ④배율 → ⑤중앙 → ⑥이동).
         return preferredTransform

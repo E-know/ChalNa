@@ -85,18 +85,19 @@ check "흰색 하드코딩" '(Color\.white|\.white\b|Color\(white:|UIColor\(whit
 
 # 5. 검정 하드코딩 — 규칙 4(흰색)의 대칭 규칙. Task 1 은 "값이 검정인 토큰(canvas)을
 #    범용 검정으로 쓰는" 우회를 정리했는데, 그 우회가 통했던 이유가 바로 이 규칙이
-#    없었기 때문이다 — 검정 하드코딩은 규칙 4처럼 아무 파일에서나 써도 5개 규칙이
-#    전부 그린으로 남는다. 예외 대상은 규칙 4와 동일한 "영상 출력 픽셀 일치" 부류:
-#    CompositionService(라벨 전경·테두리) · ClipLabelText/LabelEditorView(박스 자막,
-#    검은 글자·검은 테두리가 CATextLayer 출력과 픽셀 일치해야 한다 — 흰색과 달리
-#    LabelEditorView 는 검정 쪽만 실사용이라 여기 등록한다).
+#    없었기 때문이다 — 검정 하드코딩은 규칙 4처럼 아무 파일에서나 써도 5개 규칙이 전부
+#    그린으로 남는다. 예외 대상은 규칙 4와 동일한 "영상 출력 픽셀 일치" 부류:
+#    CompositionService(라벨 전경·테두리) · ClipLabelText(박스 자막의 검은 글자·검은 테두리가
+#    CATextLayer 출력과 픽셀 일치해야 한다).
+#    LabelEditorView.swift 는 라벨 2스텝 재구성에서 색 결정을 ClipLabelBoxPalette
+#    (ClipLabelText.swift)로 옮기면서 검정 리터럴이 사라져 예외에서 제거했다 —
+#    매치 없는 예외는 그 파일에 새로 들어오는 진짜 위반을 영구히 가린다.
 #    회색조 이니셜라이저 형태(Color(white: 0)/UIColor(white: 0))도 포함 —
 #    Color.black 을 Color(white: 0) 으로 바꾸는 것만으로 규칙을 우회할 수 없게 한다.
 check "검정 하드코딩" '(Color\.black|\.black\b|Color\(white: *0(\b|\.)|UIColor\.black|UIColor\(white: *0(\b|\.))' \
   'DesignSystem/Sources/Tokens/' \
   'CompositionService/Sources/CompositionService.swift' \
-  'TimelineFeature/Sources/Components/ClipLabelText.swift' \
-  'TimelineFeature/Sources/LabelEditorView.swift'
+  'TimelineFeature/Sources/Components/ClipLabelText.swift'
 
 # 6. UIColor(named:) — 번들 조회가 조용히 실패하는 패턴
 check "UIColor(named:)" 'UIColor\(named:'

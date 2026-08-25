@@ -7,6 +7,6 @@ public enum ChalNaMotion {
     public static let fast: Animation = .easeOut(duration: 0.15)
     /// 레이아웃 이동 · 페이드.
     public static let standard: Animation = .easeInOut(duration: 0.24)
-    /// 크롭 러버밴드 스냅백. 오버슛 없는 파라미터 — 기존 검증값을 그대로 유지한다.
+    /// 크롭 리셋(센터 크롭으로 되돌리는) 스냅백. 오버슛 없는 파라미터 — 기존 검증값을 그대로 유지한다.
     public static let spring: Animation = .spring(response: 0.35, dampingFraction: 0.85)
 }

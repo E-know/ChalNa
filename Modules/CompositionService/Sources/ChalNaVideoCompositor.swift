@@ -36,7 +36,8 @@ final class ChalNaCompositionInstruction: NSObject, AVVideoCompositionInstructio
 }
 
 /// 9:16 캔버스에 전경(aspectFill 센터 크롭 + 사용자 변환)을 배치하고 라벨 오버레이를 얹는 커스텀 컴포지터.
-/// 전경이 캔버스를 항상 꽉 덮으므로 배경(블러) 레이어는 없다. 만일의 경계 틈은 검정 베이스가 받친다.
+/// 전경은 캔버스를 **꽉 덮지 않을 수 있다** — 사용자가 fill 미만으로 축소하거나 캔버스 밖으로
+/// 밀어낼 수 있기 때문이다(`ClipTransform` 참고). 드러나는 여백은 아래 불투명 검정 베이스가 받는다.
 final class ChalNaVideoCompositor: NSObject, AVVideoCompositing, @unchecked Sendable {
     let sourcePixelBufferAttributes: [String: any Sendable]? =
         [kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32BGRA)]
@@ -79,7 +80,9 @@ final class ChalNaVideoCompositor: NSObject, AVVideoCompositing, @unchecked Send
             return image.transformed(by: combined)
         }
 
-        // ① 전경: aspectFill(센터 크롭) + 사용자 변환. 서브픽셀 경계 틈 대비 검정 베이스 위에 얹는다.
+        // ① 전경: aspectFill(센터 크롭) + 사용자 변환. 불투명 검정 베이스 위에 얹는다 —
+        //    서브픽셀 경계 틈뿐 아니라, 축소·캔버스 밖 이동으로 생기는 여백도 이 베이스가 채운다.
+        //    (`CompositorRenderTests.testCompositor_ScaleBelowFill_LeavesBlackMargin` 가 픽셀로 잠근다.)
         let base = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 1)).cropped(to: renderRect)
         let foreground = placeYDown(src, instruction.foreground).cropped(to: renderRect)
         var output = foreground.composited(over: base).cropped(to: renderRect)
