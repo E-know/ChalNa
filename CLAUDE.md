@@ -42,7 +42,7 @@ xcodebuild ... test \
 - **스킴이 두 개다**:
   - `ChalNa` — 실제 사진 라이브러리 사용(`AppMode.real`).
   - `ChalNa Dev` — `CHALNA_APP_MODE=devMock` 환경변수를 주입해 **번들 고정 fixture 미디어**(`BundledDevMediaSource`)로 동작. 사진 권한 없이 전체 플로우를 돌릴 때 사용 (DEBUG 빌드 한정).
-- 단일 모듈만 빌드/포커스: `tuist generate <Module>` (예: `tuist generate DesignSystem`) — 나머지 타겟은 가능하면 바이너리로 링크된다. Tuist 4(현재 환경 4.195.12)에 `tuist focus` 서브커맨드는 없다.
+- 단일 모듈만 빌드/포커스: `tuist generate <Module>` (예: `tuist generate DesignSystem`) — 나머지 타겟은 가능하면 바이너리로 링크된다. Tuist 4(현재 환경 4.209.0)에 `tuist focus` 서브커맨드는 없다. **Xcode 27 에선 Tuist 4.197.1 이상이 필요하다** — 그 전 버전은 서드파티 패키지 타깃을 선언값(GoogleUtilities iOS 12.0 등) 그대로 생성해 Xcode 27 하한(iOS 15.0 · macOS 12.0) 미달 에러로 빌드가 막힌다(tuist/tuist#11169). 같은 이유로 SPM 핀도 Xcode 27 수정이 들어간 버전으로 올렸다 — TCA 1.26.1 · swift-sharing 2.9.1 · xctest-dynamic-overlay 1.11.0(1.9.0 은 Swift 6.4 의 Swift Testing 레이아웃 변경 때문에 `TestStore` 테스트가 전부 크래시). TCA 1.26.2 · swift-sharing 2.10.x 부터는 IssueReporting 을 개명 패키지 `swift-issue-reporting` 2.x 로 옮겼으니, 그 이상으로 올릴 땐 나머지 pointfree 패키지까지 한꺼번에 맞추고 유닛 테스트로 확인한다.
 - 의존성 그래프: `tuist graph`. 그래프 출력물·설계 문서를 두는 `docs/` 는 `.gitignore` 대상인 임시 디렉터리라 저장소에 없다 — 그래서 이 문서는 설계 문서 링크 대신 **코드를 근거로 인용한다**.
 - iOS 빌드/시뮬레이터 실행은 위 `xcodebuild` 명령으로 직접 한다 (매번 fresh build → 설치/실행으로 시각 검증). 전용 `ios-build-run` 서브에이전트는 이 저장소에도 사용자 전역 설정에도 없다.
 - **유닛 테스트 타겟은 8개** (`Project.swift`의 `Module.unitTests(for:)` 8회 호출): `AppCoreTests` · `ExportFeatureTests` · `CompositionServiceTests` · `PhotosServiceTests` · `TimelineFeatureTests` · `MediaPickerFeatureTests` · `SettingsFeatureTests` · `DesignSystemTests`. Preview 보조용 고정 데이터 `SampleData` 는 현재 TimelineFeature 테스트 2곳(`TimelinePlaybackTests`·`TimelineReorderTests`)만 쓴다 — 재사용할 수 있으면 쓰고, 나머지 타겟은 자체 픽스처를 만든다.
