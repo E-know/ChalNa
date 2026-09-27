@@ -7,8 +7,10 @@ public enum ChalNaRadius {
     public static let xxs: CGFloat = 2
     /// 태그 · 작은 썸네일.
     public static let xs: CGFloat = 6
-    /// 버튼 · 입력 필드.
-    public static let sm: CGFloat = 10
+    /// 버튼 · 입력 필드. 버튼 크기(lg/md/sm) 무관 단일 값.
+    /// 4 가 아닌 8 인 이유: 4 면 태그(`xs` 6)보다 날카로워져 "큰 요소일수록 둥글다"는
+    /// 위계가 뒤집히고, 52pt 버튼에서 continuous 곡률이 거의 직각으로 읽힌다.
+    public static let sm: CGFloat = 8
     /// 카드 · 프리뷰 캔버스.
     public static let md: CGFloat = 14
     /// 바텀시트 · 플로팅 툴바.
