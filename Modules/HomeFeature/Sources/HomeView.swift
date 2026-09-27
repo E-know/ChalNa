@@ -67,7 +67,7 @@ public struct HomeView: View {
                 ChalNaEmptyState(
                     icon: .film,
                     title: "아직 만든 필름이 없어요",
-                    message: "Live Photo와 짧은 영상을 촬영일 순서로 이어붙여\n한 편의 필름처럼 기록해요."
+                    message: "찍은 순서대로 이어 붙여\n한 편의 필름으로 만들어요."
                 )
 
                 // 비한국어 UI 에서만 앱 이름 뜻풀이를 덧붙인다. 빈 상태 한정 —

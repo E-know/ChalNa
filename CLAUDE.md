@@ -216,7 +216,7 @@ DesignSystem/Sources/
 - 앱 전역 Dynamic Type 상한은 `RootView` 의 `.dynamicTypeSize(...DynamicTypeSize.accessibility1)` — 단 **`.sheet`/`.fullScreenCover` 경계를 넘지 않는다.** 아래 "접근성" 참고.
 
 ### Radius — `ChalNaRadius`
-`.xxs 2`(10×6pt 급 초소형 인디케이터용으로 정의돼 있지만 **현재 소비자 0건** — `.xs` 이상은 이 크기에서 캡슐이 되어버려서 남겨둔 토큰) · `.xs 6`(태그·작은 썸네일) · `.sm 10`(버튼·입력 필드) · `.md 14`(카드·프리뷰 캔버스) · `.lg 20`(바텀시트·플로팅 툴바). **`pill` 토큰은 없다** — 완전한 캡슐이 필요한 태그·토스트·진행률 바는 SwiftUI `Capsule()` 을 직접 쓴다.
+`.xxs 2`(10×6pt 급 초소형 인디케이터용으로 정의돼 있지만 **현재 소비자 0건** — `.xs` 이상은 이 크기에서 캡슐이 되어버려서 남겨둔 토큰) · `.xs 6`(태그·작은 썸네일) · `.sm 8`(버튼·입력 필드 — 버튼 크기 무관 단일 값. 2026-09-27 10→8. 4 가 아닌 이유는 토큰 주석 참고) · `.md 14`(카드·프리뷰 캔버스) · `.lg 20`(바텀시트·플로팅 툴바). **`pill` 토큰은 없다** — 완전한 캡슐이 필요한 태그·토스트·진행률 바는 SwiftUI `Capsule()` 을 직접 쓴다.
 - 과거 4px 단위 스케일(`.film 4`·`.button 4`·`.card 8`·`.sheet 16`, `.card` 포함)은 Task 26 에서 삭제됐다.
 
 ### Motion — `ChalNaMotion`
