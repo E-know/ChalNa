@@ -155,7 +155,11 @@ let project = Project(
             // Firebase(GoogleUtilities 등) 가 staticFramework 로 통합되어 있어
             // ObjC 카테고리 메서드(`gul_dataByGzippingData:` 등) 가 링커의 dead-code-stripping
             // 으로 빠지면서 런타임에 unrecognized selector 가 발생. `-ObjC` 로 강제 로드.
-            settings: .settings(base: ["OTHER_LDFLAGS": "$(inherited) -ObjC"])
+            settings: .settings(base: [
+                "CODE_SIGN_STYLE": "Automatic",
+                "DEVELOPMENT_TEAM": "P2UJWPTGRX",
+                "OTHER_LDFLAGS": "$(inherited) -ObjC",
+            ])
         ),
         // 크롭 조정 플로우 시각 검증용 UI 테스트 (devMock, XCTest — CLAUDE.md 예외 허용 대상).
         .target(
