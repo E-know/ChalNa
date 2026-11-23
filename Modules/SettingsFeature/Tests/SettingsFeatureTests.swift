@@ -9,15 +9,34 @@ struct SettingsFeatureTests {
         await store.send(.onAppear)   // analytics(Noop) 로깅, 상태 불변
     }
 
-    @Test func languageMenuTapEmitsDelegate() async {
+    @Test func switchingSectionsKeepsTheSupportDraft() async {
         let store = TestStore(initialState: SettingsFeature.State()) { SettingsFeature() }
-        await store.send(.languageMenuTapped)
-        await store.receive(.delegate(.languageRequested))
+        await store.send(.sectionSelected(.support)) {
+            $0.selectedSection = .support
+        }
+        await store.send(.support(.textChanged("제안 초안"))) {
+            $0.support.text = "제안 초안"
+        }
+        await store.send(.sectionSelected(.language)) {
+            $0.selectedSection = .language
+        }
+        await store.send(.sectionSelected(.support)) {
+            $0.selectedSection = .support
+        }
+        #expect(store.state.support.text == "제안 초안")
     }
 
-    @Test func supportMenuTapEmitsDelegate() async {
-        let store = TestStore(initialState: SettingsFeature.State()) { SettingsFeature() }
-        await store.send(.supportMenuTapped)
-        await store.receive(.delegate(.supportRequested))
+    @Test func acknowledgingSentFeedbackClearsOnlyTheDetail() async {
+        var initial = SettingsFeature.State()
+        initial.selectedSection = .support
+        initial.support.alert = SupportFeature.AlertInfo(message: "전송했어요", isSuccess: true)
+        let store = TestStore(initialState: initial) { SettingsFeature() }
+
+        await store.send(.support(.alertDismissed)) {
+            $0.support.alert = nil
+        }
+        await store.receive(\.support.delegate.finished) {
+            $0.selectedSection = nil
+        }
     }
 }

@@ -1,27 +1,32 @@
+import AnalyticsService
+import AppCore
 import ComposableArchitecture
 import Foundation
-import AnalyticsService
 
-/// 홈 화면의 Reducer. 가장 단순한 Feature 라 TCA 패턴 검증 용도로 먼저 마이그레이션.
-/// Note: SwiftData `@Query films` 는 TCA State 에 두지 않고 View 에 그대로 둔다
-/// (TCA + SwiftData 공식 권장 패턴).
 @Reducer
 public struct HomeFeature {
     public init() {}
 
     @ObservableState
     public struct State: Equatable {
+        public var films: [ArchivedFilm] = []
+        public var isLoading = true
+        public var readFailed = false
         public init() {}
     }
 
     public enum Action {
         case onAppear
+        case task
+        case filmsLoaded([ArchivedFilm])
+        case readFailed
+        case retryTapped
+        case disappeared
         case newVlogButtonTapped
         case settingsButtonTapped
         case filmTapped(filmID: UUID)
         case delegate(Delegate)
 
-        /// 부모(AppFeature)가 화면 전환으로 해석하는 네비게이션 인텐트.
         public enum Delegate: Equatable {
             case newVlogRequested
             case settingsRequested
@@ -29,7 +34,9 @@ public struct HomeFeature {
         }
     }
 
+    private enum CancelID { case library }
     @Dependency(\.analyticsTracker) var analyticsTracker
+    @Dependency(\.filmReader) var filmReader
 
     public var body: some ReducerOf<Self> {
         Reduce { state, action in
@@ -37,17 +44,36 @@ public struct HomeFeature {
             case .onAppear:
                 analyticsTracker.log(.homeViewed)
                 return .none
-
+            case .task, .retryTapped:
+                state.isLoading = state.films.isEmpty
+                state.readFailed = false
+                return .run { send in
+                    do {
+                        for try await films in filmReader.films() {
+                            await send(.filmsLoaded(films))
+                        }
+                    } catch {
+                        if !Task.isCancelled { await send(.readFailed) }
+                    }
+                }.cancellable(id: CancelID.library, cancelInFlight: true)
+            case let .filmsLoaded(films):
+                state.films = films
+                state.isLoading = false
+                state.readFailed = false
+                return .none
+            case .readFailed:
+                state.isLoading = false
+                state.readFailed = true
+                return .none
+            case .disappeared:
+                return .cancel(id: CancelID.library)
             case .newVlogButtonTapped:
                 analyticsTracker.log(.newVlogTapped)
                 return .send(.delegate(.newVlogRequested))
-
             case .settingsButtonTapped:
                 return .send(.delegate(.settingsRequested))
-
             case let .filmTapped(filmID):
                 return .send(.delegate(.filmDetailRequested(filmID: filmID)))
-
             case .delegate:
                 return .none
             }

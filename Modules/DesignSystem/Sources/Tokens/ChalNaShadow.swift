@@ -14,18 +14,10 @@ public struct ChalNaShadowLayer {
     }
 }
 
-/// 섀도우 토큰.
-///
-/// 다크에서는 그림자가 거의 보이지 않으므로 깊이는
-/// `bg → surface → surfaceRaised` 3단 밝기 + 1px hairline 으로 표현한다.
-/// 그림자는 **떠 있는 툴바 하나**에만 쓴다.
-///
-/// 근거: docs/superpowers/specs/2026-07-28-app-redesign-design.md §4.2
+/// 종이 배경에서 콘텐츠 위로 뜬 도구와 안내를 구분한다.
 public enum ChalNaShadow {
-
-    /// 유일한 그림자. 플로팅 툴바 전용.
     public static let floating: [ChalNaShadowLayer] = [
-        .init(Color.black.opacity(0.5), radius: 24, y: 8),
+        .init(ChalNaColor.textPrimary.opacity(0.14), radius: 12, y: 4),
     ]
 }
 

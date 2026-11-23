@@ -12,7 +12,7 @@ public enum ChalNaIconKind: String, CaseIterable, Sendable {
     case chevronLeft, chevronRight, close, check
     case skipBack, skipForward
     case scissors, reorderLines, trash, music
-    case move
+    case crop, move
     case rotate
     case textLabel
     case settings
@@ -40,6 +40,7 @@ public enum ChalNaIconKind: String, CaseIterable, Sendable {
         case .reorderLines: return "line.3.horizontal"
         case .trash:        return "trash"
         case .music:        return "music.note"
+        case .crop:         return "crop"
         case .move:         return "arrow.up.and.down.and.arrow.left.and.right"
         case .rotate:       return "rotate.left"
         case .textLabel:    return "textformat"

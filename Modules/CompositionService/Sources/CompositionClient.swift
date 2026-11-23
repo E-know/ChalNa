@@ -34,3 +34,5 @@ public extension DependencyValues {
         set { self[CompositionClient.self] = newValue }
     }
 }
+
+extension CompositionClient: FilmComposing {}

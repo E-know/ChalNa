@@ -128,8 +128,21 @@ xcuserdata
 Derived/**
 
 ### Project specific (ChalNa / Tuist) ###
-# Tuist 가 generate 마다 재생성하는 워크스페이스 — commit 대상 아님 (xcodeproj 는 위 *.xcodeproj 로 무시)
+# Xcode Cloud는 워크스페이스 경로와 제품 연결 정보를 저장소에서 찾는다.
+!/ChalNa.xcodeproj/
+/ChalNa.xcodeproj/*
+!/ChalNa.xcodeproj/xcshareddata/
+/ChalNa.xcodeproj/xcshareddata/*
+!/ChalNa.xcodeproj/xcshareddata/xcschemes/
+/ChalNa.xcodeproj/xcshareddata/xcschemes/*
+!/ChalNa.xcodeproj/xcshareddata/xcschemes/ChalNa.xcscheme
+!/ChalNa.xcodeproj/xcshareddata/xcodecloud/
+/ChalNa.xcodeproj/xcshareddata/xcodecloud/*
+!/ChalNa.xcodeproj/xcshareddata/xcodecloud/manifest.json
 *.xcworkspace
+!/ChalNa.xcworkspace/
+/ChalNa.xcworkspace/*
+!/ChalNa.xcworkspace/contents.xcworkspacedata
 # tuist graph 가 루트에 만드는 임시 산출물 (정식본은 docs/architecture-graph.png)
 /graph.png
 /graph.dot

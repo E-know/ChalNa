@@ -1,3 +1,4 @@
+import AppCore
 import ComposableArchitecture
 
 @Reducer
@@ -10,16 +11,16 @@ public struct LanguageFeature {
     }
 
     public enum Action: Equatable {
-        case backTapped
+        case selected(AppLanguage)
     }
 
-    @Dependency(\.dismiss) var dismiss
+    @Dependency(\.appLanguageWriter) var writer
 
     public var body: some ReducerOf<Self> {
         Reduce { _, action in
             switch action {
-            case .backTapped:
-                return .run { _ in await dismiss() }
+            case let .selected(language):
+                return .run { _ in await writer.set(language) }
             }
         }
     }

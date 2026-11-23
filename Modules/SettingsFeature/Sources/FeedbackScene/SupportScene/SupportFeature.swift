@@ -12,7 +12,7 @@ public struct SupportFeature {
         public var text = ""
         public var category: FeedbackCategory = .bug
         public var isSending = false
-        /// nil 이면 알림 숨김. 성공 시 확인을 누르면 화면을 pop 한다(isSuccess 로 구분).
+        /// 성공 알림을 확인하면 설정 목록으로 돌아간다.
         public var alert: AlertInfo?
         public var otherCategoryTapCount = 0
         public var isRedeemPresented = false
@@ -21,14 +21,13 @@ public struct SupportFeature {
         public init() {}
     }
 
-    /// 전송 결과 알림. isSuccess 면 확인 시 pop, 실패면 머무른다(재시도 가능).
+    /// 전송 결과 알림. 실패하면 문안을 그대로 두어 다시 전송할 수 있다.
     public struct AlertInfo: Equatable {
         public let message: String
         public let isSuccess: Bool
     }
 
     public enum Action {
-        case backTapped
         case textChanged(String)
         case categorySelected(FeedbackCategory)
         case sendTapped
@@ -38,19 +37,21 @@ public struct SupportFeature {
         case redeemPresentedChanged(Bool)
         case redeemCodeChanged(String)
         case redeemSubmitted
+        case delegate(Delegate)
+
+        @CasePathable
+        public enum Delegate {
+            case finished
+        }
     }
 
     @Dependency(\.feedbackClient) var feedbackClient
     @Dependency(\.analyticsTracker) var analyticsTracker
     @Dependency(\.exportQuotaClient) var exportQuotaClient
-    @Dependency(\.dismiss) var dismiss
 
     public var body: some ReducerOf<Self> {
         Reduce { state, action in
             switch action {
-            case .backTapped:
-                return .run { _ in await dismiss() }
-
             case let .textChanged(value):
                 state.text = value
                 return .none
@@ -99,11 +100,9 @@ public struct SupportFeature {
                 return .none
 
             case .alertDismissed:
-                // 전송 성공 알림을 닫을 때만 화면도 닫는다(실패면 머물러 재시도).
                 let wasSuccess = state.alert?.isSuccess == true
                 state.alert = nil
-                guard wasSuccess else { return .none }
-                return .run { _ in await dismiss() }
+                return wasSuccess ? .send(.delegate(.finished)) : .none
 
             case let .redeemPresentedChanged(isPresented):
                 state.isRedeemPresented = isPresented
@@ -132,6 +131,9 @@ public struct SupportFeature {
                 state.redeemCode = ""
                 state.redeemError = nil
                 state.alert = AlertInfo(message: String(localized: "2026년까지 영상 생성 제한이 해제됐어요."), isSuccess: false)
+                return .none
+
+            case .delegate:
                 return .none
             }
         }

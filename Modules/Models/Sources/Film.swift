@@ -1,6 +1,5 @@
 import Foundation
 import SwiftData
-import FileStorage
 
 /// 사용자가 한 번 export 한 결과 = 라이브러리에 영구 저장되는 단위.
 /// SwiftData `@Model` 로 자동 영속화되고, 큰 mp4 파일은 별도 디렉터리에 두고
@@ -43,21 +42,3 @@ public final class Film {
         self.totalDurationSeconds = totalDurationSeconds
     }
 }
-
-public extension Film {
-    /// 디스크 상의 mp4 절대 URL. 파일이 사라졌으면 nil.
-    var movieURL: URL? {
-        guard let movieFilename else { return nil }
-        let url = FilmStorage.documentsURL.appendingPathComponent(movieFilename)
-        return FileManager.default.fileExists(atPath: url.path) ? url : nil
-    }
-
-    /// "8 CLIPS · 00:24" 형식의 메타 라벨.
-    var metaLabel: String {
-        let m = Int(totalDurationSeconds) / 60
-        let s = Int(totalDurationSeconds) % 60
-        return String(format: String(localized: "%d CLIPS · %02d:%02d"), clipCount, m, s)
-    }
-}
-
-// FilmStorage 헬퍼는 별도 FileStorage 모듈에 정의됨.

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 다크용 태그. 반투명 흰 필 + 선택적 글리프.
+/// 미디어 유형과 선택 상태를 표시하는 태그.
 /// 구 `ChalNaChip` 이 내부에서 SF Symbols 를 직접 쓰며 만든 이중 아이콘 계통을 없앤다.
 public enum ChalNaTagVariant {
     /// Live Photo. danger 계열 dot — Live Photo 의 붉은 계열 관례.
@@ -54,8 +54,8 @@ public struct ChalNaTag: View {
 
     private var background: Color {
         switch variant {
-        case .live, .video, .neutral: return Color.white.opacity(0.10)
-        case .accent:                 return ChalNaColor.accentFill.opacity(0.22)
+        case .live, .video, .neutral: return ChalNaColor.surface
+        case .accent:                 return ChalNaColor.selection
         }
     }
 
@@ -69,7 +69,7 @@ public struct ChalNaTag: View {
     private var borderColor: Color {
         switch variant {
         case .accent: return ChalNaColor.accent.opacity(0.45)
-        default:      return Color.white.opacity(0.08)
+        default:      return ChalNaColor.border
         }
     }
 }

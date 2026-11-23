@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 import ComposableArchitecture
+import AppCore
 import Models
 @testable import TimelineFeature
 
@@ -114,6 +115,81 @@ struct TimelineReorderTests {
 
         #expect(store.state.currentIndex == 6, "currentIndex가 이동된 클립을 따라가야 함")
         #expect(store.state.clips[6].id == movingID)
+    }
+
+    @Test func movingPlayingClipPreservesLocalTimeWhenTimelineReappears() async {
+        let store = testStore()
+        let selectedID = store.state.clips[1].id
+        await store.send(.clipTapped(index: 1))
+        await store.send(.togglePlay)
+        await store.send(.playheadElapsedUpdated(0.7))
+
+        await store.send(.clipMoved(id: selectedID, toIndex: 0))
+        let reordered = store.state.clips
+        await store.send(.syncFromSession(clips: reordered, title: "편집 중"))
+
+        #expect(store.state.currentClip?.id == selectedID)
+        #expect(abs(store.state.playheadSeconds - 0.7) < 0.0001)
+        #expect(store.state.playheadLabel == "00:00.7")
+        #expect(store.state.isPlaying)
+    }
+
+    @Test func deletingMiddleClipSelectsItsSuccessorAtItsStart() async {
+        let store = testStore()
+        let nextID = store.state.clips[2].id
+        let deletedID = store.state.clips[1].id
+        let expectedStart = store.state.clips[0].duration
+        await store.send(.clipTapped(index: 1))
+        await store.send(.playheadElapsedUpdated(0.7))
+        await store.send(.deleteCurrentRequested)
+        await store.send(.deleteAlert(.presented(.confirm(deletedID))))
+
+        #expect(store.state.currentClip?.id == nextID)
+        #expect(store.state.playheadSeconds == expectedStart)
+    }
+
+    @Test func cancellingDeletionWhilePlayingKeepsSelectionEditsAndTime() async {
+        let clips = Array(SampleData.jejuTimeline.prefix(2))
+        let selected = clips[1]
+        let session = EditSession(clips: clips, rotations: [selected.id: .r90])
+        let playhead = clips[0].duration + 0.5
+        let store = TestStore(initialState: TimelineFeature.State(
+            clips: clips, currentIndex: 1, playbackState: .playing, playheadSeconds: playhead
+        )) { TimelineFeature() } withDependencies: { $0.editSession = session }
+        store.exhaustivity = .off
+
+        await store.send(.deleteCurrentRequested)
+        #expect(store.state.deleteAlert != nil)
+        #expect(!store.state.isPlaying)
+        await store.send(.currentClipEnded)
+        await store.send(.deleteAlert(.dismiss))
+
+        #expect(store.state.deleteAlert == nil)
+        #expect(store.state.clips == clips && session.clips == clips)
+        #expect(store.state.currentClip?.id == selected.id)
+        #expect(store.state.playheadSeconds == playhead)
+        #expect(session.rotation(for: selected.id) == .r90)
+    }
+
+    @Test func adjustAndCaptionDuringPlaybackOpenForTheSelectedClip() async {
+        let store = testStore(currentIndex: 1)
+        let selected = store.state.clips[1]
+        await store.send(.togglePlay)
+        #expect(store.state.isPlaying && store.state.canEditCurrentClip)
+        #expect(!TimelineFeature.State(clips: []).canEditCurrentClip)
+        await store.send(.adjustCurrentTapped)
+        await store.receive(\.delegate, .clipAdjustRequested(clipID: selected.id))
+        #expect(!store.state.isPlaying)
+
+        await store.send(.togglePlay)
+        await store.send(.labelTapped)
+        #expect(!store.state.isPlaying)
+        #expect(store.state.labelEditorClip == selected)
+    }
+
+    @Test func sameDayStripShowsOneThumbnailPerClip() {
+        let clips = Array(SampleData.jejuTimeline.prefix(3))
+        #expect(FilmStripVC.items(for: clips) == clips.map { .clip($0.id) })
     }
 
     /// 다른 날짜 경계로 옮긴 클립도 FilmStrip 표시 순서가 model.clips 순서를 따라야 한다.

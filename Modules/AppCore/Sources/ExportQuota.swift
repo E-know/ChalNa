@@ -83,12 +83,14 @@ public struct ExportQuotaLedger: Equatable, Codable, Sendable {
 
 @DependencyClient
 public struct ExportQuotaClient: Sendable {
+    public var isUnlocked: @Sendable () -> Bool = { false }
     public var reserveExport: @Sendable () -> ExportQuotaDecision = { .allowed }
     public var redeem: @Sendable (_ code: String) -> Bool = { _ in false }
 }
 
 extension ExportQuotaClient: DependencyKey {
     public static let liveValue = ExportQuotaClient(
+        isUnlocked: { ExportQuotaUserDefaults.isUnlocked() },
         reserveExport: {
             ExportQuotaUserDefaults.reserveExport()
         },
@@ -110,7 +112,15 @@ public extension DependencyValues {
 private enum ExportQuotaUserDefaults {
     private static let storageKey = "exportQuotaLedger.v1"
 
+    private static let lock = NSLock()
+
+    static func isUnlocked() -> Bool {
+        lock.withLock { load().isUnlocked(at: Date()) }
+    }
+
     static func reserveExport() -> ExportQuotaDecision {
+        lock.lock()
+        defer { lock.unlock() }
         var ledger = load()
         let decision = ledger.reserveExport(now: Date())
         save(ledger)
@@ -118,6 +128,8 @@ private enum ExportQuotaUserDefaults {
     }
 
     static func redeem(code: String) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
         var ledger = load()
         let didRedeem = ledger.redeem(code: code, now: Date())
         if didRedeem { save(ledger) }

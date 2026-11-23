@@ -5,12 +5,15 @@ import Models
 import DesignSystem
 import UIKit
 
+enum FilmStripLayout { case strip, list, grid }
+
 // MARK: - SwiftUI bridge
 
 /// `UICollectionView` 기반 FilmStrip 의 SwiftUI 진입점. TimelineFeature store 기반.
 struct FilmStripCollectionView: UIViewControllerRepresentable {
     let store: StoreOf<TimelineFeature>
     let session: EditSession
+    let layout: FilmStripLayout
     let onTapClip: (Int) -> Void
 
     func makeUIViewController(context: Context) -> FilmStripVC {
@@ -21,6 +24,7 @@ struct FilmStripCollectionView: UIViewControllerRepresentable {
         vc.update(
             clips: store.clips,
             currentIndex: store.currentIndex,
+            layout: layout,
             isPlaying: store.isPlaying,
             session: session,
             onTapClip: onTapClip,
@@ -48,6 +52,7 @@ final class FilmStripVC: UIViewController,
 
     // SwiftUI에서 매 update 마다 다시 받아 캐시.
     private var clips: [Clip] = []
+    private var layout: FilmStripLayout = .strip
     private weak var session: EditSession?
     private var currentClipID: Clip.ID?
     private var isPlaying: Bool = false
@@ -69,8 +74,7 @@ final class FilmStripVC: UIViewController,
         let layout = makeLayout()
         collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collectionView.backgroundColor = UIColor(ChalNaColor.bg)
-        collectionView.layer.cornerRadius = ChalNaRadius.md
-        collectionView.layer.cornerCurve = .continuous
+        collectionView.showsVerticalScrollIndicator = false
         collectionView.showsHorizontalScrollIndicator = false
         collectionView.delegate = self
         collectionView.dragDelegate = self
@@ -103,25 +107,27 @@ final class FilmStripVC: UIViewController,
     }
 
     private func makeLayout() -> UICollectionViewLayout {
-        let itemSize = NSCollectionLayoutSize(
-            widthDimension: .estimated(50),
-            heightDimension: .absolute(80)
-        )
-        let item = NSCollectionLayoutItem(layoutSize: itemSize)
-
-        let groupSize = NSCollectionLayoutSize(
-            widthDimension: .estimated(50),
-            heightDimension: .absolute(80)
-        )
-        let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
-
-        let section = NSCollectionLayoutSection(group: group)
-        section.interGroupSpacing = 8
-        section.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12)
-
+        let mode = layout
         let config = UICollectionViewCompositionalLayoutConfiguration()
-        config.scrollDirection = .horizontal
-        return UICollectionViewCompositionalLayout(section: section, configuration: config)
+        config.scrollDirection = mode == .strip ? .horizontal : .vertical
+        return UICollectionViewCompositionalLayout(sectionProvider: { _, environment in
+            let height: CGFloat = mode == .strip ? 74 : 82
+            let width = environment.container.effectiveContentSize.width
+            let groupWidth: NSCollectionLayoutDimension = mode == .strip
+                ? .absolute(max(64, (width - 18) / 4)) : .fractionalWidth(1)
+            let itemWidth: NSCollectionLayoutDimension = mode == .grid
+                ? .absolute(max(1, (width - 12) / 2)) : .fractionalWidth(1)
+            let size = NSCollectionLayoutSize(widthDimension: itemWidth, heightDimension: .absolute(height))
+            let item = NSCollectionLayoutItem(layoutSize: size)
+            let group = NSCollectionLayoutGroup.horizontal(
+                layoutSize: NSCollectionLayoutSize(widthDimension: groupWidth, heightDimension: .absolute(height)),
+                subitems: mode == .grid ? [item, item] : [item]
+            )
+            group.interItemSpacing = .fixed(12)
+            let section = NSCollectionLayoutSection(group: group)
+            section.interGroupSpacing = mode == .strip ? 6 : 0
+            return section
+        }, configuration: config)
     }
 
     // MARK: - Cell configuration
@@ -130,39 +136,61 @@ final class FilmStripVC: UIViewController,
         guard let clip = clips.first(where: { $0.id == clipID }) else { return }
         let userRotation = session?.rotation(for: clipID) ?? .r0
         let isCurrent = clipID == currentClipID
-        let visualState: MediaThumbState = isCurrent
-            ? (isPlaying ? .playing : .selected)
-            : (isPlaying ? .dimmed : .normal)
         let flatIndex = clips.firstIndex(where: { $0.id == clipID }) ?? 0
-
+        let mode = layout
+        let name = clip.locationNote ?? LabelText.timeString(clip.capturedAt)
         cell.contentConfiguration = UIHostingConfiguration {
-            VStack(spacing: 4) {
-                MediaThumb(state: visualState, size: CGSize(width: 40, height: 52)) {
-                    ZStack {
-                        RotatableContent(rotation: userRotation) {
-                            clip.thumbnailView()
-                        }
-                        if clip.kind == .live {
-                            Circle()
-                                .fill(ChalNaColor.danger)
-                                .frame(width: 6, height: 6)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                                .padding(2)
-                        }
+            if mode == .strip {
+                VStack(alignment: .leading, spacing: 3) {
+                    GeometryReader { proxy in
+                        RotatableContent(rotation: userRotation) { clip.thumbnailView() }
+                            .frame(width: proxy.size.width, height: proxy.size.height)
+                            .clipped()
+                            .overlay(alignment: .topTrailing) {
+                                if isCurrent {
+                                    ChalNaIcon(.reorderLines, size: 12)
+                                        .foregroundStyle(ChalNaColor.onMedia)
+                                        .padding(4)
+                                        .background(ChalNaColor.scrim, in: RoundedRectangle(cornerRadius: ChalNaRadius.xs))
+                                        .padding(2)
+                                }
+                            }
+                            .overlay(alignment: .bottom) {
+                                if isCurrent { Rectangle().fill(ChalNaColor.accent).frame(height: 3) }
+                            }
                     }
+                    .frame(height: 46)
+                    Text(clip.durationSecondsLabel)
+                        .font(ChalNaTypography.caption)
+                        .foregroundStyle(isCurrent ? ChalNaColor.accent : ChalNaColor.textSecondary)
                 }
-                Text(clip.durationSecondsLabel)
-                    .font(ChalNaTypography.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(visualState == .selected || visualState == .playing
-                        ? ChalNaColor.accent
-                        : ChalNaColor.textSecondary)
+                .frame(maxHeight: .infinity, alignment: .top)
+            } else {
+                HStack(spacing: 10) {
+                    RotatableContent(rotation: userRotation) { clip.thumbnailView() }
+                        .frame(width: 52, height: 52).clipped()
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(verbatim: "\(flatIndex + 1). \(name)")
+                            .font(ChalNaTypography.body)
+                            .lineLimit(1)
+                            .foregroundStyle(isCurrent ? ChalNaColor.accent : ChalNaColor.textPrimary)
+                        Text(clip.durationSecondsLabel)
+                            .font(ChalNaTypography.caption).foregroundStyle(ChalNaColor.textSecondary)
+                    }
+                    Spacer(minLength: 0)
+                    ChalNaIcon(.reorderLines, size: 15).foregroundStyle(ChalNaColor.textSecondary)
+                }
+                .padding(.horizontal, 10)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(isCurrent ? ChalNaColor.selection : ChalNaColor.bg)
+                .overlay(alignment: .leading) {
+                    if isCurrent { Rectangle().fill(ChalNaColor.accent).frame(width: 3) }
+                }
+                .overlay(alignment: .bottom) { Rectangle().fill(ChalNaColor.border).frame(height: 1) }
             }
         }
         .margins(.all, 0)
-        // 셀 자체 그림자 클리핑 방지 (rotation/shadow가 셀 bounds 밖으로 살짝 뻗음).
-        cell.contentView.clipsToBounds = false
-        cell.clipsToBounds = false
+        cell.accessibilityIdentifier = "timeline.clip.\(flatIndex)"
         cell.isAccessibilityElement = true
         cell.accessibilityLabel = accessibilityLabel(for: clip, index: flatIndex, isCurrent: isCurrent)
         cell.accessibilityHint = String(localized: "선택하려면 두 번 탭하고, 순서를 바꾸려면 사용자 동작을 사용하세요.")
@@ -205,11 +233,17 @@ final class FilmStripVC: UIViewController,
     func update(
         clips: [Clip],
         currentIndex: Int,
+        layout: FilmStripLayout,
         isPlaying: Bool,
         session: EditSession,
         onTapClip: @escaping (Int) -> Void,
         onMove: @escaping (Clip.ID, Int) -> Void
     ) {
+        let layoutChanged = self.layout != layout
+        if layoutChanged {
+            self.layout = layout
+            collectionView.setCollectionViewLayout(makeLayout(), animated: false)
+        }
         let previousItems = dataSource.snapshot().itemIdentifiers
         let previousCurrentClipID = currentClipID
         let previousIsPlaying = self.isPlaying
@@ -237,7 +271,7 @@ final class FilmStripVC: UIViewController,
             previousIsPlaying: previousIsPlaying,
             previousRotationByClipID: previousRotationByClipID
         )
-        refreshVisibleCells(matching: Set(itemsToRefresh))
+        refreshVisibleCells(matching: layoutChanged ? nil : Set(itemsToRefresh))
     }
 
     private func applySnapshot(animated: Bool) {
@@ -250,6 +284,10 @@ final class FilmStripVC: UIViewController,
     }
 
     static func items(for clips: [Clip]) -> [FilmStripItem] {
+        if let first = clips.first,
+           clips.allSatisfy({ Calendar.current.isDate($0.capturedAt, inSameDayAs: first.capturedAt) }) {
+            return clips.map { .clip($0.id) }
+        }
         var items: [FilmStripItem] = []
         var occurrence: [String: Int] = [:]
         var previousDayKey: String?
@@ -410,7 +448,7 @@ final class FilmStripVC: UIViewController,
         // 2) snapshot 동기 적용 — 1프레임 flicker 방지
         applySnapshot(animated: false)
 
-        // 3) Reducer 에 통보 — store 가 clips 를 갱신하고 onChange(of: store.clips) 가 EditSession 동기화
+        // 3) 리듀서가 순서를 확정하고 EditSession에 반영한다.
         onMove?(clipID, target)
 
         // 4) UIKit drop settle 애니메이션
@@ -440,7 +478,8 @@ final class FilmStripVC: UIViewController,
         guard let attributes = collectionView.layoutAttributesForItem(at: itemIndexPath) else {
             return clipCount
         }
-        return dropLocation.x > attributes.frame.midX ? clipCount + 1 : clipCount
+        let after = layout == .list ? dropLocation.y > attributes.frame.midY : dropLocation.x > attributes.frame.midX
+        return after ? clipCount + 1 : clipCount
     }
 
     /// 원본 배열 기준 insertion offset을 remove 이후 최종 index로 변환.

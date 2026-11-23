@@ -18,7 +18,7 @@ public struct ChalNaNavBar: View {
     /// 최소폭으로 두면 슬롯이 필요한 만큼 늘어나 타이틀을 밀어낸다 —
     /// **타이틀이 살짝 비대칭이 되는 것이 글자가 잘리는 것보다 낫다.**
     /// 겹침 방지(감사 #20)는 HStack 이 공간을 배분하는 것으로 이미 보장된다.
-    private static let slot: CGFloat = 56
+    private static let slot: CGFloat = 44
     public static let height: CGFloat = 52
 
     private let titleText: Text
@@ -77,14 +77,14 @@ public struct ChalNaNavBar: View {
                         .truncationMode(.tail)
                 }
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             trailing
                 .frame(minWidth: Self.slot, alignment: .trailing)
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 20)
         .frame(minHeight: Self.height)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(ChalNaColor.bg.ignoresSafeArea(edges: .top))
         .overlay(alignment: .bottom) {
             if showsDivider {

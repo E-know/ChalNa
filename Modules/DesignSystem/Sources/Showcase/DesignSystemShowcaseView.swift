@@ -14,7 +14,7 @@ public struct DesignSystemShowcaseView: View {
         VStack(spacing: 0) {
             ChalNaNavBar(
                 verbatimTitle: "Design System",
-                caption: "dark cinematic",
+                caption: "Apple SD Gothic Neo",
                 leading: .back {},
                 trailing: .icon(.settings, accessibilityLabel: "설정") {},
                 showsDivider: true
@@ -58,6 +58,7 @@ public struct DesignSystemShowcaseView: View {
             ("border", ChalNaColor.border), ("borderStrong", ChalNaColor.borderStrong),
             ("textPrimary", ChalNaColor.textPrimary), ("textSecondary", ChalNaColor.textSecondary),
             ("textTertiary", ChalNaColor.textTertiary), ("accent", ChalNaColor.accent),
+            ("selection", ChalNaColor.selection),
             ("accentFill", ChalNaColor.accentFill), ("accentPressed", ChalNaColor.accentPressed),
             ("danger", ChalNaColor.danger),
             ("brandDeep", ChalNaColor.brandDeep),
@@ -84,6 +85,7 @@ public struct DesignSystemShowcaseView: View {
     private var typeSpecimens: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(verbatim: "display — 찰나의 순간").font(ChalNaTypography.display)
+            Text(verbatim: "screenTitle — 필름 보관함").font(ChalNaTypography.screenTitle)
             Text(verbatim: "title — 최근 필름").font(ChalNaTypography.title)
             Text(verbatim: "headline — 제주도, 우리의 봄").font(ChalNaTypography.headline)
             Text(verbatim: "body — Live Photo와 짧은 영상을 이어 붙여요").font(ChalNaTypography.body)
@@ -166,7 +168,7 @@ public struct DesignSystemShowcaseView: View {
             ChalNaToast(message: "사진 보관함에 저장했어요")
             ChalNaEmptyState(
                 title: "아직 만든 필름이 없어요",
-                message: "첫 Vlog를 시작해 보세요.",
+                message: "Live Photo와 동영상으로 첫 필름을 만들어 보세요.",
                 actionTitle: "시작하기"
             ) {}
         }

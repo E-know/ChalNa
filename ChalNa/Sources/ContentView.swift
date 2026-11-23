@@ -1,5 +1,6 @@
 import SwiftUI
 import DesignSystem
+import AppCore
 
 public struct ContentView: View {
     @State private var showSplash = true
@@ -33,7 +34,7 @@ public struct ContentView: View {
 }
 
 #Preview("App Root") {
-    ContentView()
+    ContentView().environment(AppLanguageStore())
 }
 
 #Preview("Design System Showcase") {

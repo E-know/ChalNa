@@ -1,44 +1,61 @@
-import SwiftUI
-import Models
-import SwiftData
-import ComposableArchitecture
-import FirebaseCore
 import AnalyticsService
 import AppCore
+import ComposableArchitecture
+import CompositionService
+import DesignSystem
+import FilmLibrary
+import FirebaseCore
+import Models
+import PhotosService
+import SwiftData
+import SwiftUI
 
 @main
 struct ChalNaApp: App {
+    private let library: Result<ModelContainer, Error>
+    private let languageStore: AppLanguageStore
+
     init() {
-        // GoogleService-Info.plist 가 번들에 포함돼 있어야 한다.
-        // plist 부재 시 Firebase 초기화를 건너뛰고 Noop tracker 로 fallback.
-        let firebaseConfigured: Bool
+        let languages = AppLanguageStore()
+        languageStore = languages
+        let library = Result { try ModelContainer(for: Film.self) }
+        self.library = library
+
         if Bundle.main.url(forResource: "GoogleService-Info", withExtension: "plist") != nil {
             FirebaseApp.configure()
-            firebaseConfigured = FirebaseApp.app() != nil
-        } else {
-            firebaseConfigured = false
         }
-
-        // TCA dependency liveValue 를 전역 override.
-        let tracker: any AnalyticsTracker = firebaseConfigured
-            ? FirebaseAnalyticsTracker()
-            : NoopAnalyticsTracker()
+        let tracker: any AnalyticsTracker = FirebaseApp.app() == nil ? NoopAnalyticsTracker() : FirebaseAnalyticsTracker()
         prepareDependencies {
             $0.analyticsTracker = tracker
+            $0.appLanguageWriter = languages
+            $0.filmComposer = AVFoundationCompositionService()
+            $0.photoWriter = PhotoLibraryClient.liveValue
+            if case let .success(container) = library {
+                let archive = SwiftDataFilmArchive(container: container)
+                $0.filmArchive = archive
+                $0.filmRemoval = archive
+                $0.filmReader = archive
+            }
         }
-
-        // 저장된 앱 언어를 첫 페인트 전에 적용(스위즐 설치).
-        AppLanguageStore.applyStoredLanguageAtLaunch()
-
-        // 삭제된 라벨 설정 화면이 기존 사용자 기기에 남긴 UserDefaults 키 정리.
-        // 지금은 읽는 쪽이 없지만, 남겨두면 같은 키 이름을 쓰는 미래 기능이 쓰레기 값을 물려받는다.
         RemovedSettingsCleanup.run()
     }
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            switch library {
+            case let .success(container):
+                ContentView()
+                    .font(ChalNaTypography.body)
+                    .environment(languageStore)
+                    .modelContainer(container)
+            case let .failure(error):
+                ContentUnavailableView {
+                    Text("필름 보관함을 열 수 없어요")
+                } description: {
+                    Text(verbatim: error.localizedDescription)
+                }
+                .chalNaScreen()
+            }
         }
-        .modelContainer(for: Film.self)
     }
 }

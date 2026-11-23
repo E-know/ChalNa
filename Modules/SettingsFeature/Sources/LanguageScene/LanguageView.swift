@@ -13,35 +13,26 @@ public struct LanguageView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            ChalNaNavBar(
-                title: "언어",
-                leading: .back { store.send(.backTapped) },
-                showsDivider: true
-            )
-            .zIndex(1)
-
-            ScrollView {
-                ChalNaCard(padding: 0) {
-                    VStack(spacing: 0) {
-                        ForEach(Array(AppLanguage.allCases.enumerated()), id: \.element) { index, lang in
-                            if index > 0 { ChalNaListDivider() }
-                            // displayName 은 이미 해석된 String → verbatim.
-                            ChalNaListRow.check(
-                                verbatimTitle: lang.displayName,
-                                isChecked: lang == languageStore.language
-                            ) {
-                                languageStore.set(lang)
-                            }
-                        }
+        ScrollView {
+            VStack(spacing: 0) {
+                ForEach(Array(AppLanguage.allCases.enumerated()), id: \.element) { index, lang in
+                    if index > 0 { ChalNaListDivider() }
+                    ChalNaListRow.check(
+                        verbatimTitle: lang.displayName,
+                        isChecked: lang == languageStore.language
+                    ) {
+                        store.send(.selected(lang))
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 32)
             }
+            .frame(maxWidth: 620)
+            .padding(.horizontal, 24)
+            .padding(.top, 16)
+            .padding(.bottom, 32)
         }
         .chalNaScreen()
+        .navigationTitle("언어")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

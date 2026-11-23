@@ -1,6 +1,5 @@
 import ComposableArchitecture
 import Foundation
-import Photos
 import Models
 import PhotosService
 import AnalyticsService
@@ -17,12 +16,11 @@ public struct MediaPickerFeature {
         public let source: MediaPickerSource
 
         // 권한 + 사진 라이브러리
-        public var photoAuthorizationStatus: PHAuthorizationStatus
+        public var photoAuthorizationStatus: PhotoLibraryAccess
         public var photoAssets: [PhotoLibraryAsset] = []
         public var assetThumbnails: [String: Data] = [:]
         public var media: [String: MediaLoadState] = [:]
         public var selectedAssetIDs: [String] = []
-        public var isPhotoLibraryLoading: Bool = false
         public var isPhotoPermissionAlertPresented: Bool = false
         public var isSystemPhotoPickerPresented: Bool = false
         /// PHPicker가 닫히고 PickedMediaLoader가 비동기 추출을 끝낼 때까지의 짧은 공백 구간을 채우는 오버레이용.
@@ -37,7 +35,6 @@ public struct MediaPickerFeature {
 
         // 공통
         public var titleInput: String = ""
-        public var scrollProgress: Double = 0
         public var isResolving: Bool = false
 
         /// 미리보기 시트로 띄울 선택된 미디어. nil 이면 시트가 닫혀 있음.
@@ -45,7 +42,7 @@ public struct MediaPickerFeature {
 
         public init(
             source: MediaPickerSource = .photoLibrary,
-            photoAuthorizationStatus: PHAuthorizationStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+            photoAuthorizationStatus: PhotoLibraryAccess = .notDetermined
         ) {
             self.source = source
             self.photoAuthorizationStatus = photoAuthorizationStatus
@@ -57,16 +54,14 @@ public struct MediaPickerFeature {
     public enum Action {
         // Lifecycle
         case task
-        case scrollProgressChanged(Double)
         case titleChanged(String)
 
         // Header / navigation
-        case dismissTapped
 
         // Permission / library launcher
         case photoLauncherTapped
-        case authorizationStatusUpdated(PHAuthorizationStatus)
-        case permissionRequestCompleted(PHAuthorizationStatus)
+        case authorizationStatusUpdated(PhotoLibraryAccess)
+        case permissionRequestCompleted(PhotoLibraryAccess)
         case permissionAlertConfirmTapped
         case permissionAlertDismissed
         case permissionAlertPresentedChanged(Bool)
@@ -74,8 +69,8 @@ public struct MediaPickerFeature {
         case systemPhotoPickerPresentedChanged(Bool)
 
         // Library data
-        case pickedMediaLoadingStarted(total: Int)
-        case pickedMediaProgressUpdated(done: Int)
+        case systemPickerFinished([any PickedMediaLoading])
+        case pickedMediaProgressUpdated(done: Int, index: Int, thumbnail: Data?)
         case photosPickedFromSystemPicker(media: [PickedMedia])
         case photoAssetTapped(PhotoLibraryAsset)
 
@@ -129,7 +124,6 @@ public struct MediaPickerFeature {
 
     @Dependency(\.photoLibraryClient) var photoLibraryClient
     @Dependency(\.analyticsTracker) var analyticsTracker
-    @Dependency(\.dismiss) var dismiss
 
     // MARK: - Reducer
 
@@ -137,8 +131,6 @@ public struct MediaPickerFeature {
         Reduce { state, action in
             switch action {
             case .task:
-                let currentStatus = photoLibraryClient.authorizationStatus()
-                state.photoAuthorizationStatus = currentStatus
                 switch state.source {
                 case .devFixtures(let source):
                     return .run { send in
@@ -146,21 +138,13 @@ public struct MediaPickerFeature {
                         await send(.devAssetsLoaded(assets))
                     }
                 case .photoLibrary:
+                    state.photoAuthorizationStatus = photoLibraryClient.authorizationStatus()
                     return .none
                 }
-
-            case let .scrollProgressChanged(progress):
-                let clamped = max(0, min(1, progress))
-                guard abs(clamped - state.scrollProgress) > 0.01 else { return .none }
-                state.scrollProgress = clamped
-                return .none
 
             case let .titleChanged(title):
                 state.titleInput = title
                 return .none
-
-            case .dismissTapped:
-                return .run { _ in await dismiss() }
 
             case .photoLauncherTapped:
                 let current = photoLibraryClient.authorizationStatus()
@@ -210,41 +194,67 @@ public struct MediaPickerFeature {
                 state.isSystemPhotoPickerPresented = value
                 return .none
 
-            case let .pickedMediaLoadingStarted(total):
+            case let .systemPickerFinished(results):
+                state.isSystemPhotoPickerPresented = false
+                guard !results.isEmpty, !state.isPreparingPickedMedia else { return .none }
                 state.isPreparingPickedMedia = true
-                state.preparingPickedMediaProgress = .init(done: 0, total: max(total, 0))
-                return .none
+                state.preparingPickedMediaProgress = .init(done: 0, total: results.count)
+                return .run { send in
+                    var media = [PickedMedia?](repeating: nil, count: results.count)
+                    await withTaskGroup(of: (Int, PickedMedia).self) { group in
+                        for (index, result) in results.enumerated() {
+                            group.addTask {
+                                let picked = await result.load() ?? PickedMedia(
+                                    id: result.id, kind: .unknown,
+                                    thumbnailData: nil, videoURL: nil, capturedAt: nil,
+                                    duration: nil, displaySize: nil
+                                )
+                                return (index, picked)
+                            }
+                        }
+                        var done = 0
+                        for await (index, picked) in group {
+                            media[index] = picked
+                            done += 1
+                            await send(.pickedMediaProgressUpdated(done: done, index: index, thumbnail: picked.thumbnailData))
+                        }
+                    }
+                    await send(.photosPickedFromSystemPicker(media: media.compactMap { $0 }))
+                }
 
-            case let .pickedMediaProgressUpdated(done):
+            case let .pickedMediaProgressUpdated(done, index, thumbnail):
                 if var progress = state.preparingPickedMediaProgress {
                     progress.done = min(max(done, 0), progress.total)
+                    if index < 4 { progress.thumbnails[index] = thumbnail }
                     state.preparingPickedMediaProgress = progress
                 }
                 return .none
 
             case let .photosPickedFromSystemPicker(media):
                 state.isSystemPhotoPickerPresented = false
-                state.isPhotoLibraryLoading = false
                 state.isPreparingPickedMedia = false
                 state.preparingPickedMediaProgress = nil
                 guard !media.isEmpty else { return .none }
 
                 for item in media {
+                    // 재선택한 원본을 읽지 못해도 이미 준비된 동일 클립은 그대로 사용할 수 있다.
+                    if state.media[item.id]?.isReadyForTimeline == true,
+                       item.thumbnailData == nil || item.videoURL == nil { continue }
                     let asset = PhotoLibraryAsset(
                         id: item.id,
                         kind: item.kind,
                         capturedAt: item.capturedAt,
                         pixelSize: item.displaySize ?? .zero
                     )
-                    if !state.photoAssets.contains(where: { $0.id == item.id }) {
+                    if let index = state.photoAssets.firstIndex(where: { $0.id == item.id }) {
+                        state.photoAssets[index] = asset
+                    } else {
                         state.photoAssets.append(asset)
                     }
                     if !state.selectedAssetIDs.contains(item.id) {
                         state.selectedAssetIDs.append(item.id)
                     }
-                    if let thumb = item.thumbnailData {
-                        state.assetThumbnails[item.id] = thumb
-                    }
+                    state.assetThumbnails[item.id] = item.thumbnailData
 
                     // picker 단계에서 이미 모든 데이터를 꺼냈으므로 비동기 로딩 없이 즉시 ready 상태.
                     var loaded = MediaLoadState(
@@ -380,8 +390,7 @@ public struct MediaPickerFeature {
 
     private func confirmPhotoLibrary(state: inout State) -> Effect<Action> {
         let ids = state.selectedAssetIDs
-        guard !ids.isEmpty else { return .none }
-        guard ids.allSatisfy({ state.media[$0]?.isReadyForTimeline == true }) else { return .none }
+        guard state.canProceed else { return .none }
 
         let presetPool: [ThumbnailPreset] = [
             .jejuSea, .jejuOrange, .hallasan, .seoulSun,
@@ -436,6 +445,7 @@ public enum MediaPickerSource: Sendable {
 public struct PreparingPickedMediaProgress: Equatable, Sendable {
     public var done: Int
     public var total: Int
+    public var thumbnails: [Int: Data] = [:]
 
     public init(done: Int, total: Int) {
         self.done = done
@@ -474,5 +484,35 @@ public struct MediaLoadState: Equatable {
 
     public var didFailTimelinePreparation: Bool {
         !isLoading && (thumbnail == nil || (kind.hasMotion && videoURL == nil))
+    }
+}
+
+extension MediaPickerFeature.State {
+    var selectedCount: Int {
+        switch source {
+        case .photoLibrary: return selectedAssetIDs.count
+        case .devFixtures: return selectedDevAssetIDs.count
+        }
+    }
+
+    var selectedAssets: [PhotoLibraryAsset] {
+        let byID = Dictionary(uniqueKeysWithValues: photoAssets.map { ($0.id, $0) })
+        return selectedAssetIDs.compactMap { byID[$0] }
+    }
+
+    var liveCount: Int { selectedAssetIDs.filter { media[$0]?.kind == .livePhoto }.count }
+    var videoCount: Int { selectedAssetIDs.filter { media[$0]?.kind == .video }.count }
+
+    var hasUnavailableMedia: Bool {
+        selectedAssetIDs.contains { media[$0]?.didFailTimelinePreparation == true }
+    }
+
+    var canProceed: Bool {
+        switch source {
+        case .photoLibrary:
+            return !selectedAssetIDs.isEmpty && selectedAssetIDs.allSatisfy { media[$0]?.isReadyForTimeline == true }
+        case .devFixtures:
+            return !selectedDevAssetIDs.isEmpty
+        }
     }
 }

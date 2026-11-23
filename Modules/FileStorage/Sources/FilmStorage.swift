@@ -1,7 +1,6 @@
 import Foundation
 
-/// Documents/films 디렉터리에 mp4 를 복사·삭제하는 단순 헬퍼.
-/// SwiftData 모델 자체는 mp4 파일을 들고 있지 않고 상대 경로만 보관.
+/// Documents/films에는 완성된 MP4를 두고 SwiftData에는 기존과 같은 상대 경로를 저장한다.
 public enum FilmStorage {
     public static var documentsURL: URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -15,21 +14,48 @@ public enum FilmStorage {
         return url
     }
 
-    /// 외부(temp) mp4 를 films/<filmID>.mp4 로 복사하고 Documents 기준 상대 경로 반환.
     @discardableResult
     public static func importMovie(from sourceURL: URL, filmID: UUID) throws -> String {
-        _ = moviesDirectoryURL
+        let manager = FileManager.default
+        let directory = moviesDirectoryURL
         let filename = "\(filmID.uuidString).mp4"
-        let dest = moviesDirectoryURL.appendingPathComponent(filename)
-        try? FileManager.default.removeItem(at: dest)
-        try FileManager.default.copyItem(at: sourceURL, to: dest)
+        let destination = directory.appendingPathComponent(filename)
+        if !manager.fileExists(atPath: destination.path) {
+            let staged = directory.appendingPathComponent(".\(UUID().uuidString).partial")
+            defer { try? manager.removeItem(at: staged) }
+            try manager.copyItem(at: sourceURL, to: staged)
+            try manager.moveItem(at: staged, to: destination)
+        }
         return "films/\(filename)"
     }
 
-    /// 라이브러리에서 Film 을 제거할 때 디스크 mp4 도 같이 청소.
     public static func deleteMovie(filename: String?) {
-        guard let filename else { return }
-        let url = documentsURL.appendingPathComponent(filename)
+        guard let url = localMovieURL(filename) else { return }
         try? FileManager.default.removeItem(at: url)
+    }
+
+    private static func localMovieURL(_ filename: String?) -> URL? {
+        guard let filename, !filename.isEmpty else { return nil }
+        let documents = documentsURL.resolvingSymlinksInPath().standardizedFileURL
+        let source = documents.appendingPathComponent(filename).resolvingSymlinksInPath().standardizedFileURL
+        guard source.path.hasPrefix(documents.path + "/"), source.pathExtension.lowercased() == "mp4" else { return nil }
+        return source
+    }
+
+    /// 큰 파일의 이동·정리는 일반 실행자에서 수행한다. 메타데이터 커밋 실패 시 원래 파일을 복원한다.
+    public static func removingMovie(filename: String?, commit: @Sendable () async throws -> Void) async throws {
+        let manager = FileManager.default
+        guard let source = localMovieURL(filename), manager.fileExists(atPath: source.path) else {
+            return try await commit()
+        }
+        let staged = source.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString).deleting")
+        try manager.moveItem(at: source, to: staged)
+        do {
+            try await commit()
+        } catch {
+            try manager.moveItem(at: staged, to: source)
+            throw error
+        }
+        try? manager.removeItem(at: staged)
     }
 }

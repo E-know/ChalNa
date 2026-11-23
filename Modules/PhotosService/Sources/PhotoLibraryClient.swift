@@ -5,15 +5,30 @@ import UIKit
 import AVFoundation
 import Models
 
+public enum PhotoLibraryAccess: Sendable, Equatable {
+    case notDetermined, restricted, denied, authorized, limited
+
+    fileprivate init(_ status: PHAuthorizationStatus) {
+        switch status {
+        case .notDetermined: self = .notDetermined
+        case .restricted: self = .restricted
+        case .denied: self = .denied
+        case .authorized: self = .authorized
+        case .limited: self = .limited
+        @unknown default: self = .restricted
+        }
+    }
+}
+
 /// 사용자의 사진 보관함에서 Live Photo / 영상을 읽어오는 @DependencyClient.
 /// MediaPickerFeature 에서 `@Dependency(\.photoLibraryClient)` 로 주입.
 @DependencyClient
 public struct PhotoLibraryClient: Sendable {
     /// 현재 권한 상태.
-    public var authorizationStatus: @Sendable () -> PHAuthorizationStatus = { .notDetermined }
+    public var authorizationStatus: @Sendable () -> PhotoLibraryAccess = { .notDetermined }
 
     /// 권한 요청 (readWrite).
-    public var requestAuthorization: @Sendable () async -> PHAuthorizationStatus = { .denied }
+    public var requestAuthorization: @Sendable () async -> PhotoLibraryAccess = { .denied }
 
     /// 권한 범위 내의 모든 Live Photo / 영상 asset 메타 (id + kind + capturedAt + pixelSize).
     public var fetchAuthorizedAssets: @Sendable () async -> [PhotoLibraryAsset] = { [] }
@@ -41,10 +56,12 @@ public struct PhotoLibraryClient: Sendable {
     public var saveVideoToPhotoLibrary: @Sendable (_ url: URL) async -> PhotoSaveResult = { _ in .denied }
 }
 
-public enum PhotoSaveResult: Sendable, Equatable {
-    case ok
-    case denied
-    case failed(String)
+public typealias PhotoSaveResult = FilmPhotoSaveResult
+
+extension PhotoLibraryClient: FilmPhotoWriting {
+    public func saveVideo(at url: URL) async -> FilmPhotoSaveResult {
+        await saveVideoToPhotoLibrary(url)
+    }
 }
 
 // MARK: - DependencyValues
@@ -52,10 +69,10 @@ public enum PhotoSaveResult: Sendable, Equatable {
 extension PhotoLibraryClient: DependencyKey {
     public static let liveValue = PhotoLibraryClient(
         authorizationStatus: {
-            PHPhotoLibrary.authorizationStatus(for: .readWrite)
+            PhotoLibraryAccess(PHPhotoLibrary.authorizationStatus(for: .readWrite))
         },
         requestAuthorization: {
-            await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+            PhotoLibraryAccess(await PHPhotoLibrary.requestAuthorization(for: .readWrite))
         },
         fetchAuthorizedAssets: {
             await Task.detached(priority: .userInitiated) {

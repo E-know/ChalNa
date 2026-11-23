@@ -13,15 +13,10 @@ public struct ChalNaBottomBar<Content: View>: View {
 
     public var body: some View {
         content()
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 24)
             .padding(.top, 10)
             .padding(.bottom, 10)
             .background(ChalNaColor.bg.ignoresSafeArea(edges: .bottom))
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(ChalNaColor.border)
-                    .frame(height: 1)
-            }
     }
 }
 

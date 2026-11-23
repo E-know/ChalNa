@@ -1,17 +1,29 @@
+import AnalyticsService
+import AppCore
 import ComposableArchitecture
 import Foundation
 import Models
-import AppCore
-import CompositionService
-import PhotosService
-import AnalyticsService
 
-/// Timeline → Export 화면 Reducer. 진행률/완료/실패 phase 와 사진 보관함 저장 phase 를 함께 관리.
 @Reducer
 public struct ExportFeature {
     public init() {}
 
-    // MARK: - State
+    public enum ExportPhase: Equatable, Sendable {
+        case idle, exporting, done, failed
+        case limited(ExportQuotaBlockReason)
+    }
+
+    public enum SaveStatus: Equatable, Sendable {
+        case idle, saving, saved, denied
+        case failed(String)
+
+        var allowsRetry: Bool {
+            switch self {
+            case .idle, .failed, .denied: true
+            case .saving, .saved: false
+            }
+        }
+    }
 
     @ObservableState
     public struct State: Equatable {
@@ -19,237 +31,168 @@ public struct ExportFeature {
         public var progress: Double
         public var exportedURL: URL?
         public var errorMessage: String?
-        public var isSaving: Bool
-        public var saveToast: String?
-        /// 같은 export 가 두 번 라이브러리에 추가되는 걸 방지.
-        public var didAddToLibrary: Bool
-        public var isPlayerPresented: Bool
+        public var archiveStatus: SaveStatus = .idle
+        public var photoStatus: SaveStatus = .idle
+        public var entry: FilmArchiveEntry?
+        public var cover: Data?
+        public var isPlayerPresented = false
+        public var quotaUnlocked = false
 
-        public init(
-            phase: ExportPhase = .idle,
-            progress: Double = 0,
-            exportedURL: URL? = nil,
-            errorMessage: String? = nil,
-            isSaving: Bool = false,
-            saveToast: String? = nil,
-            didAddToLibrary: Bool = false,
-            isPlayerPresented: Bool = false
-        ) {
+        public init(phase: ExportPhase = .idle, progress: Double = 0, exportedURL: URL? = nil) {
             self.phase = phase
             self.progress = progress
             self.exportedURL = exportedURL
-            self.errorMessage = errorMessage
-            self.isSaving = isSaving
-            self.saveToast = saveToast
-            self.didAddToLibrary = didAddToLibrary
-            self.isPlayerPresented = isPlayerPresented
         }
     }
 
-    public enum ExportPhase: Sendable, Equatable {
-        case idle
-        case exporting
-        case done
-        case failed
-    }
-
-    // MARK: - Action
-
     public enum Action {
-        case startExport(clips: [Clip], rotations: [Clip.ID: ClipRotation], transforms: [Clip.ID: ClipTransform], clipLabels: [Clip.ID: ClipLabel])
+        case confirmationAppeared
+        case startExport(clips: [Clip], rotations: [Clip.ID: ClipRotation], transforms: [Clip.ID: ClipTransform], clipLabels: [Clip.ID: ClipLabel], title: String = "")
         case exportProgress(Double)
         case exportCompleted(URL)
         case exportFailed(String)
-
-        case retryTapped(clips: [Clip], rotations: [Clip.ID: ClipRotation], transforms: [Clip.ID: ClipTransform], clipLabels: [Clip.ID: ClipLabel])
-
+        case archiveRequested
+        case archiveCompleted(TaskResult<Data?>)
         case saveToPhotoLibraryTapped
-        case saveCompleted(PhotoSaveResult)
-        case toastDismissed
-
-        case markAddedToLibrary
-
+        case saveCompleted(FilmPhotoSaveResult)
         case playerPresentedChanged(Bool)
-
-        // Navigation intents
-        case viewDisappeared
         case backToEditTapped
         case startAnotherTapped
         case homeTapped
         case delegate(Delegate)
 
-        /// 부모(AppFeature)가 화면 전환으로 해석하는 네비게이션 인텐트.
         public enum Delegate: Equatable {
-            /// 홈으로 — 부모가 popToRoot.
             case homeRequested
-            /// 다른 영상 만들기 — 부모가 세션 초기화 후 popToRoot + MediaPicker push.
             case newFilmRequested
         }
     }
 
-    // MARK: - Dependencies
-
-    @Dependency(\.compositionClient) var compositionClient
-    @Dependency(\.photoLibraryClient) var photoLibraryClient
+    @Dependency(\.filmComposer) var composer
+    @Dependency(\.photoWriter) var photoWriter
     @Dependency(\.analyticsTracker) var analyticsTracker
     @Dependency(\.exportQuotaClient) var exportQuotaClient
+    @Dependency(\.filmArchive) var filmArchive
+    @Dependency(\.uuid) var uuid
+    @Dependency(\.date.now) var now
     @Dependency(\.dismiss) var dismiss
-
-    private enum CancelID { case exportStream }
-
-    // MARK: - Reducer
 
     public var body: some ReducerOf<Self> {
         Reduce { state, action in
             switch action {
-            case let .startExport(clips, rotations, transforms, clipLabels):
-                guard !clips.isEmpty else { return .none }
-                switch exportQuotaClient.reserveExport() {
-                case .allowed:
-                    break
-                case let .blocked(reason):
-                    state.phase = .failed
-                    state.progress = 0
+            case .confirmationAppeared:
+                state.quotaUnlocked = exportQuotaClient.isUnlocked()
+                return .none
+
+            case let .startExport(clips, rotations, transforms, clipLabels, title):
+                guard state.phase == .idle, !clips.isEmpty else { return .none }
+                if case let .blocked(reason) = exportQuotaClient.reserveExport() {
+                    state.phase = .limited(reason)
                     state.errorMessage = reason.message
-                    state.exportedURL = nil
-                    state.didAddToLibrary = false
                     analyticsTracker.log(.exportFailed(reason: "quota_\(reason)"))
                     return .none
                 }
+                state.entry = FilmArchiveEntry(
+                    id: uuid(), title: title.isEmpty ? "ChalNa" : title, createdAt: now,
+                    thumbnail: clips.first?.thumbnailData, clipCount: clips.count,
+                    liveCount: clips.filter { $0.kind == .live }.count,
+                    duration: clips.reduce(0) { $0 + $1.duration }
+                )
                 state.phase = .exporting
-                state.progress = 0
-                state.errorMessage = nil
-                state.exportedURL = nil
-                state.didAddToLibrary = false
                 analyticsTracker.log(.exportStarted(clipCount: clips.count))
                 return .run { send in
-                    for await event in compositionClient.export(clips, rotations, transforms, clipLabels) {
+                    for await event in composer.export(clips: clips, rotations: rotations, transforms: transforms, clipLabels: clipLabels) {
                         switch event {
-                        case let .progress(p):
-                            await send(.exportProgress(p))
-                        case let .completed(url):
-                            await send(.exportCompleted(url))
-                        case let .failed(msg):
-                            await send(.exportFailed(msg))
+                        case let .progress(p): await send(.exportProgress(p))
+                        case let .completed(url): await send(.exportCompleted(url))
+                        case let .failed(message): await send(.exportFailed(message))
                         }
                     }
                 }
-                .cancellable(id: CancelID.exportStream, cancelInFlight: true)
 
-            case let .exportProgress(p):
-                state.progress = p
-                if state.phase != .exporting {
-                    state.phase = .exporting
-                }
+            case let .exportProgress(progress):
+                guard state.phase == .exporting else { return .none }
+                state.progress = progress
                 return .none
 
             case let .exportCompleted(url):
-                state.progress = 1.0
-                state.exportedURL = url
+                guard state.phase == .exporting else { return .none }
+                state.progress = 1
                 state.phase = .done
+                state.exportedURL = url
                 analyticsTracker.log(.exportCompleted(durationMs: nil))
-                // 완성되면 자동으로 사진 보관함에 저장. 중복 추가는 `didAddToLibrary` 가드.
-                if !state.didAddToLibrary {
-                    return .send(.saveToPhotoLibraryTapped)
+                let archive = startArchive(state: &state)
+                let photo = startPhotoSave(state: &state)
+                return .merge(archive, photo)
+
+            case let .exportFailed(message):
+                guard state.phase == .exporting else { return .none }
+                state.phase = .failed
+                state.errorMessage = message
+                analyticsTracker.log(.exportFailed(reason: message))
+                return .none
+
+            case .archiveRequested:
+                return startArchive(state: &state)
+
+            case let .archiveCompleted(result):
+                guard state.archiveStatus == .saving else { return .none }
+                switch result {
+                case let .success(cover):
+                    state.cover = cover
+                    state.archiveStatus = .saved
+                case let .failure(error):
+                    state.archiveStatus = .failed(error.localizedDescription)
                 }
                 return .none
-
-            case let .exportFailed(msg):
-                state.errorMessage = msg
-                state.phase = .failed
-                analyticsTracker.log(.exportFailed(reason: msg))
-                return .none
-
-            case let .retryTapped(clips, rotations, transforms, clipLabels):
-                return .send(.startExport(clips: clips, rotations: rotations, transforms: transforms, clipLabels: clipLabels))
 
             case .saveToPhotoLibraryTapped:
-                guard let url = state.exportedURL,
-                      !state.isSaving,
-                      !state.didAddToLibrary else { return .none }
-                state.isSaving = true
-                return .run { send in
-                    let result = await photoLibraryClient.saveVideoToPhotoLibrary(url)
-                    await send(.saveCompleted(result))
-                }
+                return startPhotoSave(state: &state)
 
             case let .saveCompleted(result):
-                state.isSaving = false
+                guard state.photoStatus == .saving else { return .none }
                 switch result {
                 case .ok:
-                    state.didAddToLibrary = true
-                    state.saveToast = String(localized: "사진 앱에 저장됐어요 ✦")
+                    state.photoStatus = .saved
                     analyticsTracker.log(.vlogSavedToLibrary)
                 case .denied:
-                    state.saveToast = String(localized: "사진 보관함 접근 권한이 필요해요")
+                    state.photoStatus = .denied
                     analyticsTracker.log(.vlogSaveFailed(reason: "denied"))
-                case let .failed(msg):
-                    state.saveToast = String(localized: "저장 실패 — \(msg)")
-                    analyticsTracker.log(.vlogSaveFailed(reason: msg))
+                case let .failed(message):
+                    state.photoStatus = .failed(message)
+                    analyticsTracker.log(.vlogSaveFailed(reason: message))
                 }
                 return .none
 
-            case .toastDismissed:
-                state.saveToast = nil
+            case let .playerPresentedChanged(value):
+                state.isPlayerPresented = value
                 return .none
-
-            case .markAddedToLibrary:
-                state.didAddToLibrary = true
-                return .none
-
-            case let .playerPresentedChanged(isPresented):
-                state.isPlayerPresented = isPresented
-                return .none
-
-            case .viewDisappeared:
-                // pop 완료 후 뒷정리 전용 — 여기서 dismiss 를 부르면 안 된다(이미 스택에서 빠진 상태).
-                state.isPlayerPresented = false
-                return .cancel(id: CancelID.exportStream)
-
             case .backToEditTapped:
-                state.isPlayerPresented = false
-                return .concatenate(
-                    .cancel(id: CancelID.exportStream),
-                    .run { _ in await dismiss() }
-                )
-
+                return .run { _ in await dismiss() }
             case .startAnotherTapped:
-                state.isPlayerPresented = false
-                return .concatenate(
-                    .cancel(id: CancelID.exportStream),
-                    .send(.delegate(.newFilmRequested))
-                )
-
+                guard state.archiveStatus != .saving else { return .none }
+                return .send(.delegate(.newFilmRequested))
             case .homeTapped:
-                state.isPlayerPresented = false
-                return .concatenate(
-                    .cancel(id: CancelID.exportStream),
-                    .send(.delegate(.homeRequested))
-                )
-
+                guard state.archiveStatus != .saving else { return .none }
+                return .send(.delegate(.homeRequested))
             case .delegate:
                 return .none
             }
         }
     }
-}
 
-// MARK: - View helpers
-
-public extension ExportFeature.ExportPhase {
-    var title: String {
-        switch self {
-        case .idle, .exporting: return String(localized: "저장 중")
-        case .done:             return String(localized: "완성")
-        case .failed:           return String(localized: "저장 실패")
+    private func startArchive(state: inout State) -> Effect<Action> {
+        guard let url = state.exportedURL, let entry = state.entry, state.archiveStatus.allowsRetry else { return .none }
+        state.archiveStatus = .saving
+        return .run { send in
+            await send(.archiveCompleted(TaskResult { try await filmArchive.archive(entry, movie: url) }))
         }
     }
 
-    var tag: String {
-        switch self {
-        case .idle, .exporting: return "EXPORTING"
-        case .done:             return "DONE"
-        case .failed:           return "FAILED"
+    private func startPhotoSave(state: inout State) -> Effect<Action> {
+        guard let url = state.exportedURL, state.photoStatus.allowsRetry else { return .none }
+        state.photoStatus = .saving
+        return .run { send in
+            await send(.saveCompleted(photoWriter.saveVideo(at: url)))
         }
     }
 }

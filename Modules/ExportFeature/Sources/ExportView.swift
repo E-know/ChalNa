@@ -1,404 +1,363 @@
-import SwiftUI
-import ComposableArchitecture
-import FileStorage
 import AppCore
-import CompositionService
-import Models
-import DesignSystem
-import SwiftData
-import Photos
-import AVKit
 import AVFoundation
-import UIKit
+import AVKit
+import ComposableArchitecture
+import DesignSystem
+import Models
+import SwiftUI
 
-/// Timeline에서 "저장"을 누르면 진입. AVFoundationCompositionService 를 구동해 mp4 를 만든다.
 public struct ExportView: View {
     @Environment(EditSession.self) private var session
-    @Environment(\.modelContext) private var modelContext
-
+    @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var returningFromSettings = false
     @Bindable var store: StoreOf<ExportFeature>
 
-    public init(store: StoreOf<ExportFeature> = Store(initialState: ExportFeature.State()) { ExportFeature() }) {
+    public init(store: StoreOf<ExportFeature> = Store(initialState: .init()) { ExportFeature() }) {
         self.store = store
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            header
-
-            VStack(spacing: 0) {
-                Spacer(minLength: 12)
-
-                cover
-                    .padding(.horizontal, 20)
-
-                Spacer(minLength: 12)
+        GeometryReader { proxy in
+            let size = proxy.size
+            let split = ChalNaLayout.isSplit(size)
+            VStack(alignment: .leading, spacing: 0) {
+                switch store.phase {
+                case .idle, .done:
+                    if split {
+                        HStack(spacing: 28) {
+                            poster(width: min(size.width * 0.42, max(1, size.height - 82) * 9 / 16))
+                                .frame(maxWidth: .infinity)
+                            ScrollView {
+                                VStack(alignment: .leading, spacing: 18) {
+                                    if store.phase == .done { completionLabel }
+                                    titleBlock
+                                    Divider()
+                                    information
+                                    actions
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 12)
+                            }
+                            .frame(width: size.width * 0.44)
+                        }
+                        .padding(.horizontal, 24)
+                        .frame(maxHeight: .infinity)
+                    } else {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 22) {
+                                if store.phase == .done { completionLabel }
+                                HStack(spacing: 16) {
+                                    poster(width: min(max(1, size.width - 48) * (store.phase == .done ? 0.56 : 0.36),
+                                                      max(90, size.height * (store.phase == .done ? 0.44 : 0.28)) * 9 / 16))
+                                    titleBlock
+                                }
+                                Divider()
+                                information
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 14)
+                        }
+                        actions.padding(.horizontal, 24).padding(.vertical, 8)
+                    }
+                case .exporting:
+                    progressView
+                case .limited, .failed:
+                    failureView
+                }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .foregroundStyle(ChalNaColor.textPrimary)
         .chalNaScreen()
-        .safeAreaInset(edge: .bottom) { bottomCTAs }
-        .chalNaToast(message: store.saveToast) { store.send(.toastDismissed) }
-        .onAppear {
-            guard store.phase == .idle else { return }
-            store.send(.startExport(clips: session.clips, rotations: session.rotations, transforms: session.transforms, clipLabels: session.labels))
+        .navigationTitle(store.phase == .done ? LocalizedStringKey("완성한 필름") : "필름 만들기")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(store.phase == .exporting || store.phase == .done)
+        .toolbar {
+            if store.phase == .done {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("닫기", systemImage: "xmark") { store.send(.homeTapped) }
+                        .disabled(archivePending)
+                }
+            }
+        }
+        .onAppear { if store.phase == .idle { store.send(.confirmationAppeared) } }
+        .onChange(of: store.phase, initial: true) { _, phase in
+            UIApplication.shared.isIdleTimerDisabled = phase == .exporting
         }
         .onDisappear {
             UIApplication.shared.isIdleTimerDisabled = false
-            store.send(.viewDisappeared)
         }
-        // 영상 합성 중에는 화면 자동 잠금(idle timer)을 막아 작업이 중단되지 않게 한다.
-        .onChange(of: store.phase) { _, newPhase in
-            UIApplication.shared.isIdleTimerDisabled = (newPhase == .exporting)
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active, returningFromSettings else { return }
+            returningFromSettings = false
+            store.send(.saveToPhotoLibraryTapped)
         }
-        .onChange(of: store.exportedURL) { _, newURL in
-            if let newURL, !store.didAddToLibrary {
-                addCompletedFilmToLibrary(at: newURL)
-                store.send(.markAddedToLibrary)
-            }
-        }
-        .fullScreenCover(
-            isPresented: $store.isPlayerPresented.sending(\.playerPresentedChanged)
-        ) {
+        .fullScreenCover(isPresented: $store.isPlayerPresented.sending(\.playerPresentedChanged)) {
             if let url = store.exportedURL {
-                ZStack(alignment: .topTrailing) {
-                    ChalNaColor.canvas.ignoresSafeArea()
-
-                    ExportVideoPlayerCover(url: url) {
-                        store.send(.playerPresentedChanged(false))
-                    }
-                    .ignoresSafeArea()
-
-                    Button {
-                        store.send(.playerPresentedChanged(false))
-                    } label: {
-                        ChalNaIcon(.close, size: 18, weight: .semibold)
-                            .foregroundColor(ChalNaColor.textPrimary)
-                            .frame(width: 44, height: 44)
-                            .background(Circle().fill(ChalNaColor.surfaceRaised.opacity(0.8)))
-                            .overlay(Circle().strokeBorder(ChalNaColor.border, lineWidth: 1))
-                    }
-                    .padding(.top, 12)
-                    .padding(.trailing, 16)
-                    .accessibilityLabel("재생 닫기")
+                NavigationStack {
+                    ExportVideoPlayerCover(url: url) { store.send(.playerPresentedChanged(false)) }
+                        .ignoresSafeArea()
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("닫기", systemImage: "xmark") { store.send(.playerPresentedChanged(false)) }
+                            }
+                        }
                 }
-                // RootView 의 전역 Dynamic Type 상한(.dynamicTypeSize(...accessibility1))은
-                // fullScreenCover 경계를 넘어 전달되지 않는다(실측 확인) — 여기서 다시 건다.
                 .dynamicTypeSize(...DynamicTypeSize.accessibility1)
             }
         }
     }
 
-    // MARK: - Film library
+    private var archivePending: Bool {
+        store.phase == .done && (store.archiveStatus == .idle || store.archiveStatus == .saving)
+    }
 
-    private func addCompletedFilmToLibrary(at sourceURL: URL) {
-        let clips = session.clips
-        let filmID = UUID()
-        let movieFilename: String?
-        do {
-            movieFilename = try FilmStorage.importMovie(from: sourceURL, filmID: filmID)
-        } catch {
-            movieFilename = nil
-        }
+    private var title: String { store.entry?.title ?? (session.title.isEmpty ? "ChalNa" : session.title) }
+    private var count: Int { store.entry?.clipCount ?? session.clips.count }
+    private var duration: Double { store.entry?.duration ?? session.clips.reduce(0) { $0 + $1.duration } }
 
-        let liveCount = clips.filter { $0.kind == .live }.count
-        let totalDuration = clips.reduce(0) { $0 + $1.duration }
-        let title = session.title.isEmpty ? "ChalNa" : session.title
-
-        let film = Film(
-            id: filmID,
-            title: title,
-            createdAt: .now,
-            movieFilename: movieFilename,
-            thumbnailData: clips.first?.thumbnailData,
-            clipCount: clips.count,
-            liveCount: liveCount,
-            totalDurationSeconds: totalDuration
-        )
-        modelContext.insert(film)
-        try? modelContext.save()
-
-        // 표지를 결과물(합성 mp4) 첫 프레임으로 승격한다. 첫 클립 원본 썸네일(16:9·4:3 등)을
-        // 표지로 두면 홈/상세의 9:16 포스터가 scaledToFill 로 좌우를 잘라낸다.
-        // 추출 실패 시에는 위에서 넣은 첫 클립 썸네일이 폴백으로 남는다.
-        if let movieURL = film.movieURL {
-            Task {
-                if let cover = await FilmCover.firstFrameJPEG(fromMovieAt: movieURL) {
-                    film.thumbnailData = cover
-                    try? modelContext.save()
-                }
+    private var titleBlock: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(verbatim: title)
+                .font(store.phase == .done ? ChalNaTypography.display : ChalNaTypography.title)
+                .lineLimit(3)
+            if store.phase == .done {
+                Text("클립 \(count)개 · \(Duration.seconds(duration).formatted(.time(pattern: .minuteSecond(padMinuteToLength: 2))))")
+                    .font(ChalNaTypography.label)
+                    .foregroundStyle(ChalNaColor.textSecondary)
+            } else {
+                Text("클립 \(count)개 · \(duration, specifier: "%.1f")초")
+                    .font(ChalNaTypography.label)
+                    .foregroundStyle(ChalNaColor.textSecondary)
             }
         }
     }
 
-    // MARK: - Header
-
-    private var header: some View {
-        // ExportPhase.title/.tag 는 String(localized:) 로 이미 해석된 String 이다
-        // (ExportFeature.swift:256,264). 다시 감싸면 이중 조회가 된다.
-        ChalNaNavBar(
-            verbatimTitle: store.phase.title,
-            caption: store.phase.tag,
-            showsDivider: true
-        )
-    }
-
-    // MARK: - Cover
-
-    /// 9:16 커버. 진행률·완료 배지를 **커버 위에** 얹어 시선을 한 곳에 모은다.
-    /// (기존에는 커버와 statusBlock 이 분리돼 시선이 두 곳으로 갈렸다)
     @ViewBuilder
-    private var cover: some View {
-        if let clip = session.clips.first {
-            let canPlay = store.phase == .done && store.exportedURL != nil
+    private func poster(width: CGFloat) -> some View {
+        let h = width * 16 / 9
+        let cover = Group {
+            if let data = store.cover, let image = UIImage(data: data) {
+                Image(uiImage: image).resizable().scaledToFill()
+            } else if let clip = session.clips.first {
+                let size = CGSize(width: width, height: h)
+                let rotation = session.rotation(for: clip.id)
+                let rect = ClipFraming.resolvedRect(display: clip.displaySize ?? size, rotation: rotation,
+                                                    render: size, transform: session.transform(for: clip.id))
+                ZStack(alignment: .bottomTrailing) {
+                    ChalNaColor.canvas
+                    clip.thumbnailView()
+                        .frame(width: rotation.swapsAxes ? rect.height : rect.width,
+                               height: rotation.swapsAxes ? rect.width : rect.height)
+                        .rotationEffect(.degrees(rotation.degrees))
+                        .position(x: rect.midX, y: rect.midY)
+                    VStack(alignment: .trailing, spacing: width * LabelLayout.stackGapFraction) {
+                        Text(verbatim: LabelText.timeString(clip.capturedAt))
+                            .font(LabelText.font(px: width * LabelLayout.timeFontFraction))
+                        Text(verbatim: LabelText.dateString(clip.capturedAt))
+                            .font(LabelText.font(px: width * LabelLayout.dateFontFraction))
+                    }
+                    .foregroundStyle(ChalNaColor.onMedia.opacity(LabelLayout.opacity))
+                    .padding(.trailing, width * LabelLayout.paddingFraction)
+                    .padding(.bottom, h * LabelLayout.paddingFraction)
+                    let label = session.label(for: clip.id)
+                    if label.isVisible {
+                        caption(label, size: size)
+                    }
+                }
+            } else { ChalNaColor.surface }
+        }
+        .frame(width: width, height: h)
+        .clipped()
+        .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.sm))
+        if store.phase == .done {
+            Button { store.send(.playerPresentedChanged(true)) } label: { cover }
+                .buttonStyle(.plain)
+                .accessibilityLabel("완성된 영상 재생")
+        } else { cover.accessibilityHidden(true) }
+    }
 
-            VStack(alignment: .leading, spacing: 12) {
-                ChalNaCanvas { box in
-                    clip.thumbnailView(contentMode: .fill)
-                        .frame(width: box.width, height: box.height)
-                } overlay: { _ in
-                    coverOverlay(canPlay: canPlay)
+    private func caption(_ label: ClipLabel, size: CGSize) -> some View {
+        let font = label.fontPx(canvasHeight: size.height)
+        let box = ClipLabelMetrics.paddedBoxSize(label.text, fontPx: font)
+        return Text(verbatim: label.text)
+            .font(Font(ClipLabelMetrics.uiFont(px: font)))
+            .tracking(ClipLabel.BoxStyle.letterSpacing(for: font))
+            .foregroundStyle(label.hasBackground ? ChalNaColor.onMediaDark : ChalNaColor.onMedia)
+            .fixedSize()
+            .frame(width: box.width, height: box.height)
+            .background(label.hasBackground ? ChalNaColor.onMedia : .clear)
+            .overlay {
+                if label.hasBackground {
+                    Rectangle().strokeBorder(ChalNaColor.onMediaDark, lineWidth: font * ClipLabel.BoxStyle.borderWidthFraction)
                 }
-                // 이 두 modifier 는 여기서 상한으로만 작동한다. `cover` 는 header + safeAreaInset
-                // 사이의 이미 제한된 높이 예산 안에 있고, `ChalNaCanvas` 내부 GeometryReader 가
-                // 그 높이를 그대로 받아 9:16 을 맞추기 때문이다(넓은 기기에서는 maxWidth 300 이 폭을 제한).
-                // 높이가 무제약인 컨텍스트(예: ScrollView) 에 이 조합을 그대로 옮기면
-                // aspectRatio(.fit) 가 무한 높이로 폭을 역산해 깨진다 — Task 19 FilmDetailView 가
-                // 그 사례(240×643 로 잘못 렌더링)이므로 그대로 복사하지 말 것.
-                .frame(maxWidth: 300)
-                .aspectRatio(9.0 / 16.0, contentMode: .fit)
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    guard canPlay else { return }
-                    store.send(.playerPresentedChanged(true))
-                }
-                .accessibilityAddTraits(canPlay ? .isButton : [])
-                .accessibilityLabel(canPlay ? "완성된 영상 재생" : "")
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(verbatim: session.title.isEmpty ? SampleData.filmTitle : session.title)
-                        .font(ChalNaTypography.title)
-                        .foregroundColor(ChalNaColor.textPrimary)
-                        .lineLimit(1)
-                    Text(verbatim: metaLine)
-                        .font(ChalNaTypography.label)
-                        // "%02d:%02d" 를 품고 있고 편집 패스마다 값이 바뀐다 — 다른 숫자 표시
-                        // 4곳과 같은 이유로 tabular figure 를 쓴다.
-                        .monospacedDigit()
-                        .foregroundColor(ChalNaColor.textSecondary)
-                    Text(statusLine)
-                        .font(ChalNaTypography.label)
-                        // 실패 상태의 문구는 오류다 — 진행률 바(:220)가 이미 danger 로 바뀌는데
-                        // 설명 텍스트만 textSecondary 로 남아 둘이 어긋났다.
-                        .foregroundColor(store.phase == .failed ? ChalNaColor.danger : ChalNaColor.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .frame(maxWidth: 300, alignment: .leading)
-                .frame(maxWidth: .infinity, alignment: .center)
             }
+            .rotationEffect(label.previewRotation)
+            .position(x: label.position.x * size.width, y: label.position.y * size.height)
+    }
+
+    private var completionLabel: some View {
+        Text("필름이 완성됐어요").font(ChalNaTypography.label).foregroundStyle(ChalNaColor.accent)
+    }
+
+    @ViewBuilder
+    private var information: some View {
+        if store.phase == .idle {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("출력 형식").font(ChalNaTypography.label).foregroundStyle(ChalNaColor.textSecondary)
+                Text(verbatim: "1080 × 1920 · 30fps").font(ChalNaTypography.headline)
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                Text("생성 횟수").font(ChalNaTypography.label)
+                if store.quotaUnlocked {
+                    Text("2026년까지 영상 생성 제한이 해제됐어요.").font(ChalNaTypography.headline)
+                } else {
+                    Text("하루 1회 · 주 3회").font(ChalNaTypography.headline)
+                    Text("만들기를 누르면 생성 횟수 1회를 사용해요.").font(ChalNaTypography.label)
+                        .foregroundStyle(ChalNaColor.textSecondary)
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(ChalNaColor.selection, in: RoundedRectangle(cornerRadius: ChalNaRadius.sm))
         } else {
-            Text("내보낼 클립이 없어요")
-                .font(ChalNaTypography.headline)
-                .foregroundColor(ChalNaColor.textSecondary)
+            saveRow(photo: false)
+            saveRow(photo: true)
         }
     }
 
-    /// 커버 위 오버레이: 진행 중이면 하단 진행률 바 + 퍼센트, 완료면 재생 버튼 + DONE 태그.
-    @ViewBuilder
-    private func coverOverlay(canPlay: Bool) -> some View {
-        ZStack {
-            if canPlay {
-                playOverlay
-            }
-
-            VStack(spacing: 0) {
-                HStack {
-                    Spacer()
-                    if store.phase == .done {
-                        ChalNaTag("DONE", variant: .accent, icon: .check)
+    private func saveRow(photo: Bool) -> some View {
+        let status = photo ? store.photoStatus : store.archiveStatus
+        return HStack(alignment: .top, spacing: 12) {
+            ChalNaIcon(photo ? .download : .film, size: 16)
+                .frame(width: 34, height: 34)
+                .background(ChalNaColor.surface, in: Circle())
+            VStack(alignment: .leading, spacing: 4) {
+                Text(photo ? LocalizedStringKey("사진 앱") : "내 필름").font(ChalNaTypography.headline)
+                Group {
+                    switch status {
+                    case .idle, .saving: Text("저장 중…")
+                    case .saved: Text(photo ? LocalizedStringKey("사진 앱에 저장했어요") : "앱에 보관했어요")
+                    case .denied: Text("사진 추가 권한이 필요해요")
+                    case .failed(let message): Text(verbatim: message)
                     }
-                }
-                .padding(12)
-
-                Spacer()
-
-                if store.phase != .done {
-                    VStack(spacing: 6) {
-                        HStack {
-                            Text(verbatim: "\(Int(store.progress * 100))%")
-                                .font(ChalNaTypography.label)
-                                .fontWeight(.semibold)
-                                .monospacedDigit()
-                                .foregroundColor(ChalNaColor.textPrimary)
-                            Spacer()
-                        }
-                        ChalNaProgressBar(
-                            progress: store.progress,
-                            tint: store.phase == .failed ? ChalNaColor.danger : ChalNaColor.accent
-                        )
-                    }
-                    .padding(12)
-                    .background(ChalNaColor.scrim)
-                }
-            }
-        }
-    }
-
-    private var playOverlay: some View {
-        ZStack {
-            ChalNaColor.scrim.opacity(0.4)
-            Circle()
-                .fill(ChalNaColor.surfaceRaised.opacity(0.9))
-                .frame(width: 64, height: 64)
-                .overlay(Circle().strokeBorder(ChalNaColor.border, lineWidth: 1))
-                .overlay(
-                    ChalNaIcon(.play, size: 26, weight: .semibold)
-                        .foregroundColor(ChalNaColor.textPrimary)
-                )
-        }
-    }
-
-    private var metaLine: String {
-        let count = session.clips.count
-        let videos = session.clips.filter { $0.videoURL != nil }.count
-        let total = session.clips.reduce(0) { $0 + $1.duration }
-        let m = Int(total) / 60
-        let s = Int(total) % 60
-        return String(format: "%d CLIPS · %d VIDEO · %02d:%02d", count, videos, m, s)
-    }
-
-    // MARK: - Status
-
-    private var statusLine: String {
-        switch store.phase {
-        case .idle, .exporting:
-            return String(localized: "Vlog를 엮는 중… Live Photo의 영상 부분을 자동으로 추출해 이어 붙여요.")
-        case .done:
-            return String(localized: "필름이 완성되었어요. 공유하거나 사진 보관함에 저장할 수 있어요.")
-        case .failed:
-            return store.errorMessage ?? String(localized: "저장 중 문제가 발생했어요.")
-        }
-    }
-
-    // MARK: - CTAs
-
-    @ViewBuilder
-    private var bottomCTAs: some View {
-        Group {
-            switch store.phase {
-            case .idle, .exporting:
-                HStack(spacing: 8) {
-                    ChalNaIcon(.film, size: 14)
-                    Text("잠깐만 기다려주세요")
                 }
                 .font(ChalNaTypography.label)
-                .foregroundColor(ChalNaColor.textSecondary)
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: 52)
-
-            case .done:
-                completedCTAs
-
-            case .failed:
-                failedCTAs
+                .foregroundStyle(ChalNaColor.textSecondary)
+                if status == .denied {
+                    Button("설정 열기") {
+                        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                        returningFromSettings = true
+                        openURL(url) { if !$0 { returningFromSettings = false } }
+                    }
+                    .buttonStyle(.chalNa(.ghost, size: .md))
+                } else if case .failed = status {
+                    Button(photo ? LocalizedStringKey("사진 앱에 다시 저장") : "보관 다시 시도") {
+                        store.send(photo ? .saveToPhotoLibraryTapped : .archiveRequested)
+                    }
+                    .buttonStyle(.chalNa(.ghost, size: .md))
+                }
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 12)
-        .padding(.bottom, 12)
-        .background(ChalNaColor.bg.ignoresSafeArea(edges: .bottom))
-        .overlay(alignment: .top) {
-            Rectangle().fill(ChalNaColor.border).frame(height: 1)
-        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// 주 액션 2개(저장·공유)를 면형/선형으로, 보조 2개는 ghost 텍스트로 내려
-    /// 위계를 분리한다. 기존에는 4개가 2×2 로 동등해 무엇이 주인지 불명확했다.
-    private var completedCTAs: some View {
-        VStack(spacing: 8) {
-            if let url = store.exportedURL {
-                HStack(spacing: 10) {
-                    Button {
-                        store.send(.saveToPhotoLibraryTapped)
-                    } label: {
-                        HStack(spacing: 6) {
-                            if store.isSaving {
-                                ProgressView().controlSize(.small).tint(ChalNaColor.onAccent)
-                            } else {
-                                ChalNaIcon(.download, size: 16, weight: .semibold)
-                            }
-                            Text(store.isSaving ? LocalizedStringKey("저장 중…") : LocalizedStringKey("저장하기"))
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.chalNa(.primary, size: .lg, fillWidth: true))
-                    .disabled(store.isSaving)
-
-                    ShareLink(item: url) {
-                        HStack(spacing: 6) {
-                            ChalNaIcon(.share, size: 16, weight: .semibold)
-                            Text("공유")
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
+    @ViewBuilder
+    private var actions: some View {
+        if store.phase == .idle {
+            HStack(spacing: 8) {
+                Button("필름 만들기") {
+                    store.send(.startExport(clips: session.clips, rotations: session.rotations,
+                                            transforms: session.transforms, clipLabels: session.labels, title: session.title))
+                }
+                .buttonStyle(.chalNa(.primary, size: .lg, fillWidth: true))
+                .disabled(session.clips.isEmpty)
+                Button("편집 검토") { store.send(.backToEditTapped) }
                     .buttonStyle(.chalNa(.secondary, size: .lg, fillWidth: true))
-                }
             }
-
-            HStack(spacing: 4) {
-                Button("다른 영상 만들기") { store.send(.startAnotherTapped) }
-                    .buttonStyle(.chalNa(.ghost, size: .md, fillWidth: true))
-                Button {
-                    store.send(.homeTapped)
-                } label: {
-                    HStack(spacing: 4) {
-                        Text("홈으로")
-                        ChalNaIcon(.chevronRight, size: 13, weight: .semibold)
+        } else if let url = store.exportedURL {
+            HStack(spacing: 8) {
+                ShareLink(item: url) { Text("공유하기").frame(maxWidth: .infinity) }
+                    .buttonStyle(.chalNa(.primary, size: .lg, fillWidth: true))
+                Button("내 필름으로") { store.send(.homeTapped) }
+                    .buttonStyle(.chalNa(.secondary, size: .lg, fillWidth: true))
+                    .contextMenu {
+                        Button("다른 영상 만들기") { store.send(.startAnotherTapped) }
                     }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.chalNa(.ghost, size: .md, fillWidth: true))
+                    .accessibilityAction(named: Text("다른 영상 만들기")) { store.send(.startAnotherTapped) }
+                    .disabled(archivePending)
             }
         }
     }
 
-    private var failedCTAs: some View {
-        VStack(spacing: 8) {
-            Button {
-                store.send(.retryTapped(clips: session.clips,
-                                        rotations: session.rotations,
-                                        transforms: session.transforms,
-                                        clipLabels: session.labels))
-            } label: {
-                Text("다시 시도").frame(maxWidth: .infinity)
+    private var progressView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                GeometryReader { proxy in
+                    let n = min(3, session.clips.count)
+                    let width = max(0, proxy.size.width - CGFloat(max(0, n - 1)) * 8) / CGFloat(max(1, n))
+                    HStack(spacing: 8) {
+                        ForEach(session.clips.prefix(3)) { clip in
+                            clip.thumbnailView()
+                                .frame(width: width, height: 145)
+                                .clipped()
+                                .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.sm))
+                        }
+                    }
+                }
+                .frame(height: 145)
+                Text("장면을 이어 붙이는 중").font(ChalNaTypography.title)
+                Text(store.progress, format: .percent.precision(.fractionLength(0)))
+                    .font(ChalNaTypography.display)
+                    .foregroundStyle(ChalNaColor.accent)
+                    .monospacedDigit()
+                ChalNaProgressBar(progress: store.progress)
+                Text("\(title) · 클립 \(count)개").font(ChalNaTypography.label)
+                    .foregroundStyle(ChalNaColor.textSecondary)
             }
-            .buttonStyle(.chalNa(.primary, size: .lg, fillWidth: true))
-
-            Button("편집으로 돌아가기") { store.send(.backToEditTapped) }
-                .buttonStyle(.chalNa(.ghost, size: .md, fillWidth: true))
+            .frame(maxWidth: 560, alignment: .leading)
+            .padding(.horizontal, 24)
+            .padding(.top, 52)
+            .frame(maxWidth: .infinity)
         }
+    }
+
+    private var failureView: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Spacer()
+            ChalNaIcon(.film, size: 28)
+                .padding(15)
+                .background(ChalNaColor.surface, in: Circle())
+            if case let .limited(reason) = store.phase {
+                Text(verbatim: reason.message).font(ChalNaTypography.title)
+            } else {
+                Text("필름을 만들지 못했어요").font(ChalNaTypography.title)
+                if let message = store.errorMessage {
+                    Text(verbatim: message).font(ChalNaTypography.body).foregroundStyle(ChalNaColor.textSecondary)
+                }
+            }
+            Spacer()
+            Button("편집으로 돌아가기") { store.send(.backToEditTapped) }
+                .buttonStyle(.chalNa(.primary, size: .lg, fillWidth: true))
+        }
+        .padding(24)
+        .frame(maxWidth: 560, maxHeight: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
     }
 }
-
-// MARK: - Video player bridge
-
 private struct ExportVideoPlayerCover: UIViewControllerRepresentable {
     let url: URL
     let onDismiss: () -> Void
 
     func makeUIViewController(context: Context) -> AVPlayerViewController {
-        // 무음 스위치가 켜져 있어도 영상 사운드가 재생되도록 playback 카테고리로 활성화.
-        let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.playback, mode: .moviePlayback, options: [])
-        try? session.setActive(true)
-
         let player = AVPlayer(url: url)
         let controller = AVPlayerViewController()
         controller.player = player
         controller.allowsPictureInPicturePlayback = true
         controller.delegate = context.coordinator
-        player.play()
+        player.playWithFilmAudio()
         return controller
     }
 
@@ -416,30 +375,4 @@ private struct ExportVideoPlayerCover: UIViewControllerRepresentable {
             }
         }
     }
-}
-
-#Preview("Exporting") {
-    let session = EditSession(title: SampleData.filmTitle, clips: SampleData.jejuTimeline)
-    return ExportView(
-        store: Store(initialState: ExportFeature.State(phase: .exporting, progress: 0.5)) {
-            ExportFeature()
-        }
-    )
-    .environment(session)
-    .modelContainer(for: Film.self, inMemory: true)
-}
-
-#Preview("Done") {
-    let session = EditSession(title: SampleData.filmTitle, clips: SampleData.jejuTimeline)
-    return ExportView(
-        store: Store(initialState: ExportFeature.State(
-            phase: .done,
-            progress: 1.0,
-            exportedURL: URL(fileURLWithPath: "/tmp/preview.mp4")
-        )) {
-            ExportFeature()
-        }
-    )
-    .environment(session)
-    .modelContainer(for: Film.self, inMemory: true)
 }

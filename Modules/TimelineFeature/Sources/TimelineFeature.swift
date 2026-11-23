@@ -1,4 +1,5 @@
 import ComposableArchitecture
+import AppCore
 import Foundation
 import Models
 
@@ -25,10 +26,9 @@ public struct TimelineFeature {
         public var currentIndex: Int
         public var playbackState: TimelineState
         public var playheadSeconds: TimeInterval
+        public var labelEditorClip: Clip?
 
-        // Delete confirmation
-        public var pendingDeleteClipID: Clip.ID?
-        public var isConfirmingDelete: Bool
+        @Presents public var deleteAlert: AlertState<Action.DeleteAlert>?
 
         public init(
             title: String = SampleData.filmTitle,
@@ -42,8 +42,6 @@ public struct TimelineFeature {
             self.currentIndex = currentIndex
             self.playbackState = playbackState
             self.playheadSeconds = playheadSeconds
-            self.pendingDeleteClipID = nil
-            self.isConfirmingDelete = false
         }
 
         // MARK: Derived
@@ -59,15 +57,16 @@ public struct TimelineFeature {
         }
 
         public var playheadLabel: String {
-            let m = Int(playheadSeconds) / 60
-            let s = Int(playheadSeconds) % 60
-            return String(format: "%02d:%02d", m, s)
+            Self.clock(playheadSeconds)
         }
 
         public var totalClockLabel: String {
-            let m = Int(totalDuration) / 60
-            let s = Int(totalDuration) % 60
-            return String(format: "%02d:%02d", m, s)
+            Self.clock(totalDuration)
+        }
+
+        private static func clock(_ seconds: TimeInterval) -> String {
+            let tenths = Int((max(0, seconds) * 10).rounded(.toNearestOrAwayFromZero))
+            return String(format: "%02d:%02d.%d", tenths / 600, tenths / 10 % 60, tenths % 10)
         }
 
         public var currentClip: Clip? {
@@ -78,6 +77,8 @@ public struct TimelineFeature {
         public var isPlaying: Bool {
             playbackState == .playing
         }
+
+        public var canEditCurrentClip: Bool { currentClip != nil }
 
         public func cumulativeStart(ofClipAt index: Int) -> TimeInterval {
             var t: TimeInterval = 0
@@ -100,18 +101,24 @@ public struct TimelineFeature {
 
         // Delete flow
         case deleteCurrentRequested
-        case deletePresentedChanged(Bool)
-        case deleteConfirmed
-        case deleteCancelled
+        case deleteAlert(PresentationAction<DeleteAlert>)
+
+        @CasePathable
+        public enum DeleteAlert: Equatable {
+            case confirm(Clip.ID)
+        }
 
         // Playback controller -> reducer
         case playheadElapsedUpdated(TimeInterval)
         case currentClipEnded
 
         // Navigation intents
-        case dismissTapped
         case saveTapped
         case adjustCurrentTapped
+        case labelTapped
+        case labelDismissed
+        case labelCommitted(ClipLabel)
+        case playbackInterrupted
         case rotateCurrentTapped
         case delegate(Delegate)
 
@@ -122,7 +129,7 @@ public struct TimelineFeature {
         }
     }
 
-    @Dependency(\.dismiss) var dismiss
+    @Dependency(\.editSession) var session
 
     // MARK: - Reducer
 
@@ -134,9 +141,9 @@ public struct TimelineFeature {
 
             case let .syncFromSession(clips, title):
                 guard !clips.isEmpty else { return .none }
+                state.title = title
                 if state.clips != clips {
                     state.clips = clips
-                    if !title.isEmpty { state.title = title }
                     state.currentIndex = 0
                     state.playheadSeconds = 0
                     state.playbackState = .idle
@@ -144,6 +151,7 @@ public struct TimelineFeature {
                 return .none
 
             case .togglePlay:
+                guard !state.clips.isEmpty else { return .none }
                 state.playbackState = state.isPlaying ? .idle : .playing
                 return .none
 
@@ -169,6 +177,7 @@ public struct TimelineFeature {
                 guard let from = state.clips.firstIndex(where: { $0.id == id }) else { return .none }
                 let clamped = max(0, min(target, state.clips.count - 1))
                 guard from != clamped else { return .none }
+                let clipElapsed = max(0, state.playheadSeconds - state.cumulativeStart(ofClipAt: state.currentIndex))
                 let clip = state.clips.remove(at: from)
                 state.clips.insert(clip, at: clamped)
                 if state.currentIndex == from {
@@ -178,6 +187,8 @@ public struct TimelineFeature {
                 } else if from > state.currentIndex && clamped <= state.currentIndex {
                     state.currentIndex += 1
                 }
+                state.playheadSeconds = state.cumulativeStart(ofClipAt: state.currentIndex) + clipElapsed
+                session.clips = state.clips
                 return .none
 
             case let .trimCurrent(delta):
@@ -195,38 +206,31 @@ public struct TimelineFeature {
                     locationNote: clip.locationNote,
                     displaySize: clip.displaySize
                 )
+                session.clips = state.clips
                 return .none
 
             case .deleteCurrentRequested:
-                state.pendingDeleteClipID = state.currentClip?.id
-                state.isConfirmingDelete = state.pendingDeleteClipID != nil
-                return .none
-
-            case let .deletePresentedChanged(value):
-                state.isConfirmingDelete = value
-                if !value { state.pendingDeleteClipID = nil }
-                return .none
-
-            case .deleteConfirmed:
-                state.isConfirmingDelete = false
-                if let pendingID = state.pendingDeleteClipID,
-                   let index = state.clips.firstIndex(where: { $0.id == pendingID }) {
-                    state.currentIndex = index
-                    state.clips.remove(at: index)
-                    state.playheadSeconds = 0
-                    if state.clips.isEmpty {
-                        state.currentIndex = 0
-                    } else {
-                        state.currentIndex = min(state.currentIndex, state.clips.count - 1)
-                    }
-                    if state.isPlaying { state.playbackState = .idle }
+                guard let clipID = state.currentClip?.id else { return .none }
+                state.playbackState = .idle
+                state.deleteAlert = AlertState {
+                    TextState("클립을 삭제할까요?")
+                } actions: {
+                    ButtonState(role: .cancel) { TextState("취소") }
+                    ButtonState(role: .destructive, action: .confirm(clipID)) { TextState("삭제") }
+                } message: {
+                    TextState("삭제한 클립은 현재 타임라인에서 제거됩니다.")
                 }
-                state.pendingDeleteClipID = nil
                 return .none
 
-            case .deleteCancelled:
-                state.isConfirmingDelete = false
-                state.pendingDeleteClipID = nil
+            case let .deleteAlert(.presented(.confirm(id))):
+                guard let index = state.clips.firstIndex(where: { $0.id == id }) else { return .none }
+                state.clips.remove(at: index)
+                state.currentIndex = min(index, max(0, state.clips.count - 1))
+                state.playheadSeconds = state.cumulativeStart(ofClipAt: state.currentIndex)
+                session.clips = state.clips
+                return .none
+
+            case .deleteAlert:
                 return .none
 
             case let .playheadElapsedUpdated(elapsed):
@@ -235,6 +239,7 @@ public struct TimelineFeature {
                 return .none
 
             case .currentClipEnded:
+                guard state.isPlaying else { return .none }
                 if state.currentIndex + 1 < state.clips.count {
                     state.currentIndex += 1
                     state.playheadSeconds = state.cumulativeStart(ofClipAt: state.currentIndex)
@@ -245,22 +250,42 @@ public struct TimelineFeature {
                 }
                 return .none
 
-            case .dismissTapped:
-                return .run { _ in await dismiss() }
-
             case .saveTapped:
+                guard !state.clips.isEmpty, !state.isPlaying else { return .none }
                 return .send(.delegate(.exportRequested))
 
             case .adjustCurrentTapped:
                 guard let clipID = state.currentClip?.id else { return .none }
+                state.playbackState = .idle
                 return .send(.delegate(.clipAdjustRequested(clipID: clipID)))
 
+            case .labelTapped:
+                guard let clip = state.currentClip else { return .none }
+                state.playbackState = .idle
+                state.labelEditorClip = clip
+                return .none
+
+            case .labelDismissed:
+                state.labelEditorClip = nil
+                return .none
+
+            case .labelCommitted(let label):
+                if let id = state.labelEditorClip?.id { session.setLabel(label, for: id) }
+                state.labelEditorClip = nil
+                return .none
+
+            case .playbackInterrupted:
+                state.playbackState = .idle
+                return .none
+
             case .rotateCurrentTapped:
-                return .none   // View 가 session.cycleRotation
+                if let id = state.currentClip?.id { session.cycleRotation(for: id) }
+                return .none
 
             case .delegate:
                 return .none
             }
         }
+        .ifLet(\.$deleteAlert, action: \.deleteAlert)
     }
 }

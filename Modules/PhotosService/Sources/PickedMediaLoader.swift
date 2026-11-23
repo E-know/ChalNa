@@ -1,6 +1,5 @@
 import Foundation
 import Photos
-import PhotosUI
 import AVFoundation
 import UIKit
 import UniformTypeIdentifiers
@@ -40,59 +39,33 @@ public struct PickedMedia: Sendable, Identifiable, Hashable {
     }
 }
 
-public enum PickedMediaLoader {
-    /// PHPicker 결과 배열을 picker 가 띄운 순서 그대로 `PickedMedia` 배열로 변환.
-    /// 권한 밖 사진도 picker 의 `NSItemProvider` 가 부여한 임시 접근으로 추출 가능.
-    ///
-    /// - Parameter onProgress: 한 항목 추출이 끝날 때마다 누적 완료 개수(1...N)를 콜백으로 흘려보낸다.
-    ///   비동기 동시 추출이라 호출 순서는 picker 순서와 다를 수 있고, MainActor 보장은 호출자 책임.
-    public static func load(
-        from results: [PHPickerResult],
-        onProgress: (@Sendable (Int) -> Void)? = nil
-    ) async -> [PickedMedia] {
-        actor Counter {
-            private(set) var done: Int = 0
-            func increment() -> Int {
-                done += 1
-                return done
-            }
-        }
-        let counter = Counter()
+public protocol PickedMediaLoading: Sendable {
+    var id: String { get }
+    func load() async -> PickedMedia?
+}
 
-        return await withTaskGroup(of: (Int, PickedMedia?).self) { group in
-            for (idx, result) in results.enumerated() {
-                group.addTask {
-                    let media = await loadOne(result: result)
-                    let done = await counter.increment()
-                    onProgress?(done)
-                    return (idx, media)
-                }
-            }
-            var collected: [(Int, PickedMedia)] = []
-            for await (idx, media) in group {
-                if let media { collected.append((idx, media)) }
-            }
-            return collected.sorted { $0.0 < $1.0 }.map(\.1)
-        }
+/// 선택기가 일시적으로 허용한 원본을 이 항목이 보유한다. 제한 접근에서도 PHAsset 재조회 없이 읽는다.
+public actor PickedMediaLoader: PickedMediaLoading {
+    public nonisolated let id: String
+    private let provider: NSItemProvider
+
+    public init(assetID: String?, provider: NSItemProvider) {
+        self.id = assetID ?? UUID().uuidString
+        self.provider = provider
     }
 
-    // MARK: - Per-result
-
-    private static func loadOne(result: PHPickerResult) async -> PickedMedia? {
-        let provider = result.itemProvider
-        let id = result.assetIdentifier ?? UUID().uuidString
-
+    public func load() async -> PickedMedia? {
         if provider.canLoadObject(ofClass: PHLivePhoto.self) {
-            return await loadLivePhoto(provider: provider, id: id)
+            return await loadLivePhoto()
         }
         if provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
-            return await loadMovie(provider: provider, id: id)
+            return await loadMovie()
         }
         return nil
     }
 
-    private static func loadLivePhoto(provider: NSItemProvider, id: String) async -> PickedMedia? {
-        guard let livePhoto = await loadObject(provider: provider, ofClass: PHLivePhoto.self) else {
+    private func loadLivePhoto() async -> PickedMedia? {
+        guard let livePhoto = await livePhotoFromProvider() else {
             return nil
         }
         let resources = PHAssetResource.assetResources(for: livePhoto)
@@ -102,19 +75,19 @@ public enum PickedMediaLoader {
             .first
         else { return nil }
 
-        let destURL = makeTempURL(extension: "mov")
+        let destURL = Self.makeTempURL(extension: "mov")
         do {
-            try await writeResource(videoResource, to: destURL)
+            try await Self.writeResource(videoResource, to: destURL)
         } catch {
             return nil
         }
-        let meta = await loadVideoMetadata(url: destURL)
+        let meta = await Self.loadVideoMetadata(url: destURL)
         // 영상 첫 프레임 추출이 실패해도 Live Photo 는 정지 이미지로 폴백해 썸네일을 보장한다.
         let thumbnail: Data?
         if let metaThumbnail = meta.thumbnail {
             thumbnail = metaThumbnail
         } else {
-            thumbnail = await stillImageJPEG(from: resources)
+            thumbnail = await Self.stillImageJPEG(from: resources)
         }
         return PickedMedia(
             id: id,
@@ -127,9 +100,9 @@ public enum PickedMediaLoader {
         )
     }
 
-    private static func loadMovie(provider: NSItemProvider, id: String) async -> PickedMedia? {
-        guard let destURL = await loadMovieFile(provider: provider) else { return nil }
-        let meta = await loadVideoMetadata(url: destURL)
+    private func loadMovie() async -> PickedMedia? {
+        guard let destURL = await loadMovieFile() else { return nil }
+        let meta = await Self.loadVideoMetadata(url: destURL)
         return PickedMedia(
             id: id,
             kind: .video,
@@ -143,25 +116,20 @@ public enum PickedMediaLoader {
 
     // MARK: - NSItemProvider helpers
 
-    private static func loadObject<T: NSItemProviderReading>(
-        provider: NSItemProvider,
-        ofClass cls: T.Type
-    ) async -> T? {
-        await withCheckedContinuation { (cont: CheckedContinuation<T?, Never>) in
-            provider.loadObject(ofClass: cls) { obj, _ in
-                cont.resume(returning: obj as? T)
+    private func livePhotoFromProvider() async -> PHLivePhoto? {
+        await withCheckedContinuation { continuation in
+            provider.loadObject(ofClass: PHLivePhoto.self) { object, _ in
+                continuation.resume(returning: object as? PHLivePhoto)
             }
         }
     }
 
-    /// `loadFileRepresentation` 콜백에서 받는 URL 은 콜백이 끝나면 시스템이 즉시 정리한다.
-    /// 그래서 콜백 안에서 동기적으로 우리 임시 폴더로 복사한 뒤 그 URL 만 돌려준다.
-    private static func loadMovieFile(provider: NSItemProvider) async -> URL? {
+    private func loadMovieFile() async -> URL? {
         await withCheckedContinuation { (cont: CheckedContinuation<URL?, Never>) in
             provider.loadFileRepresentation(forTypeIdentifier: UTType.movie.identifier) { tempURL, _ in
                 guard let tempURL else { cont.resume(returning: nil); return }
                 let ext = tempURL.pathExtension.isEmpty ? "mov" : tempURL.pathExtension
-                let destURL = makeTempURL(extension: ext)
+                let destURL = Self.makeTempURL(extension: ext)
                 do {
                     try FileManager.default.copyItem(at: tempURL, to: destURL)
                     cont.resume(returning: destURL)

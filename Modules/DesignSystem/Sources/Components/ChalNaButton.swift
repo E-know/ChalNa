@@ -17,13 +17,13 @@ public enum ChalNaButtonVariant {
 }
 
 public enum ChalNaButtonSize {
-    case lg   // 52pt
+    case lg   // 48pt
     case md   // 44pt
     case sm   // 36pt
 
     fileprivate var height: CGFloat {
         switch self {
-        case .lg: return 52
+        case .lg: return 48
         case .md: return 44
         case .sm: return 36
         }
@@ -73,7 +73,6 @@ public struct ChalNaButtonStyle: ButtonStyle {
             .padding(.horizontal, size.horizontalPadding)
             .frame(maxWidth: fillWidth ? .infinity : nil)
             .background(background(pressed: configuration.isPressed))
-            .overlay(border)
             .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.sm, style: .continuous))
             .animation(ChalNaMotion.fast, value: configuration.isPressed)
     }
@@ -109,23 +108,13 @@ public struct ChalNaButtonStyle: ButtonStyle {
             }
         } else {
             switch variant {
-            case .primary:   shape.fill(pressed ? tint : tintFill)
+            case .primary:   shape.fill(pressed ? tintFill.opacity(0.85) : tintFill)
             case .secondary: shape.fill(pressed ? ChalNaColor.surfaceRaised : ChalNaColor.surface)
             case .ghost:     shape.fill(Color.clear)
             }
         }
     }
 
-    @ViewBuilder
-    private var border: some View {
-        let shape = RoundedRectangle(cornerRadius: ChalNaRadius.sm, style: .continuous)
-        switch variant {
-        case .secondary:
-            shape.strokeBorder(isEnabled ? ChalNaColor.border : ChalNaColor.border.opacity(0.5), lineWidth: 1)
-        case .primary, .ghost:
-            Color.clear
-        }
-    }
 }
 
 public extension ButtonStyle where Self == ChalNaButtonStyle {
