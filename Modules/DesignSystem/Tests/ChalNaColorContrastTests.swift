@@ -3,8 +3,7 @@ import SwiftUI
 import UIKit
 import DesignSystem
 
-/// 다크 토큰의 WCAG 대비 규칙을 잠근다.
-/// 값 근거: docs/superpowers/specs/2026-07-28-app-redesign-design.md §4.1
+/// 사진집 UI의 본문과 선택·버튼 상태 대비.
 struct ChalNaColorContrastTests {
 
     // MARK: - WCAG 2.1 상대 휘도 / 대비비
@@ -54,10 +53,9 @@ struct ChalNaColorContrastTests {
         #expect(ratio < 4.5, "본문 기준을 넘으면 disabled 전용이라는 의미가 흐려진다 — 실제 \(ratio)")
     }
 
-    @Test func testBrandDeepIsNotUsableForInteraction() {
-        let ratio = contrast(ChalNaColor.brandDeep, ChalNaColor.bg)
-        #expect(ratio < 3.0,
-                "brandDeep 은 Splash·브랜드 면 전용. 이 값이 3:1 을 넘으면 인터랙션 금지 근거가 무너진다 — 실제 \(ratio)")
+    @Test func testSelectionRemainsLegible() {
+        #expect(contrast(ChalNaColor.accent, ChalNaColor.selection) >= 4.5)
+        #expect(contrast(ChalNaColor.textSecondary, ChalNaColor.surface) >= 4.5)
     }
 
     // MARK: - 서피스 위계
@@ -66,13 +64,12 @@ struct ChalNaColorContrastTests {
         let bg = luminance(ChalNaColor.bg)
         let surface = luminance(ChalNaColor.surface)
         let raised = luminance(ChalNaColor.surfaceRaised)
-        #expect(bg < surface, "surface 는 bg 보다 밝아야 한다")
-        #expect(surface < raised, "surfaceRaised 는 surface 보다 밝아야 한다")
+        #expect(surface < bg)
+        #expect(bg < raised)
     }
 
-    @Test func testCanvasIsIndistinguishableFromBackground() {
-        let ratio = contrast(ChalNaColor.canvas, ChalNaColor.bg)
-        #expect(ratio < 1.2,
-                "영상 캔버스와 화면 배경이 눈에 띄게 다르면 '검은 섬' 문제가 남는다 — 실제 \(ratio)")
+    @Test func testMovieCanvasKeepsTrueBlackAndReadableStamps() {
+        #expect(luminance(ChalNaColor.canvas) == 0)
+        #expect(contrast(ChalNaColor.onMedia, ChalNaColor.canvas) >= 20)
     }
 }

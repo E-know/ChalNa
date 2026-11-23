@@ -2,49 +2,69 @@ import SwiftUI
 import ComposableArchitecture
 import DesignSystem
 
-/// 설정 최상위 메뉴. 현재 '언어'·'문의·신고' 2개 — 향후 다른 메뉴 행을 카드에 추가.
 public struct SettingsView: View {
-    let store: StoreOf<SettingsFeature>
+    @Environment(\.dismiss) private var dismiss
+    @State private var preferredCompactColumn = NavigationSplitViewColumn.sidebar
+    @Bindable var store: StoreOf<SettingsFeature>
 
-    public init(store: StoreOf<SettingsFeature>) {
-        self.store = store
-    }
+    public init(store: StoreOf<SettingsFeature>) { self.store = store }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            ChalNaNavBar(
-                title: "설정",
-                leading: .back { store.send(.backTapped) },
-                showsDivider: true
-            )
-            .zIndex(1)
-
-            ScrollView {
-                ChalNaCard(padding: 0) {
-                    VStack(spacing: 0) {
-                        ChalNaListRow.navigate(
-                            title: "언어",
-                            subtitle: "앱 표시 언어를 선택하세요"
-                        ) { store.send(.languageMenuTapped) }
-
-                        ChalNaListDivider()
-
-                        ChalNaListRow.navigate(
-                            title: "문의·신고",
-                            subtitle: "불편한 점이나 제안을 보내주세요"
-                        ) { store.send(.supportMenuTapped) }
-                    }
+        NavigationSplitView(preferredCompactColumn: $preferredCompactColumn) {
+            List(selection: $store.selectedSection.sending(\.sectionSelected)) {
+                menuLink(.language, title: "언어", subtitle: "앱 표시 언어를 선택하세요")
+                    .accessibilityIdentifier("settings.language")
+                menuLink(.support, title: "문의·신고", subtitle: "불편한 점이나 제안을 보내주세요")
+                    .accessibilityIdentifier("settings.support")
+            }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .chalNaScreen()
+            .navigationTitle("설정")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("닫기", systemImage: "xmark") { dismiss() }
+                        .accessibilityIdentifier("settings.close")
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 32)
+            }
+        } detail: {
+            switch store.selectedSection {
+            case .language:
+                LanguageView(store: store.scope(state: \.language, action: \.language))
+            case .support:
+                SupportView(store: store.scope(state: \.support, action: \.support))
+            case nil:
+                Text("설정 항목을 선택하세요")
+                    .font(ChalNaTypography.body)
+                    .foregroundStyle(ChalNaColor.textSecondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .chalNaScreen()
             }
         }
-        .chalNaScreen()
+        .navigationSplitViewStyle(.balanced)
+        .onChange(of: store.selectedSection) { _, section in
+            preferredCompactColumn = section == nil ? .sidebar : .detail
+        }
         .onAppear { store.send(.onAppear) }
     }
-}
 
-#Preview {
-    SettingsView(store: Store(initialState: SettingsFeature.State()) { SettingsFeature() })
+    private func menuLink(_ section: SettingsFeature.Section, title: LocalizedStringKey,
+                          subtitle: LocalizedStringKey) -> some View {
+        NavigationLink(value: section) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(ChalNaTypography.body)
+                    .foregroundStyle(ChalNaColor.textPrimary)
+                Text(subtitle)
+                    .font(ChalNaTypography.label)
+                    .foregroundStyle(ChalNaColor.textSecondary)
+            }
+            .padding(.vertical, 8)
+            .frame(minHeight: 56, alignment: .leading)
+        }
+        .tag(section)
+        .listRowBackground(store.selectedSection == section ? ChalNaColor.selection : ChalNaColor.bg)
+        .listRowSeparatorTint(ChalNaColor.border)
+    }
 }

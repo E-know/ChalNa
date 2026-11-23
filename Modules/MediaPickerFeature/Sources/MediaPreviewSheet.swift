@@ -1,4 +1,5 @@
 import SwiftUI
+import AppCore
 import AVFoundation
 import UIKit
 import ComposableArchitecture
@@ -163,7 +164,7 @@ final class PreviewPlaybackController {
 
     func start(url: URL) {
         if currentURL == url, player.currentItem != nil {
-            player.play()
+            player.playWithFilmAudio()
             isPlaying = true
             return
         }
@@ -178,10 +179,11 @@ final class PreviewPlaybackController {
             object: item,
             queue: .main
         ) { [weak self] _ in
-            self?.player.seek(to: .zero)
-            self?.player.play()
+            guard let self, isPlaying, player.currentItem === item else { return }
+            player.seek(to: .zero)
+            player.playWithFilmAudio()
         }
-        player.play()
+        player.playWithFilmAudio()
         isPlaying = true
     }
 
@@ -190,7 +192,7 @@ final class PreviewPlaybackController {
             player.pause()
             isPlaying = false
         } else {
-            player.play()
+            player.playWithFilmAudio()
             isPlaying = true
         }
     }

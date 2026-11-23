@@ -1,46 +1,43 @@
 import SwiftUI
+import ComposableArchitecture
 import DesignSystem
 
-/// Playing 상태의 3-버튼 전송 컨트롤 (이전 · 재생/일시정지 · 다음).
 struct TransportControls: View {
-    let isPlaying: Bool
-    let onPrev: () -> Void
-    let onToggle: () -> Void
-    let onNext: () -> Void
+    let store: StoreOf<TimelineFeature>
 
     var body: some View {
-        HStack(spacing: 20) {
-            sideButton(icon: .skipBack, label: "이전 클립", action: onPrev)
-            centerButton
-            sideButton(icon: .skipForward, label: "다음 클립", action: onNext)
-        }
-    }
-
-    private func sideButton(icon: ChalNaIconKind, label: LocalizedStringKey, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            ZStack {
-                Circle().fill(ChalNaColor.surface).frame(width: 40, height: 40)
-                Circle().strokeBorder(ChalNaColor.border, lineWidth: 1).frame(width: 40, height: 40)
-                ChalNaIcon(icon, size: 14, weight: .semibold)
-                    .foregroundColor(ChalNaColor.textPrimary)
+        VStack(spacing: 2) {
+            ChalNaProgressBar(progress: store.playheadSeconds / max(store.totalDuration, 0.001), height: 2)
+            HStack(spacing: 0) {
+                Text(verbatim: store.playheadLabel)
+                    .accessibilityIdentifier("timeline.playhead")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Button { store.send(.previousTapped) } label: {
+                    ChalNaIcon(.chevronLeft, size: 14).frame(width: 44, height: 44)
+                }
+                .disabled(store.currentIndex == 0)
+                .accessibilityLabel("이전 클립")
+                Button { store.send(.togglePlay) } label: {
+                    ChalNaIcon(store.isPlaying ? .pause : .play, size: 13)
+                        .foregroundStyle(ChalNaColor.onAccent)
+                        .frame(width: 34, height: 34)
+                        .background(ChalNaColor.textPrimary, in: Circle())
+                        .frame(width: 48, height: 44)
+                }
+                .accessibilityLabel(store.isPlaying ? LocalizedStringKey("일시정지") : "재생")
+                .disabled(store.clips.isEmpty)
+                Button { store.send(.nextTapped) } label: {
+                    ChalNaIcon(.chevronRight, size: 14).frame(width: 44, height: 44)
+                }
+                .disabled(store.currentIndex + 1 >= store.clips.count)
+                .accessibilityLabel("다음 클립")
+                Text(verbatim: store.totalClockLabel)
+                    .foregroundStyle(ChalNaColor.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
             }
+            .font(ChalNaTypography.label)
+            .monospacedDigit()
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
-        .chalNaHitTarget()
-        .accessibilityLabel(label)
-    }
-
-    private var centerButton: some View {
-        Button(action: onToggle) {
-            ZStack {
-                Circle().fill(ChalNaColor.accentFill).frame(width: 52, height: 52)
-                ChalNaIcon(isPlaying ? .pause : .play, size: 18, weight: .semibold)
-                    .foregroundColor(ChalNaColor.onAccent)
-            }
-        }
-        .buttonStyle(.plain)
-        .chalNaHitTarget(minSize: 52)
-        .accessibilityLabel(isPlaying ? LocalizedStringKey("일시정지") : LocalizedStringKey("재생"))
-        .accessibilityHint("현재 클립 재생 상태를 전환합니다.")
     }
 }

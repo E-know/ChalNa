@@ -1,2 +1,2 @@
-"NSPhotoLibraryUsageDescription" = "Live Photo内の動画を読み込んでVlogにつなぐため、写真ライブラリへのアクセスが必要です。";
-"NSPhotoLibraryAddUsageDescription" = "完成したVlogを写真ライブラリに保存するために権限が必要です。";
+"NSPhotoLibraryUsageDescription" = "フィルムに使うLive Photosと動画を写真ライブラリから読み込みます。";
+"NSPhotoLibraryAddUsageDescription" = "完成したフィルムを写真アプリに保存します。";

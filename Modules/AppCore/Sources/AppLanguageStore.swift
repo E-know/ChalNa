@@ -5,8 +5,8 @@ import Observation
 /// 스위즐(`Bundle.setLanguage`)을 갱신한다. RootView 가 환경으로 주입.
 @Observable
 @MainActor
-public final class AppLanguageStore {
-    public static let storageKey = "appLanguage"
+public final class AppLanguageStore: AppLanguageWriting {
+    public nonisolated static let storageKey = "appLanguage"
 
     public private(set) var language: AppLanguage
 
@@ -38,10 +38,4 @@ public final class AppLanguageStore {
         return resolved == "ko"
     }
 
-    /// 첫 페인트 전 ChalNaApp.init 에서 호출(인스턴스 없이 스위즐만 설치).
-    public nonisolated static func applyStoredLanguageAtLaunch() {
-        let raw = UserDefaults.standard.string(forKey: storageKey)
-        let lang = raw.flatMap(AppLanguage.init(rawValue:)) ?? .system
-        Bundle.setLanguage(lang.bundleCode)
-    }
 }

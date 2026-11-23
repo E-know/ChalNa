@@ -9,11 +9,7 @@ import UIKit
 #endif
 
 /// 익스포트 진행 중 외부로 흘려보내는 이벤트.
-public enum ExportEvent: Sendable {
-    case progress(Double)      // 0.0 → 1.0
-    case completed(URL)        // 출력 파일 URL
-    case failed(String)        // 사용자에게 보여줄 메시지
-}
+public typealias ExportEvent = FilmExportEvent
 
 public enum ExportError: LocalizedError {
     case noVideoClips
@@ -35,16 +31,7 @@ public enum ExportError: LocalizedError {
     }
 }
 
-public protocol CompositionServicing: Sendable {
-    /// 클립 배열·회전·클립별 변환·클립별 사용자 라벨을 받아 mp4를 만든다.
-    /// 자동 시각/날짜 라벨은 설정 대상이 아니라 항상 붙는다 — 기하·불투명도는 `LabelLayout` 고정값.
-    func export(
-        clips: [Clip],
-        rotations: [Clip.ID: ClipRotation],
-        transforms: [Clip.ID: ClipTransform],
-        clipLabels: [Clip.ID: ClipLabel]
-    ) -> AsyncStream<ExportEvent>
-}
+public typealias CompositionServicing = FilmComposing
 
 public extension CompositionServicing {
     /// 사용자 라벨 없는 호출 → 빈 라벨(현행 동작).

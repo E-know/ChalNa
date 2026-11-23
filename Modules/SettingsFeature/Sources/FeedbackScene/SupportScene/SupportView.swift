@@ -13,25 +13,22 @@ public struct SupportView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            header
-                .zIndex(1)
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    categoryPicker
-                    editor
-                    Text("모든 제보는 익명으로 전송돼요.")
-                        .font(ChalNaTypography.caption)
-                        .foregroundColor(ChalNaColor.textSecondary)
-                    sendButton
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 64)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                categoryPicker
+                editor
+                Text("모든 제보는 익명으로 전송돼요.")
+                    .font(ChalNaTypography.caption)
+                    .foregroundColor(ChalNaColor.textSecondary)
+                sendButton
             }
+            .padding(.horizontal, 24)
+            .padding(.top, 16)
+            .padding(.bottom, 64)
         }
         .chalNaScreen()
+        .navigationTitle("문의·신고")
+        .navigationBarTitleDisplayMode(.inline)
         .alert(
             "알림",
             isPresented: Binding(
@@ -63,16 +60,6 @@ public struct SupportView: View {
         }
     }
 
-    // MARK: - Header
-
-    private var header: some View {
-        ChalNaNavBar(
-            title: "문의·신고",
-            leading: .back { store.send(.backTapped) },
-            showsDivider: true
-        )
-    }
-
     // MARK: - Category
 
     private var categoryPicker: some View {
@@ -99,7 +86,7 @@ public struct SupportView: View {
             .padding(.vertical, 10)
             .background(
                 Capsule(style: .continuous)
-                    .fill(isSelected ? ChalNaColor.accentFill.opacity(0.22) : ChalNaColor.surface)
+                    .fill(isSelected ? ChalNaColor.selection : ChalNaColor.surface)
             )
             .overlay(
                 Capsule(style: .continuous)

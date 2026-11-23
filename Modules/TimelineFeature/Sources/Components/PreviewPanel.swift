@@ -28,20 +28,15 @@ struct PreviewPanel: View {
     }
 
     var body: some View {
-        VStack(spacing: 8) {
-            ChalNaCanvas { box in
-                clipContent(box: box)
-            } overlay: { box in
-                ZStack {
-                    autoLabelsOverlay(box: box)
-                    labelOverlay(box: box)
-                    clipIndexBadge
-                }
+        ChalNaCanvas(cornerRadius: ChalNaRadius.xxs) { box in
+            clipContent(box: box)
+        } overlay: { box in
+            ZStack {
+                autoLabelsOverlay(box: box)
+                labelOverlay(box: box)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            scrubBar
         }
+        .accessibilityIdentifier("timeline.preview")
     }
 
     // MARK: - Clip content
@@ -97,37 +92,4 @@ struct PreviewPanel: View {
         }
     }
 
-    /// 영상 위에는 정보용 인덱스만 둔다. 재생 제어는 아래 TransportControls 담당.
-    private var clipIndexBadge: some View {
-        ChalNaTag("\(store.currentIndex + 1) / \(store.clips.count)", variant: .neutral)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-            .padding(10)
-            .allowsHitTesting(false)
-    }
-
-    // MARK: - Scrub bar
-
-    private var scrubBar: some View {
-        HStack(spacing: 8) {
-            Text(verbatim: store.isPlaying ? store.playheadLabel : "00:00")
-                .font(ChalNaTypography.caption)
-                .fontWeight(.semibold)
-                .monospacedDigit()
-                .foregroundColor(ChalNaColor.textPrimary)
-
-            ChalNaProgressBar(progress: scrubProgress, height: 3)
-
-            Text(verbatim: store.totalClockLabel)
-                .font(ChalNaTypography.caption)
-                .fontWeight(.semibold)
-                .monospacedDigit()
-                .foregroundColor(ChalNaColor.textSecondary)
-        }
-        .frame(height: 20)
-    }
-
-    private var scrubProgress: Double {
-        guard store.isPlaying else { return 0 }
-        return min(1.0, max(0.0, store.playheadSeconds / max(store.totalDuration, 0.001)))
-    }
 }

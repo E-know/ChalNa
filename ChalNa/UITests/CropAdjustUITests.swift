@@ -43,8 +43,8 @@ final class CropAdjustUITests: XCTestCase {
         app.launch()
 
         // 홈 → 새 Vlog
-        let newVlog = app.buttons["새 Vlog 만들기"].firstMatch
-        XCTAssertTrue(newVlog.waitForExistence(timeout: 10), "홈의 새 Vlog 버튼")
+        let newVlog = app.buttons["home.newFilm"].firstMatch
+        XCTAssertTrue(newVlog.waitForExistence(timeout: 10), "홈의 새 필름 버튼")
         newVlog.tap()
 
         // MediaPicker(dev fixtures) → 클립 2개 선택
@@ -55,18 +55,18 @@ final class CropAdjustUITests: XCTestCase {
         XCTAssertTrue(secondAsset.waitForExistence(timeout: 5), "dev fixture: 카페 테이블")
         secondAsset.tap()
 
-        let confirm = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Timeline으로'")).firstMatch
-        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "Timeline으로 버튼")
+        let confirm = app.buttons["picker.confirm"].firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "편집으로 이동하는 버튼")
         confirm.tap()
 
         // 타임라인 편집 화면
-        let adjustButton = app.buttons["조정"].firstMatch
+        let adjustButton = app.buttons["timeline.adjust"].firstMatch
         XCTAssertTrue(adjustButton.waitForExistence(timeout: 15), "타임라인 하단 조정 버튼")
         checkpoint(app, name: "10-timeline", holdSeconds: 3)
 
         // 조정 화면 진입
         adjustButton.tap()
-        let hint = app.staticTexts.matching(NSPredicate(format: "label CONTAINS '더블탭 = 초기화'")).firstMatch
+        let hint = app.staticTexts.matching(NSPredicate(format: "label CONTAINS '두 손가락으로 크기'")).firstMatch
         XCTAssertTrue(hint.waitForExistence(timeout: 10), "조정 화면 힌트 텍스트")
         checkpoint(app, name: "20-adjust-initial", holdSeconds: 3)
 
@@ -77,6 +77,7 @@ final class CropAdjustUITests: XCTestCase {
         let farRight = app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.45))
         canvasCenter.press(forDuration: 0.2, thenDragTo: farRight,
                            withVelocity: 300, thenHoldForDuration: 1.0)
+        XCTAssertTrue(hint.exists, "캔버스 중앙에서 오른쪽으로 드래그하면 조정 화면에 머물러야 한다")
         checkpoint(app, name: "30-after-drag-right", holdSeconds: 3)
 
         // 2) 핀치 인(손가락을 모으는 축소) 제스처를 실행한다.
@@ -90,7 +91,7 @@ final class CropAdjustUITests: XCTestCase {
         checkpoint(app, name: "50-after-drag-left", holdSeconds: 3)
 
         // 4) 회전 버튼을 탭한다.
-        let rotateButton = app.buttons["회전"].firstMatch
+        let rotateButton = app.buttons["90° 회전"].firstMatch
         XCTAssertTrue(rotateButton.waitForExistence(timeout: 5), "회전 버튼")
         rotateButton.tap()
         checkpoint(app, name: "55-after-rotate", holdSeconds: 3)
@@ -100,6 +101,16 @@ final class CropAdjustUITests: XCTestCase {
         // 5) 더블탭 = 센터 크롭 리셋
         canvasCenter.doubleTap()
         checkpoint(app, name: "60-double-tap-reset", holdSeconds: 3)
+        let apply = app.buttons["timeline.adjust.apply"]
+        XCTAssertTrue(apply.isHittable)
+        apply.tap()
+        XCTAssertTrue(adjustButton.waitForExistence(timeout: 5), "조정 적용 후 타임라인 복귀")
+
+        adjustButton.tap()
+        XCTAssertTrue(hint.waitForExistence(timeout: 5))
+        let leadingEdge = app.coordinate(withNormalizedOffset: CGVector(dx: 0.003, dy: 0.45))
+        leadingEdge.press(forDuration: 0.1, thenDragTo: farRight)
+        XCTAssertTrue(adjustButton.waitForExistence(timeout: 5), "화면 가장자리에서는 시스템 뒤로가기로 복귀한다")
     }
 
     /// XCTAttachment 스냅샷 + 호스트 폴링용 대기.

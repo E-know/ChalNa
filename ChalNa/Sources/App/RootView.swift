@@ -9,31 +9,28 @@ import AppCore
 import DesignSystem
 import SettingsFeature
 
-/// 앱 루트. TCA AppFeature 의 StackState 가 navigation 의 단일 출처.
-/// push 는 자식 delegate → AppFeature, pop 은 자식 리듀서의 dismiss 의존성이 처리한다.
+/// 앱 루트. TCA AppFeature가 편집 스택과 설정 화면 표시를 관리한다.
 public struct RootView: View {
     @State private var store = Store(initialState: AppFeature.State()) {
         AppFeature()
     }
     /// Reducer(@Dependency)와 View(environment)가 같은 인스턴스를 공유한다.
     @Dependency(\.editSession) private var session
-    @State private var languageStore = AppLanguageStore()
+    @Environment(AppLanguageStore.self) private var languageStore
 
     public init() {}
 
     public var body: some View {
         NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
             HomeView(store: store.scope(state: \.home, action: \.home))
-                .toolbar(.hidden, for: .navigationBar)
-                .chalNaSwipeBack()
         } destination: { childStore in
             destinationView(for: childStore)
-                .toolbar(.hidden, for: .navigationBar)
-                .navigationBarBackButtonHidden(true)
-                .chalNaSwipeBack()
+        }
+        .fullScreenCover(item: $store.scope(\.settings, action: \.settings)) { settingsStore in
+            SettingsView(store: settingsStore)
+                .dynamicTypeSize(...DynamicTypeSize.accessibility1)
         }
         .environment(session)
-        .environment(languageStore)
         .environment(\.locale, languageStore.locale)
         .dynamicTypeSize(...DynamicTypeSize.accessibility1)
     }
@@ -45,14 +42,11 @@ public struct RootView: View {
         case let .timeline(s):    TimelineView(store: s)
         case let .export(s):      ExportView(store: s)
         case let .filmDetail(s):  FilmDetailView(store: s)
-        case let .settings(s):      SettingsView(store: s)
-        case let .support(s):       SupportView(store: s)
         case let .clipAdjust(s):    ClipAdjustView(store: s)
-        case let .language(s):      LanguageView(store: s)
         }
     }
 }
 
 #Preview {
-    RootView()
+    RootView().environment(AppLanguageStore())
 }

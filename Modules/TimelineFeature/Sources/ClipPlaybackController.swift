@@ -1,4 +1,5 @@
 import Foundation
+import AppCore
 import Models
 import AVFoundation
 import Observation
@@ -57,7 +58,7 @@ public final class ClipPlaybackController {
 
     public func play() {
         if hasVideo {
-            player.play()
+            player.playWithFilmAudio()
         } else {
             startStaticTask(duration: currentClipDuration)
         }
