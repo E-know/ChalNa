@@ -89,7 +89,7 @@ public struct MediaPickerView: View {
         } message: {
             Text("Live Photo를 영상으로 사용하려면 사진 보관함 접근 권한이 필요해요.")
         }
-        .sheet(isPresented: $store.isSystemPhotoPickerPresented.sending(\.systemPhotoPickerPresentedChanged)) {
+        .fullScreenCover(isPresented: $store.isSystemPhotoPickerPresented.sending(\.systemPhotoPickerPresentedChanged)) {
             SystemPhotoPicker { results in store.send(.systemPickerFinished(results)) }
                 .ignoresSafeArea()
                 .dynamicTypeSize(...DynamicTypeSize.accessibility1)
