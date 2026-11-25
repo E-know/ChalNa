@@ -20,8 +20,12 @@ struct ClipTrimView: View {
     @State private var ready = false
     @State private var failed = false
     @State private var playing = false
+    @State private var playhead: TimeInterval
+    @State private var resumeAfterScrub: Bool?
+    @State private var timeObserver: Any?
     @State private var saving = false
-    @State private var playTask: Task<Void, Never>?
+    @State private var seekTask: Task<Void, Never>?
+    @State private var requestedSeek: CMTime?
 
     init(clip: Clip, onCommit: @escaping (ClosedRange<TimeInterval>, Data?) -> Void, onCancel: @escaping () -> Void) {
         self.clip = clip
@@ -29,6 +33,7 @@ struct ClipTrimView: View {
         self.onCancel = onCancel
         fallbackThumbnail = clip.thumbnailData.flatMap { UIImage(data: $0)?.cgImage }
         _draft = State(initialValue: clip)
+        _playhead = State(initialValue: clip.trimRange.lowerBound)
     }
 
     var body: some View {
@@ -49,6 +54,8 @@ struct ClipTrimView: View {
                     if status == .failed { stop(); failed = true }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime, object: item)) { _ in
+                    guard playing, seekTask == nil else { return }
+                    playhead = draft.trimRange.upperBound
                     playing = false
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemFailedToPlayToEndTime, object: item)) { _ in
@@ -86,6 +93,13 @@ struct ClipTrimView: View {
         .onDisappear {
             saving = false
             stop()
+            seekTask?.cancel()
+            seekTask = nil
+            requestedSeek = nil
+            if let timeObserver {
+                player.removeTimeObserver(timeObserver)
+                self.timeObserver = nil
+            }
             player.currentItem?.cancelPendingSeeks()
             player.replaceCurrentItem(with: nil)
         }
@@ -106,7 +120,7 @@ struct ClipTrimView: View {
     }
 
     private var controls: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 0) {
             HStack(spacing: 12) {
                 Button { togglePlayback() } label: {
                     ChalNaIcon(playing ? .pause : .play, size: 16, weight: .semibold)
@@ -122,14 +136,14 @@ struct ClipTrimView: View {
                 Text(verbatim: timelineClock(draft.duration)).font(ChalNaTypography.title).monospacedDigit()
                     .accessibilityIdentifier("trim.duration")
             }
-            TrimFilmstrip(range: draft.trimRange, duration: draft.sourceDuration, thumbnails: thumbnails, fallbackThumbnail: fallbackThumbnail) { edge, time in
+            TrimFilmstrip(range: draft.trimRange, duration: draft.sourceDuration, playhead: playhead,
+                          thumbnails: thumbnails, fallbackThumbnail: fallbackThumbnail, onScrub: scrub) { edge, time in
                 switch edge {
                 case .start: draft.setTrimStart(time)
                 case .end: draft.setTrimEnd(time)
                 }
                 stop()
-                item?.forwardPlaybackEndTime = .invalid
-                showBoundary(edge)
+                seekPreview(to: edge == .start ? draft.trimRange.lowerBound : draft.trimRange.upperBound)
             }
         }
         .padding(.bottom, 8)
@@ -150,7 +164,12 @@ struct ClipTrimView: View {
             let newItem = AVPlayerItem(asset: asset)
             item = newItem
             player.replaceCurrentItem(with: newItem)
-            showBoundary(.start)
+            seekPreview(to: draft.trimRange.lowerBound)
+            timeObserver = player.addPeriodicTimeObserver(forInterval: cmTime(1.0 / 30), queue: .main) { _ in
+                MainActor.assumeIsolated {
+                    if playing { updatePlaybackPosition() }
+                }
+            }
             let generator = AVAssetImageGenerator(asset: asset)
             generator.appliesPreferredTrackTransform = true
             generator.maximumSize = CGSize(width: 144, height: 144)
@@ -171,29 +190,77 @@ struct ClipTrimView: View {
     }
 
     private func togglePlayback() {
-        guard !playing else { stop(); return }
-        guard let item else { return }
-        item.forwardPlaybackEndTime = cmTime(draft.trimRange.upperBound)
-        playing = true
-        playTask = Task { @MainActor in
-            let positioned = await player.seek(to: cmTime(draft.trimRange.lowerBound), toleranceBefore: .zero, toleranceAfter: .zero)
-            guard !Task.isCancelled else { return }
-            if positioned { player.playWithFilmAudio() } else { playing = false }
+        if playing {
+            updatePlaybackPosition()
+            stop()
+        } else {
+            play(from: playhead >= draft.trimRange.upperBound ? draft.trimRange.lowerBound : playhead)
         }
     }
 
+    private func play(from time: TimeInterval) {
+        guard let item else { return }
+        item.forwardPlaybackEndTime = cmTime(draft.trimRange.upperBound)
+        playhead = time
+        playing = true
+        requestSeek(to: cmTime(time))
+    }
+
+    private func updatePlaybackPosition() {
+        let time = player.currentTime()
+        guard player.rate > 0, time.isNumeric else { return }
+        playhead = min(max(time.seconds, draft.trimRange.lowerBound), draft.trimRange.upperBound)
+    }
+
     private func stop() {
-        playTask?.cancel()
-        playTask = nil
         player.pause()
         playing = false
     }
 
-    private func showBoundary(_ edge: TrimFilmstrip.Edge) {
+    private func scrub(to time: TimeInterval, phase: TrimFilmstrip.ScrubPhase) {
+        if phase == .cancelled {
+            resumeAfterScrub = nil
+            return
+        }
+        if resumeAfterScrub == nil {
+            resumeAfterScrub = playing
+            stop()
+        }
+        seekPreview(to: time)
+        if phase == .ended {
+            let resume = resumeAfterScrub == true && playhead < draft.trimRange.upperBound
+            resumeAfterScrub = nil
+            if resume { play(from: playhead) }
+        }
+    }
+
+    private func seekPreview(to time: TimeInterval) {
         let range = draft.trimRange
-        // The upper bound is exclusive. Seek just inside it so the preview shows the last kept frame.
-        let time = edge == .start ? range.lowerBound : max(range.lowerBound, range.upperBound - 1.0 / 600)
-        player.seek(to: cmTime(time), toleranceBefore: .zero, toleranceAfter: .zero)
+        playhead = min(max(time, range.lowerBound), range.upperBound)
+        item?.forwardPlaybackEndTime = .invalid
+        // The end marker represents the exclusive boundary. Show the last kept frame there.
+        let frameTime = min(playhead, max(range.lowerBound, range.upperBound - 1.0 / 600))
+        requestSeek(to: cmTime(frameTime))
+    }
+
+    private func requestSeek(to time: CMTime) {
+        // Finish decoding the current frame before seeking to the newest drag position.
+        requestedSeek = time
+        guard seekTask == nil else { return }
+        seekTask = Task { @MainActor in
+            guard !Task.isCancelled else { return }
+            while let target = requestedSeek {
+                requestedSeek = nil
+                let reached = await player.seek(to: target, toleranceBefore: .zero, toleranceAfter: .zero)
+                guard !Task.isCancelled else { return }
+                if let newer = requestedSeek, newer != target { continue }
+                requestedSeek = nil
+                if playing {
+                    if reached { player.playWithFilmAudio() } else { playing = false }
+                }
+            }
+            seekTask = nil
+        }
     }
 
     private func commit() async {

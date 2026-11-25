@@ -2465,6 +2465,23 @@
         }
       }
     },
+    "재생 위치" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Playback position"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再生位置"
+          }
+        }
+      }
+    },
     "재생 중" : {
       "extractionState" : "stale",
       "localizations" : {

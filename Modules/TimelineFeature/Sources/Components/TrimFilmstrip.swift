@@ -3,16 +3,21 @@ import SwiftUI
 
 struct TrimFilmstrip: View {
     enum Edge { case start, end }
+    enum ScrubPhase { case moving, ended, cancelled }
+    private enum DragTarget: Equatable { case boundary(Edge), playhead }
     static let frameCount = 8
 
     let range: ClosedRange<TimeInterval>
     let duration: TimeInterval
+    let playhead: TimeInterval
     let thumbnails: [CGImage?]
     let fallbackThumbnail: CGImage?
+    let onScrub: (TimeInterval, ScrubPhase) -> Void
     let onChange: (Edge, TimeInterval) -> Void
 
-    @State private var dragging: Edge?
+    @State private var dragging: DragTarget?
     @State private var originalTime: TimeInterval = 0
+    @GestureState private var touching = false
 
     var body: some View {
         VStack(spacing: 10) {
@@ -22,6 +27,7 @@ struct TrimFilmstrip: View {
                 // Offset the two grips to either side of their time positions, keeping them visible even for a very short selection.
                 let start = 8 + travel * range.lowerBound / duration
                 let end = 24 + travel * range.upperBound / duration
+                let marker = 16 + travel * playhead / duration
                 let startTarget = min(max(start, 22), width - 66)
                 let endTarget = min(max(end, startTarget + 44), width - 22)
                 ZStack(alignment: .leading) {
@@ -53,28 +59,62 @@ struct TrimFilmstrip: View {
                     accessibleHandle(.start, x: startTarget)
                     accessibleHandle(.end, x: endTarget)
                 }
+                .frame(height: 48)
                 .clipShape(RoundedRectangle(cornerRadius: ChalNaRadius.xs))
-                .contentShape(Rectangle())
-                .gesture(drag(start: start, end: end, startTarget: startTarget, endTarget: endTarget, travel: travel))
+                .overlay(alignment: .topLeading) {
+                    Image(decorative: "trim_playhead").renderingMode(.original)
+                        .frame(width: 44, height: 64)
+                        .offset(x: marker - 22, y: -16)
+                        .allowsHitTesting(false).accessibilityHidden(true)
+                }
+                .overlay(alignment: .topLeading) {
+                    Color.clear.frame(width: 44, height: 44)
+                        .accessibilityElement()
+                        .accessibilityLabel(Text("재생 위치"))
+                        .accessibilityValue(Text(verbatim: timelineClock(playhead)))
+                        .accessibilityAdjustableAction { direction in
+                            switch direction {
+                            case .increment: onScrub(playhead + 0.1, .ended)
+                            case .decrement: onScrub(playhead - 0.1, .ended)
+                            @unknown default: break
+                            }
+                        }
+                        .accessibilityIdentifier("trim.playhead")
+                        .offset(x: min(max(marker - 22, 0), width - 44), y: -16)
+                }
                 .overlay(alignment: .topLeading) {
                     if let dragging {
-                        Text(verbatim: timelineClock(dragging == .start ? range.lowerBound : range.upperBound))
+                        let (time, x) = switch dragging {
+                        case .playhead: (playhead, marker)
+                        case .boundary(.start): (range.lowerBound, start)
+                        case .boundary(.end): (range.upperBound, end)
+                        }
+                        Text(verbatim: timelineClock(time))
                             .font(ChalNaTypography.caption).monospacedDigit()
                             .foregroundStyle(ChalNaColor.onAccent)
                             .padding(.horizontal, 8).padding(.vertical, 4)
                             .background(ChalNaColor.accent, in: RoundedRectangle(cornerRadius: ChalNaRadius.xs))
-                            .position(x: min(max(dragging == .start ? start : end, 34), width - 34), y: -16)
+                            .fixedSize()
+                            .position(x: min(max(x, 34), width - 34), y: -28)
                             .allowsHitTesting(false).accessibilityHidden(true)
                     }
                 }
+                .padding(.top, 16)
+                .contentShape(Rectangle())
+                .gesture(drag(start: start, end: end, marker: marker, startTarget: startTarget, endTarget: endTarget, travel: travel))
+                .onChange(of: touching) { _, active in
+                    guard !active, let dragging else { return }
+                    if dragging == .playhead { onScrub(playhead, .cancelled) }
+                    self.dragging = nil
+                }
             }
-            .frame(height: 48)
+            .frame(height: 64)
             HStack {
                 HStack(spacing: 5) { Text("시작"); Text(verbatim: timelineClock(range.lowerBound)) }
-                    .foregroundStyle(dragging == .start ? ChalNaColor.accent : ChalNaColor.textSecondary)
+                    .foregroundStyle(dragging == .boundary(.start) ? ChalNaColor.accent : ChalNaColor.textSecondary)
                 Spacer()
                 HStack(spacing: 5) { Text("끝"); Text(verbatim: timelineClock(range.upperBound)) }
-                    .foregroundStyle(dragging == .end ? ChalNaColor.accent : ChalNaColor.textSecondary)
+                    .foregroundStyle(dragging == .boundary(.end) ? ChalNaColor.accent : ChalNaColor.textSecondary)
             }
             .font(ChalNaTypography.label).monospacedDigit()
         }
@@ -109,26 +149,44 @@ struct TrimFilmstrip: View {
             .position(x: x, y: 24)
     }
 
-    private func drag(start: CGFloat, end: CGFloat, startTarget: CGFloat, endTarget: CGFloat, travel: CGFloat) -> some Gesture {
+    private func drag(start: CGFloat, end: CGFloat, marker: CGFloat, startTarget: CGFloat, endTarget: CGFloat, travel: CGFloat) -> some Gesture {
         DragGesture(minimumDistance: 0)
+            .updating($touching) { _, touching, _ in touching = true }
             .onChanged { value in
                 if dragging == nil {
-                    let left = abs(value.startLocation.x - start)
-                    let right = abs(value.startLocation.x - end)
-                    if min(left, right) <= 8 {
-                        dragging = left <= right ? .start : .end
+                    let point = value.startLocation
+                    let nearMarker = abs(point.x - marker) <= 22
+                    let left = abs(point.x - start)
+                    let right = abs(point.x - end)
+                    let leftTarget = abs(point.x - startTarget)
+                    let rightTarget = abs(point.x - endTarget)
+                    // The cap remains draggable above either grip. The middle of each grip always edits its boundary.
+                    if nearMarker && point.y < 32 {
+                        dragging = .playhead
+                    } else if point.y >= 16 && min(left, right) <= 8 {
+                        dragging = .boundary(left <= right ? .start : .end)
+                    } else if point.y >= 16 && min(leftTarget, rightTarget) <= 22 {
+                        dragging = .boundary(leftTarget <= rightTarget ? .start : .end)
                     } else {
-                        let leftTarget = abs(value.startLocation.x - startTarget)
-                        let rightTarget = abs(value.startLocation.x - endTarget)
-                        guard min(leftTarget, rightTarget) <= 22 else { return }
-                        dragging = leftTarget <= rightTarget ? .start : .end
+                        dragging = .playhead
                     }
-                    originalTime = dragging == .start ? range.lowerBound : range.upperBound
+                    switch dragging {
+                    case .boundary(.start): originalTime = range.lowerBound
+                    case .boundary(.end): originalTime = range.upperBound
+                    case .playhead: originalTime = nearMarker ? playhead : (point.x - 16) / travel * duration
+                    case nil: return
+                    }
                 }
-                if let dragging {
-                    onChange(dragging, originalTime + value.translation.width / travel * duration)
+                let time = originalTime + value.translation.width / travel * duration
+                switch dragging {
+                case let .boundary(edge): onChange(edge, time)
+                case .playhead: onScrub(time, .moving)
+                case nil: break
                 }
             }
-            .onEnded { _ in dragging = nil }
+            .onEnded { value in
+                if dragging == .playhead { onScrub(originalTime + value.translation.width / travel * duration, .ended) }
+                dragging = nil
+            }
     }
 }

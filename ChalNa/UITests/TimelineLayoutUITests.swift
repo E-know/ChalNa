@@ -144,10 +144,6 @@ final class TimelineLayoutUITests: XCTestCase {
         let initialStart = start.value as? String
         let initialEnd = end.value as? String
         let distance = (end.frame.midX - start.frame.midX) * 0.24
-        func drag(_ handle: XCUIElement, by dx: CGFloat) {
-            let point = handle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-            point.press(forDuration: 0.15, thenDragTo: point.withOffset(CGVector(dx: dx, dy: 0)))
-        }
         drag(start, by: distance)
         drag(end, by: -distance)
         let changedStart = start.value as? String
@@ -185,7 +181,69 @@ final class TimelineLayoutUITests: XCTestCase {
         }
     }
 
-    private func openTimeline() -> XCUIApplication {
+    func testTrimPlayheadScrubsAndPlaysWithinSelection() throws {
+        let app = openTimeline(videoTitle: "노을 산책")
+        app.collectionViews.firstMatch.descendants(matching: .any)
+            .matching(identifier: "timeline.clip.1").firstMatch.tap()
+        app.buttons["timeline.trim"].tap()
+
+        let elements = app.descendants(matching: .any)
+        let head = elements.matching(identifier: "trim.playhead").firstMatch
+        let start = elements.matching(identifier: "trim.start").firstMatch
+        let end = elements.matching(identifier: "trim.end").firstMatch
+        let play = app.buttons["trim.play"]
+        XCTAssertTrue(head.waitForExistence(timeout: 10))
+        XCTAssertTrue(play.wait(for: \.isEnabled, toEqual: true, timeout: 10))
+        let paused = play.label
+        XCTAssertEqual(head.value as? String, start.value as? String)
+
+        let width = end.frame.midX - start.frame.midX
+        drag(start, by: width * 0.10)
+        let selectedStart = try XCTUnwrap(start.value as? String)
+        XCTAssertEqual(head.value as? String, selectedStart)
+        drag(end, by: -width * 0.10)
+        let selectedEnd = try XCTUnwrap(end.value as? String)
+        XCTAssertEqual(head.value as? String, selectedEnd)
+        let duration = app.staticTexts["trim.duration"]
+        let selectedDuration = duration.label
+
+        drag(head, by: -width * 0.40)
+        let scrubbed = try XCTUnwrap(head.value as? String)
+        XCTAssertGreaterThan(scrubbed, selectedStart)
+        XCTAssertLessThan(scrubbed, selectedEnd)
+        XCTAssertEqual(start.value as? String, selectedStart)
+        XCTAssertEqual(end.value as? String, selectedEnd)
+        XCTAssertEqual(play.label, paused)
+        play.tap()
+        var playingTime = try XCTUnwrap(head.value as? String)
+        XCTAssertGreaterThanOrEqual(playingTime, scrubbed)
+        let deadline = Date.now.addingTimeInterval(2)
+        while playingTime == scrubbed && Date.now < deadline {
+            Thread.sleep(forTimeInterval: 0.05)
+            playingTime = try XCTUnwrap(head.value as? String)
+        }
+        XCTAssertGreaterThan(playingTime, scrubbed)
+        XCTAssertLessThan(playingTime, selectedEnd)
+        let stopped = NSPredicate { _, _ in head.value as? String == selectedEnd && play.label == paused }
+        expectation(for: stopped, evaluatedWith: nil)
+        waitForExpectations(timeout: 5)
+
+        play.tap()
+        let restarted = try XCTUnwrap(head.value as? String)
+        XCTAssertGreaterThanOrEqual(restarted, selectedStart)
+        XCTAssertLessThan(restarted, scrubbed)
+        XCTAssertNotEqual(play.label, paused)
+        XCTAssertEqual(start.value as? String, selectedStart)
+        XCTAssertEqual(end.value as? String, selectedEnd)
+        XCTAssertEqual(duration.label, selectedDuration)
+    }
+
+    private func drag(_ handle: XCUIElement, by dx: CGFloat) {
+        let point = handle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        point.press(forDuration: 0.15, thenDragTo: point.withOffset(CGVector(dx: dx, dy: 0)))
+    }
+
+    private func openTimeline(videoTitle: String = "카페 테이블") -> XCUIApplication {
         let app = XCUIApplication()
         app.launchEnvironment["CHALNA_APP_MODE"] = "devMock"
         app.launchArguments += ["-AppleLanguages", "(ko)"]
@@ -199,8 +257,8 @@ final class TimelineLayoutUITests: XCTestCase {
         let firstAsset = app.buttons.matching(NSPredicate(format: "label CONTAINS '협재 바다'")).firstMatch
         XCTAssertTrue(firstAsset.waitForExistence(timeout: 10), "dev fixture: 협재 바다")
         firstAsset.tap()
-        let secondAsset = app.buttons.matching(NSPredicate(format: "label CONTAINS '카페 테이블'")).firstMatch
-        XCTAssertTrue(secondAsset.waitForExistence(timeout: 5), "dev fixture: 카페 테이블")
+        let secondAsset = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", videoTitle)).firstMatch
+        XCTAssertTrue(secondAsset.waitForExistence(timeout: 5), "dev fixture: \(videoTitle)")
         secondAsset.tap()
 
         let confirm = app.buttons["picker.confirm"].firstMatch
