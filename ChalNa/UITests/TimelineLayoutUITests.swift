@@ -135,7 +135,10 @@ final class TimelineLayoutUITests: XCTestCase {
                 XCTAssertLessThan(cancel.midY, done.frame.midY)
             } else {
                 XCTAssertLessThan(cancel.midX, screen.minX + screen.width * 0.2)
-                XCTAssertGreaterThan(done.frame.midX, screen.maxX - screen.width * 0.2)
+                XCTAssertGreaterThan(done.frame.midX, screen.midX)
+                XCTAssertGreaterThan(done.frame.midX - cancel.midX, screen.width * 0.6)
+                XCTAssertEqual(cancel.midY, done.frame.midY, accuracy: 4)
+                XCTAssertLessThan(cancel.midY, screen.minY + screen.height * 0.15)
             }
         }
         let initialStart = start.value as? String

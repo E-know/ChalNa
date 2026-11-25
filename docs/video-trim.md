@@ -33,4 +33,6 @@
 
 [타임라인 진입, 전체 선택, 구간 선택, 경계 드래그 시안](https://www.figma.com/design/3tHbSyWi4pNhvurAPoyJGm/?node-id=101-1984)
 
-[펼친 iPhone Duo의 하단 타임라인과 시스템 세로 탐색 막대](https://www.figma.com/design/3tHbSyWi4pNhvurAPoyJGm/?node-id=103-1627)
+[펼친 iPhone Duo 가로 화면의 하단 타임라인과 시스템 세로 탐색 막대](https://www.figma.com/design/3tHbSyWi4pNhvurAPoyJGm/?node-id=103-1627)
+
+[펼친 iPhone Duo 세로 화면의 하단 타임라인과 시스템 상단 탐색 막대](https://www.figma.com/design/3tHbSyWi4pNhvurAPoyJGm/?node-id=108-1624)
