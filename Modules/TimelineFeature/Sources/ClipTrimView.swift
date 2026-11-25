@@ -5,6 +5,8 @@ import Models
 import SwiftUI
 
 struct ClipTrimView: View {
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+
     let clip: Clip
     let onCommit: (ClosedRange<TimeInterval>, Data?) -> Void
     let onCancel: () -> Void
@@ -30,66 +32,55 @@ struct ClipTrimView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button {
-                    saving = false
+        Group {
+            if failed {
+                Text("동영상을 불러올 수 없어요.").multilineTextAlignment(.center)
+            } else if let item {
+                let layout = verticalSizeClass == .compact
+                    ? AnyLayout(HStackLayout(spacing: 24))
+                    : AnyLayout(VStackLayout(spacing: 16))
+                layout {
+                    preview
+                    controls
+                }
+                .padding(.vertical, 16)
+                .onReceive(item.publisher(for: \.status).receive(on: DispatchQueue.main)) { status in
+                    ready = status == .readyToPlay
+                    if status == .failed { stop(); failed = true }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime, object: item)) { _ in
+                    playing = false
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemFailedToPlayToEndTime, object: item)) { _ in
                     stop()
-                    onCancel()
-                } label: {
-                    Text("취소").font(ChalNaTypography.body)
-                        .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                    failed = true
                 }
-                    .accessibilityIdentifier("trim.cancel")
-                Spacer()
-                Text("동영상 자르기").font(ChalNaTypography.headline)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer()
-                Button { saving = true } label: {
-                    Text("완료").font(ChalNaTypography.headline)
-                        .foregroundStyle(ChalNaColor.accent)
-                        .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
-                }
-                    .disabled(!ready || failed || saving)
-                    .opacity(!ready || failed || saving ? 0.45 : 1)
-                    .accessibilityIdentifier("trim.done")
-            }
-            .buttonStyle(.plain)
-            Divider().overlay(ChalNaColor.border)
-            GeometryReader { proxy in
-                if failed {
-                    Text("동영상을 불러올 수 없어요.")
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let item {
-                    Group {
-                        if proxy.size.width > proxy.size.height {
-                            HStack(spacing: 24) { preview; controls }
-                        } else {
-                            VStack(spacing: 16) { preview; controls }
-                        }
-                    }
-                    .padding(.vertical, 16)
-                    .onReceive(item.publisher(for: \.status).receive(on: DispatchQueue.main)) { status in
-                        ready = status == .readyToPlay
-                        if status == .failed { stop(); failed = true }
-                    }
-                    .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime, object: item)) { _ in
-                        playing = false
-                    }
-                    .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemFailedToPlayToEndTime, object: item)) { _ in
-                        stop()
-                        failed = true
-                    }
-                } else {
-                    ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
+            } else {
+                ProgressView()
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.horizontal, 24)
         .foregroundStyle(ChalNaColor.textPrimary)
         .chalNaScreen()
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle("동영상 자르기")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("취소", systemImage: "xmark") {
+                    saving = false
+                    stop()
+                    onCancel()
+                }
+                .accessibilityIdentifier("trim.cancel")
+            }
+            ToolbarItem(placement: donePlacement) {
+                Button("완료", systemImage: "checkmark") { saving = true }
+                    .tint(ChalNaColor.accent)
+                    .disabled(!ready || failed || saving)
+                    .accessibilityIdentifier("trim.done")
+            }
+        }
         .task { await prepare() }
         .task(id: saving) { if saving { await commit() } }
         .onDisappear {
@@ -98,6 +89,11 @@ struct ClipTrimView: View {
             player.currentItem?.cancelPendingSeeks()
             player.replaceCurrentItem(with: nil)
         }
+    }
+
+    private var donePlacement: ToolbarItemPlacement {
+        if #available(iOS 27.0, *) { return .topBarPinnedTrailing }
+        return .confirmationAction
     }
 
     private var preview: some View {

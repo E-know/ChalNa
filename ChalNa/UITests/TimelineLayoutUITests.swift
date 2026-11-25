@@ -95,8 +95,12 @@ final class TimelineLayoutUITests: XCTestCase {
     }
 
     func testTrimVideoFromBothEndsAndCancelSubsequentChanges() {
-        XCUIDevice.shared.orientation = .portrait
         let app = openTimeline()
+        let window = app.windows.firstMatch
+        // 펼친 시뮬레이터의 안쪽 디스플레이 회전은 Device Hub가 제어한다.
+        let unfolded = min(window.frame.width, window.frame.height) >= 600
+        if !unfolded { XCUIDevice.shared.orientation = .portrait }
+        defer { if !unfolded { XCUIDevice.shared.orientation = .portrait } }
         let trim = app.buttons["timeline.trim"]
         XCTAssertFalse(trim.exists, "Live Photo에는 자르기를 표시하지 않는다")
         let video = app.collectionViews.firstMatch.descendants(matching: .any)
@@ -112,6 +116,28 @@ final class TimelineLayoutUITests: XCTestCase {
         XCTAssertTrue(start.waitForExistence(timeout: 10))
         let ready = NSPredicate(format: "enabled == true")
         XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: ready, object: done)], timeout: 10), .completed)
+        let screen = window.frame
+        for id in ["trim.cancel", "trim.done"] {
+            let inNavigation = app.navigationBars.buttons[id].firstMatch
+            let inToolbar = app.toolbars.buttons[id].firstMatch
+            XCTAssertTrue((inNavigation.exists && inNavigation.isHittable) || (inToolbar.exists && inToolbar.isHittable),
+                          "\(id)는 시스템 탐색 항목이어야 한다")
+        }
+        if unfolded {
+            XCTAssertLessThan(start.frame.minX, screen.minX + screen.width * 0.2)
+            XCTAssertGreaterThan(end.frame.maxX, screen.maxX - screen.width * 0.2)
+            XCTAssertGreaterThan(start.frame.midY, screen.minY + screen.height * 0.75)
+            XCTAssertEqual(start.frame.midY, end.frame.midY, accuracy: 2)
+            let cancel = app.buttons["trim.cancel"].frame
+            if screen.width > screen.height {
+                XCTAssertGreaterThan(abs(cancel.midX - screen.midX), screen.width * 0.3)
+                XCTAssertEqual(cancel.midX, done.frame.midX, accuracy: 25, "두 항목을 같은 시스템 세로 막대에 배치한다")
+                XCTAssertLessThan(cancel.midY, done.frame.midY)
+            } else {
+                XCTAssertLessThan(cancel.midX, screen.minX + screen.width * 0.2)
+                XCTAssertGreaterThan(done.frame.midX, screen.maxX - screen.width * 0.2)
+            }
+        }
         let initialStart = start.value as? String
         let initialEnd = end.value as? String
         let distance = (end.frame.midX - start.frame.midX) * 0.24
@@ -145,10 +171,11 @@ final class TimelineLayoutUITests: XCTestCase {
         XCTAssertEqual(start.value as? String, changedStart)
         XCTAssertEqual(end.value as? String, changedEnd)
 
-        XCUIDevice.shared.orientation = .landscapeLeft
-        defer { XCUIDevice.shared.orientation = .portrait }
-        let landscape = NSPredicate { _, _ in app.windows.firstMatch.frame.width > app.windows.firstMatch.frame.height }
-        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: landscape, object: nil)], timeout: 8), .completed)
+        if !unfolded {
+            XCUIDevice.shared.orientation = .landscapeLeft
+            let landscape = NSPredicate { _, _ in window.frame.width > window.frame.height }
+            XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: landscape, object: nil)], timeout: 8), .completed)
+        }
         for control in [start, end, done, app.buttons["trim.cancel"]] {
             XCTAssertTrue(control.isHittable)
             XCTAssertTrue(app.windows.firstMatch.frame.contains(control.frame))
