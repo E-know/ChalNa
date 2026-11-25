@@ -10,9 +10,13 @@ public struct Clip: Identifiable, Hashable, Sendable {
     public let id: UUID
     public let kind: ClipKind
     public let capturedAt: Date
-    public let duration: TimeInterval
+    public let sourceDuration: TimeInterval
+    public private(set) var trimRange: ClosedRange<TimeInterval>
+    public var duration: TimeInterval { trimRange.upperBound - trimRange.lowerBound }
+    public var canTrim: Bool { kind == .video && videoURL != nil && sourceDuration > 0 }
+    private var minimumTrimDuration: TimeInterval { min(0.5, sourceDuration) }
     public let preset: ThumbnailPreset
-    public let thumbnailData: Data?
+    public var thumbnailData: Data?
     /// 실제 영상 합성에 사용할 로컬 파일 URL. nil이면 합성에서 스킵.
     public let videoURL: URL?
     public let locationNote: String?
@@ -24,7 +28,7 @@ public struct Clip: Identifiable, Hashable, Sendable {
         id: UUID = UUID(),
         kind: ClipKind,
         capturedAt: Date,
-        duration: TimeInterval,
+        duration: TimeInterval?,
         preset: ThumbnailPreset,
         thumbnailData: Data? = nil,
         videoURL: URL? = nil,
@@ -34,7 +38,10 @@ public struct Clip: Identifiable, Hashable, Sendable {
         self.id = id
         self.kind = kind
         self.capturedAt = capturedAt
-        self.duration = duration
+        // 길이 미상 클립의 기존 타임라인 재생값은 실제 편집 가능한 원본 길이와 구분한다.
+        let seconds = duration ?? 0
+        self.sourceDuration = seconds.isFinite ? max(0, seconds) : 0
+        self.trimRange = 0...(duration == nil ? 3 : sourceDuration)
         self.preset = preset
         self.thumbnailData = thumbnailData
         self.videoURL = videoURL
@@ -44,6 +51,25 @@ public struct Clip: Identifiable, Hashable, Sendable {
 }
 
 public extension Clip {
+    mutating func setTrimRange(_ range: ClosedRange<TimeInterval>) {
+        guard canTrim, range.lowerBound.isFinite, range.upperBound.isFinite else { return }
+        let start = min(max(0, range.lowerBound), sourceDuration - minimumTrimDuration)
+        let end = min(sourceDuration, max(start + minimumTrimDuration, range.upperBound))
+        trimRange = start...end
+    }
+
+    mutating func setTrimStart(_ seconds: TimeInterval) {
+        guard canTrim, seconds.isFinite else { return }
+        let start = min(max(0, seconds), trimRange.upperBound - minimumTrimDuration)
+        trimRange = start...trimRange.upperBound
+    }
+
+    mutating func setTrimEnd(_ seconds: TimeInterval) {
+        guard canTrim, seconds.isFinite else { return }
+        let end = min(sourceDuration, max(trimRange.lowerBound + minimumTrimDuration, seconds))
+        trimRange = trimRange.lowerBound...end
+    }
+
     /// "3.0s" 형태.
     var durationSecondsLabel: String {
         String(format: String(localized: "%.1fs"), duration)

@@ -424,7 +424,7 @@ public struct MediaPickerFeature {
             return Clip(
                 kind: kind,
                 capturedAt: s.capturedAt ?? fallback.addingTimeInterval(TimeInterval(idx) * 60),
-                duration: s.duration ?? 3.0,
+                duration: s.duration,
                 preset: presetPool[idx % presetPool.count],
                 thumbnailData: s.thumbnail,
                 videoURL: s.videoURL,

@@ -27,6 +27,7 @@ public struct TimelineFeature {
         public var playbackState: TimelineState
         public var playheadSeconds: TimeInterval
         public var labelEditorClip: Clip?
+        public var trimEditorClip: Clip?
 
         @Presents public var deleteAlert: AlertState<Action.DeleteAlert>?
 
@@ -57,16 +58,11 @@ public struct TimelineFeature {
         }
 
         public var playheadLabel: String {
-            Self.clock(playheadSeconds)
+            timelineClock(playheadSeconds)
         }
 
         public var totalClockLabel: String {
-            Self.clock(totalDuration)
-        }
-
-        private static func clock(_ seconds: TimeInterval) -> String {
-            let tenths = Int((max(0, seconds) * 10).rounded(.toNearestOrAwayFromZero))
-            return String(format: "%02d:%02d.%d", tenths / 600, tenths / 10 % 60, tenths % 10)
+            timelineClock(totalDuration)
         }
 
         public var currentClip: Clip? {
@@ -97,7 +93,9 @@ public struct TimelineFeature {
         case nextTapped
         case previousTapped
         case clipMoved(id: Clip.ID, toIndex: Int)
-        case trimCurrent(deltaSeconds: TimeInterval)
+        case trimTapped
+        case trimDismissed
+        case trimCommitted(ClosedRange<TimeInterval>, thumbnail: Data?)
 
         // Delete flow
         case deleteCurrentRequested
@@ -191,21 +189,27 @@ public struct TimelineFeature {
                 session.clips = state.clips
                 return .none
 
-            case let .trimCurrent(delta):
-                guard state.clips.indices.contains(state.currentIndex) else { return .none }
-                let clip = state.clips[state.currentIndex]
-                let newDuration = max(0.5, clip.duration + delta)
-                state.clips[state.currentIndex] = Clip(
-                    id: clip.id,
-                    kind: clip.kind,
-                    capturedAt: clip.capturedAt,
-                    duration: newDuration,
-                    preset: clip.preset,
-                    thumbnailData: clip.thumbnailData,
-                    videoURL: clip.videoURL,
-                    locationNote: clip.locationNote,
-                    displaySize: clip.displaySize
-                )
+            case .trimTapped:
+                guard let clip = state.currentClip, clip.canTrim else { return .none }
+                state.playbackState = .idle
+                state.trimEditorClip = clip
+                return .none
+
+            case .trimDismissed:
+                state.trimEditorClip = nil
+                return .none
+
+            case let .trimCommitted(range, thumbnail):
+                guard let id = state.trimEditorClip?.id else { return .none }
+                state.trimEditorClip = nil
+                guard let index = state.clips.firstIndex(where: { $0.id == id }),
+                      state.clips[index].trimRange != range else { return .none }
+                let oldStart = state.clips[index].trimRange.lowerBound
+                state.clips[index].setTrimRange(range)
+                if oldStart != state.clips[index].trimRange.lowerBound {
+                    state.clips[index].thumbnailData = thumbnail
+                }
+                state.playheadSeconds = state.cumulativeStart(ofClipAt: state.currentIndex)
                 session.clips = state.clips
                 return .none
 
@@ -288,4 +292,9 @@ public struct TimelineFeature {
         }
         .ifLet(\.$deleteAlert, action: \.deleteAlert)
     }
+}
+
+func timelineClock(_ seconds: TimeInterval) -> String {
+    let tenths = Int((max(0, seconds) * 10).rounded(.toNearestOrAwayFromZero))
+    return String(format: "%02d:%02d.%d", tenths / 600, tenths / 10 % 60, tenths % 10)
 }

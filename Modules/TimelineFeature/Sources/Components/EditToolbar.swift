@@ -3,14 +3,20 @@ import DesignSystem
 
 struct EditToolbar: View {
     let adjustActive: Bool
+    let canTrim: Bool
+    let trimActive: Bool
     let labelActive: Bool
     let onAdjust: () -> Void
+    let onTrim: () -> Void
     let onLabel: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
         HStack(spacing: 8) {
             item(.crop, "조정", "timeline.adjust", active: adjustActive, action: onAdjust)
+            if canTrim {
+                item(.scissors, "자르기", "timeline.trim", active: trimActive, action: onTrim)
+            }
             item(.textLabel, "자막", "timeline.caption", active: labelActive, action: onLabel)
             item(.trash, "삭제", "timeline.delete", action: onDelete)
         }
