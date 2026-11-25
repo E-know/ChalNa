@@ -73,7 +73,7 @@ public struct TimelineView: View {
         .onChange(of: store.isPlaying) { _, playing in
             if playing { playback.play() } else { playback.pause() }
         }
-        .onChange(of: store.currentClip?.id) { _, _ in
+        .onChange(of: store.currentClip) { _, _ in
             playback.load(clip: store.currentClip)
             if store.isPlaying { playback.play() }
         }
@@ -84,6 +84,18 @@ public struct TimelineView: View {
             if store.isPlaying { store.send(.playbackInterrupted) }
         }
         .alert($store.scope(\.deleteAlert, action: \.deleteAlert))
+        .fullScreenCover(item: Binding(get: { store.trimEditorClip }, set: { clip in
+            if clip == nil { store.send(.trimDismissed) }
+        })) { clip in
+            NavigationStack {
+                ClipTrimView(
+                    clip: clip,
+                    onCommit: { store.send(.trimCommitted($0, thumbnail: $1)) },
+                    onCancel: { store.send(.trimDismissed) }
+                )
+            }
+            .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+        }
         .fullScreenCover(item: Binding(get: { store.labelEditorClip }, set: { clip in
             if clip == nil { store.send(.labelDismissed) }
         })) { clip in
@@ -126,8 +138,11 @@ public struct TimelineView: View {
             }
             EditToolbar(
                 adjustActive: store.currentClip.map { session.rotation(for: $0.id) != .r0 || session.transform(for: $0.id) != .fill } ?? false,
+                canTrim: store.currentClip?.canTrim == true,
+                trimActive: store.currentClip.map { $0.trimRange != 0...$0.sourceDuration } ?? false,
                 labelActive: store.currentClip.map { session.label(for: $0.id).isVisible } ?? false,
                 onAdjust: { store.send(.adjustCurrentTapped) },
+                onTrim: { store.send(.trimTapped) },
                 onLabel: { store.send(.labelTapped) },
                 onDelete: { store.send(.deleteCurrentRequested) }
             )

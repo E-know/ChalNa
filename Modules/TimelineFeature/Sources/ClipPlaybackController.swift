@@ -19,8 +19,7 @@ public final class ClipPlaybackController {
     /// 현재 클립의 재생이 끝났음을 외부에 알림 (영상 종료 or static 타이머 만료).
     public var onClipEnd: (() -> Void)?
 
-    private var currentClipID: Clip.ID?
-    private var currentClipDuration: TimeInterval = 3.0
+    private var loadedClip: Clip?
     private var timeObserverToken: Any?
     private var endObserver: NSObjectProtocol?
     private var staticTask: Task<Void, Never>?
@@ -29,27 +28,27 @@ public final class ClipPlaybackController {
 
     // MARK: - Intents
 
-    /// 같은 clip이면 no-op. 다른 clip이면 기존 관찰자/타이머를 정리하고 새 아이템 로드.
+    /// 같은 클립도 선택 구간이 바뀌면 새 시작점과 끝점을 적용한다.
     public func load(clip: Clip?) {
-        if clip?.id == currentClipID { return }
+        if clip == loadedClip { return }
         tearDownObservers()
         cancelStaticTask()
         player.pause()
 
-        currentClipID = clip?.id
+        loadedClip = clip
         guard let clip else {
             player.replaceCurrentItem(with: nil)
             hasVideo = false
             return
         }
 
-        currentClipDuration = clip.duration
         if let url = clip.videoURL {
             let item = AVPlayerItem(url: url)
+            item.forwardPlaybackEndTime = CMTime(seconds: clip.trimRange.upperBound, preferredTimescale: 600)
             player.replaceCurrentItem(with: item)
-            player.seek(to: .zero)
-            attachObservers(for: item, clipDuration: clip.duration)
             hasVideo = true
+            seekToStart()
+            attachObservers(for: item, range: clip.trimRange)
         } else {
             player.replaceCurrentItem(with: nil)
             hasVideo = false
@@ -59,8 +58,8 @@ public final class ClipPlaybackController {
     public func play() {
         if hasVideo {
             player.playWithFilmAudio()
-        } else {
-            startStaticTask(duration: currentClipDuration)
+        } else if let clip = loadedClip {
+            startStaticTask(duration: clip.duration)
         }
     }
 
@@ -70,25 +69,17 @@ public final class ClipPlaybackController {
     }
 
     public func seekToStart() {
-        if hasVideo {
-            player.seek(to: .zero)
-        }
+        guard hasVideo, let start = loadedClip?.trimRange.lowerBound else { return }
+        player.seek(to: CMTime(seconds: start, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
     }
 
     // MARK: - Observers
 
-    private func attachObservers(for item: AVPlayerItem, clipDuration: TimeInterval) {
+    private func attachObservers(for item: AVPlayerItem, range: ClosedRange<TimeInterval>) {
         let interval = CMTime(seconds: 0.1, preferredTimescale: 600)
         timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
-            guard let self else { return }
-            let elapsed = CMTimeGetSeconds(time)
-            guard elapsed.isFinite else { return }
-            self.onElapsed?(elapsed)
-            // 클립당 허용 길이를 넘기면 영상이 더 남았어도 종료.
-            if elapsed >= clipDuration - 0.02 {
-                self.player.pause()
-                self.onClipEnd?()
-            }
+            guard let self, self.player.currentItem === item, time.isNumeric else { return }
+            self.onElapsed?(max(0, min(time.seconds, range.upperBound) - range.lowerBound))
         }
 
         endObserver = NotificationCenter.default.addObserver(
@@ -96,7 +87,8 @@ public final class ClipPlaybackController {
             object: item,
             queue: .main
         ) { [weak self] _ in
-            self?.onClipEnd?()
+            guard let self, self.player.currentItem === item else { return }
+            self.onClipEnd?()
         }
     }
 

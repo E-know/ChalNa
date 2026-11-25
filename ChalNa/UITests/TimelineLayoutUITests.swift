@@ -94,6 +94,67 @@ final class TimelineLayoutUITests: XCTestCase {
         }
     }
 
+    func testTrimVideoFromBothEndsAndCancelSubsequentChanges() {
+        XCUIDevice.shared.orientation = .portrait
+        let app = openTimeline()
+        let trim = app.buttons["timeline.trim"]
+        XCTAssertFalse(trim.exists, "Live Photo에는 자르기를 표시하지 않는다")
+        let video = app.collectionViews.firstMatch.descendants(matching: .any)
+            .matching(identifier: "timeline.clip.1").firstMatch
+        video.tap()
+        let untrimmedLabel = video.label
+        trim.tap()
+
+        let elements = app.descendants(matching: .any)
+        let start = elements.matching(identifier: "trim.start").firstMatch
+        let end = elements.matching(identifier: "trim.end").firstMatch
+        let done = app.buttons["trim.done"]
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        let ready = NSPredicate(format: "enabled == true")
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: ready, object: done)], timeout: 10), .completed)
+        let initialStart = start.value as? String
+        let initialEnd = end.value as? String
+        let distance = (end.frame.midX - start.frame.midX) * 0.24
+        func drag(_ handle: XCUIElement, by dx: CGFloat) {
+            let point = handle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            point.press(forDuration: 0.15, thenDragTo: point.withOffset(CGVector(dx: dx, dy: 0)))
+        }
+        drag(start, by: distance)
+        drag(end, by: -distance)
+        let changedStart = start.value as? String
+        let changedEnd = end.value as? String
+        XCTAssertNotEqual(changedStart, initialStart)
+        XCTAssertNotEqual(changedEnd, initialEnd)
+        app.buttons["trim.play"].tap()
+        done.tap()
+        XCTAssertTrue(trim.waitForExistence(timeout: 10))
+        XCTAssertNotEqual(video.label, untrimmedLabel)
+        let editedLabel = video.label
+
+        trim.tap()
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        XCTAssertEqual(start.value as? String, changedStart)
+        XCTAssertEqual(end.value as? String, changedEnd)
+        drag(start, by: -distance)
+        XCTAssertNotEqual(start.value as? String, changedStart)
+        app.buttons["trim.cancel"].tap()
+        XCTAssertTrue(trim.waitForExistence(timeout: 5))
+        XCTAssertEqual(video.label, editedLabel)
+        trim.tap()
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        XCTAssertEqual(start.value as? String, changedStart)
+        XCTAssertEqual(end.value as? String, changedEnd)
+
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let landscape = NSPredicate { _, _ in app.windows.firstMatch.frame.width > app.windows.firstMatch.frame.height }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: landscape, object: nil)], timeout: 8), .completed)
+        for control in [start, end, done, app.buttons["trim.cancel"]] {
+            XCTAssertTrue(control.isHittable)
+            XCTAssertTrue(app.windows.firstMatch.frame.contains(control.frame))
+        }
+    }
+
     private func openTimeline() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchEnvironment["CHALNA_APP_MODE"] = "devMock"

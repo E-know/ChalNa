@@ -248,6 +248,7 @@ final class FilmStripVC: UIViewController,
         let previousCurrentClipID = currentClipID
         let previousIsPlaying = self.isPlaying
         let previousRotationByClipID = rotationByClipID
+        let previousClips = self.clips
         let nextClips = clips
         let nextCurrentClipID = nextClips.indices.contains(currentIndex) ? nextClips[currentIndex].id : nil
         let nextItems = Self.items(for: nextClips)
@@ -265,12 +266,15 @@ final class FilmStripVC: UIViewController,
             return
         }
 
-        let itemsToRefresh = itemsNeedingRefresh(
+        var itemsToRefresh = itemsNeedingRefresh(
             in: nextItems,
             previousCurrentClipID: previousCurrentClipID,
             previousIsPlaying: previousIsPlaying,
             previousRotationByClipID: previousRotationByClipID
         )
+        for (old, new) in zip(previousClips, nextClips) where old.trimRange != new.trimRange {
+            itemsToRefresh.append(.clip(new.id))
+        }
         refreshVisibleCells(matching: layoutChanged ? nil : Set(itemsToRefresh))
     }
 

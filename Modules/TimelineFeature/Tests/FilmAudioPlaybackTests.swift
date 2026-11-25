@@ -48,23 +48,101 @@ struct FilmAudioPlaybackTests {
     }
 
     @Test func exportedFilmPreservesSourceSoundAtItsOriginalTime() async throws {
-        let composer = AVFoundationCompositionService()
-        defer { withExtendedLifetime(composer) {} }
-        var result: URL?
-        for await event in composer.export(clips: [try clip()]) {
-            switch event {
-            case .completed(let url): result = url
-            case .failed(let message): Issue.record("Export failed: \(message)")
-            case .progress: break
-            }
-        }
-        let url = try #require(result)
+        let url = try await export(clip())
         defer { try? FileManager.default.removeItem(at: url) }
         let asset = AVURLAsset(url: url)
         let tracks = try await asset.loadTracks(withMediaType: .audio)
         let track = try #require(tracks.first)
         #expect(try peak(in: asset, track: track, at: 0.05) < 0.01)
         #expect(try peak(in: asset, track: track, at: 0.35) > 0.1)
+    }
+
+    @Test func trimmedExportUsesSelectedFramesAndSound() async throws {
+        var clip = try clip()
+        clip.setTrimRange(0.3...0.8)
+        let source = AVURLAsset(url: try #require(clip.videoURL))
+        let url = try await export(clip)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let output = AVURLAsset(url: url)
+        let duration = try await output.load(.duration).seconds
+        #expect(abs(duration - clip.duration) <= 1.0 / 30)
+
+        let tracks = try await output.loadTracks(withMediaType: .audio)
+        let track = try #require(tracks.first)
+        #expect(try peak(in: output, track: track, at: 0.05) > 0.1)
+        #expect(try peak(in: output, track: track, at: 0.35) < 0.01)
+
+        // 시작·끝 부근의 실제 영상이 제외된 장면보다 해당 원본 프레임에 가까운지 확인한다.
+        for (outputTime, excludedTime) in [(0.0, 0.0), (0.4, 0.95)] {
+            let rendered = try await centerPixels(output, at: outputTime)
+            let expected = try await centerPixels(source, at: 0.3 + outputTime)
+            let excluded = try await centerPixels(source, at: excludedTime)
+            let selectedError = zip(rendered, expected).reduce(0) { $0 + abs($1.0 - $1.1) }
+            let excludedError = zip(rendered, excluded).reduce(0) { $0 + abs($1.0 - $1.1) }
+            #expect(selectedError < excludedError)
+        }
+    }
+
+    @Test func rangeChangeOnLoadedClipSeeksAndEndsOnce() async throws {
+        var clip = try clip()
+        let playback = ClipPlaybackController()
+        playback.load(clip: clip)
+        let original = playback.player.currentItem
+        clip.setTrimRange(0.3...0.8)
+        playback.load(clip: clip)
+        let item = try #require(playback.player.currentItem)
+        #expect(original !== item)
+        #expect(item.forwardPlaybackEndTime.seconds == 0.8)
+
+        var ends = 0
+        var elapsed: [Double] = []
+        playback.onClipEnd = { ends += 1 }
+        playback.onElapsed = { elapsed.append($0) }
+        let clock = ContinuousClock()
+        let readyBy = clock.now + .seconds(6)
+        while (item.status == .unknown || abs(item.currentTime().seconds - 0.3) > 0.01), clock.now < readyBy {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        #expect(abs(item.currentTime().seconds - 0.3) <= 0.01)
+        playback.play()
+        defer { playback.pause() }
+        let endBy = clock.now + .seconds(6)
+        while ends == 0, clock.now < endBy {
+            try await Task.sleep(for: .milliseconds(30))
+        }
+        try await Task.sleep(for: .milliseconds(150))
+        #expect(ends == 1)
+        #expect(abs(item.currentTime().seconds - 0.8) <= 1.0 / 30)
+        #expect(elapsed.contains { $0 > 0.2 })
+        #expect(elapsed.allSatisfy { (0...0.501).contains($0) })
+    }
+
+    private func export(_ clip: Clip) async throws -> URL {
+        let composer = AVFoundationCompositionService()
+        defer { withExtendedLifetime(composer) {} }
+        var result: URL?
+        for await event in composer.export(clips: [clip]) {
+            switch event {
+            case .completed(let url): result = url
+            case .failed(let message): Issue.record("Export failed: \(message)")
+            case .progress: break
+            }
+        }
+        return try #require(result)
+    }
+
+    private func centerPixels(_ asset: AVAsset, at seconds: Double) async throws -> [Int] {
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.requestedTimeToleranceBefore = .zero
+        generator.requestedTimeToleranceAfter = .zero
+        let image = try await generator.image(at: CMTime(seconds: seconds, preferredTimescale: 600)).image
+        let context = try #require(CGContext(data: nil, width: 24, height: 24, bitsPerComponent: 8, bytesPerRow: 24,
+                                             space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue))
+        context.draw(image, in: CGRect(x: 0, y: 0, width: 24, height: 24))
+        let pixels = try #require(context.data).assumingMemoryBound(to: UInt8.self)
+        return withExtendedLifetime(context) {
+            (6..<18).flatMap { row in (6..<18).map { Int(pixels[row * 24 + $0]) } }
+        }
     }
 
     private func peak(in asset: AVURLAsset, track: AVAssetTrack, at start: Double) throws -> Float {

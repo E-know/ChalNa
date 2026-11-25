@@ -177,15 +177,14 @@ public actor AVFoundationCompositionService: CompositionServicing {
             let videoTracks = (try? await asset.loadTracks(withMediaType: .video)) ?? []
             guard let assetVideoTrack = videoTracks.first else { continue }
 
-            // 사용 길이 = min( max(원하는 길이, 0.5초), 원본 길이 ). 길이 0/비정상 클립은 스킵.
             let assetDuration = (try? await asset.load(.duration)) ?? .zero
-            let assetSeconds = CMTimeGetSeconds(assetDuration)
-            guard assetSeconds.isFinite, assetSeconds > 0 else { continue }
-
-            let desiredSeconds = max(clip.duration, 0.5)
-            let requestedDuration = CMTime(seconds: desiredSeconds, preferredTimescale: 600)  // 600 = 비디오 표준 타임스케일.
-            let clipDuration = CMTimeMinimum(requestedDuration, assetDuration)
-            let timeRange = CMTimeRange(start: .zero, duration: clipDuration)
+            guard assetDuration.isNumeric, assetDuration > .zero else { continue }
+            let scale = max(600, assetDuration.timescale)
+            let start = CMTime(seconds: clip.trimRange.lowerBound, preferredTimescale: scale)
+            let end = min(assetDuration, CMTime(seconds: clip.trimRange.upperBound, preferredTimescale: scale))
+            guard start < end else { continue }
+            let timeRange = CMTimeRange(start: start, end: end)
+            let clipDuration = timeRange.duration
 
             // 비디오를 cursor 위치에 이어 붙이기(삽입 실패하면 그 클립만 건너뛴다 — 관대한 스킵).
             do {
@@ -202,7 +201,13 @@ public actor AVFoundationCompositionService: CompositionServicing {
                         preferredTrackID: kCMPersistentTrackID_Invalid
                     )
                 }
-                try? compAudioTrack?.insertTimeRange(timeRange, of: assetAudioTrack, at: cursor)
+                if let available = try? await assetAudioTrack.load(.timeRange) {
+                    let audible = CMTimeRangeGetIntersection(timeRange, otherRange: available)
+                    if !audible.isEmpty {
+                        let position = cursor + (audible.start - start)
+                        try? compAudioTrack?.insertTimeRange(audible, of: assetAudioTrack, at: position)
+                    }
+                }
             }
 
             // [2단계] 트랙 메타로 이 클립의 배치 변환 2개를 계산.
