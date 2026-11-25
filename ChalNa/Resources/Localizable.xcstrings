@@ -3366,6 +3366,23 @@
         }
       }
     },
+    "전체 %lld개 중 %lld개 처리" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld of %1$lld processed"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全%1$lld件中%2$lld件を処理済み"
+          }
+        }
+      }
+    },
     "Live Photo와 동영상 원본을 불러오고 있어요." : {
       "extractionState" : "manual",
       "localizations" : {

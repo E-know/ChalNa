@@ -78,6 +78,7 @@ public struct MediaPickerView: View {
         .chalNaScreen()
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(store.isPreparingPickedMedia)
+        .disabled(store.isPreparingPickedMedia)
         .accessibilityHidden(store.isPreparingPickedMedia)
         .alert("Live Photo 권한이 필요해요",
                isPresented: $store.isPhotoPermissionAlertPresented.sending(\.permissionAlertPresentedChanged)) {
@@ -99,7 +100,7 @@ public struct MediaPickerView: View {
                 .dynamicTypeSize(...DynamicTypeSize.accessibility1)
         }
         .overlay {
-            if let progress = store.preparingPickedMediaProgress, store.isPreparingPickedMedia {
+            if let progress = store.preparingPickedMediaProgress {
                 preparation(progress)
             }
         }
@@ -112,32 +113,53 @@ public struct MediaPickerView: View {
     }
 
     private func preparation(_ progress: PreparingPickedMediaProgress) -> some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text("장면 선택").font(ChalNaTypography.display)
-            HStack(spacing: 6) {
-                ForEach(0..<min(progress.total, 4), id: \.self) { index in
-                    Rectangle().fill(ChalNaColor.surface)
-                        .aspectRatio(0.85, contentMode: .fit)
-                        .overlay {
-                            if let data = progress.thumbnails[index], let image = UIImage(data: data) {
-                                Image(uiImage: image).resizable().scaledToFill()
-                            } else {
-                                ChalNaIcon(.film, size: 20).foregroundStyle(ChalNaColor.textSecondary)
-                            }
+        VStack(spacing: 12) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    Text("장면 선택").font(ChalNaTypography.display)
+                        .accessibilityAddTraits(.isHeader)
+                    HStack(spacing: 6) {
+                        ForEach(0..<min(progress.total, 4), id: \.self) { index in
+                            Rectangle().fill(ChalNaColor.surface)
+                                .aspectRatio(0.85, contentMode: .fit)
+                                .overlay {
+                                    if let data = progress.thumbnail(at: index), let image = UIImage(data: data) {
+                                        Image(uiImage: image).resizable().scaledToFill()
+                                    } else {
+                                        ChalNaIcon(.film, size: 20).foregroundStyle(ChalNaColor.textSecondary)
+                                    }
+                                }
+                                .clipped()
+                                .frame(maxWidth: 114)
                         }
-                        .clipped()
+                    }
+                    .accessibilityHidden(true)
+                    Text("장면을 준비하는 중").font(ChalNaTypography.screenTitle)
+                    Text("Live Photo와 동영상 원본을 불러오고 있어요.")
+                        .font(ChalNaTypography.body).foregroundStyle(ChalNaColor.textSecondary)
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("전체 \(progress.total)개 중 \(progress.done)개 처리")
+                            .font(ChalNaTypography.body)
+                            .accessibilityIdentifier("picker.preparationCount")
+                        Spacer(minLength: 8)
+                        Text(progress.fractionCompleted, format: .percent.precision(.fractionLength(0)).rounded(rule: .down))
+                            .font(ChalNaTypography.title).foregroundStyle(ChalNaColor.accent)
+                            .monospacedDigit()
+                            .accessibilityHidden(true)
+                    }
+                    ChalNaProgressBar(progress: progress.fractionCompleted)
+                        .accessibilityIdentifier("picker.preparationProgress")
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 8)
             }
-            Text("장면을 준비하는 중").font(ChalNaTypography.screenTitle)
-            Text("Live Photo와 동영상 원본을 불러오고 있어요.")
-                .font(ChalNaTypography.body).foregroundStyle(ChalNaColor.textSecondary)
-            Text(verbatim: "\(progress.done) / \(progress.total)")
-                .font(ChalNaTypography.title).foregroundStyle(ChalNaColor.accent)
-            ChalNaProgressBar(progress: Double(progress.done) / Double(max(progress.total, 1)))
-            Spacer(minLength: 8)
+            Button("취소", role: .cancel) { store.send(.cancelPreparingPickedMedia) }
+                .buttonStyle(.chalNa(.secondary, size: .lg, fillWidth: true))
+                .accessibilityIdentifier("picker.cancelPreparation")
         }
         .foregroundStyle(ChalNaColor.textPrimary)
-        .padding(24)
+        .padding(.horizontal, 24)
+        .padding(.bottom, 8)
         .frame(maxWidth: 540, maxHeight: .infinity, alignment: .topLeading)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(ChalNaColor.bg.ignoresSafeArea())

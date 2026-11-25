@@ -23,9 +23,7 @@ public struct MediaPickerFeature {
         public var selectedAssetIDs: [String] = []
         public var isPhotoPermissionAlertPresented: Bool = false
         public var isSystemPhotoPickerPresented: Bool = false
-        /// PHPicker가 닫히고 PickedMediaLoader가 비동기 추출을 끝낼 때까지의 짧은 공백 구간을 채우는 오버레이용.
-        public var isPreparingPickedMedia: Bool = false
-        /// 사진 추출 진행 카운트 (완료, 전체). 오버레이가 떠 있는 동안에만 non-nil.
+        public var isPreparingPickedMedia: Bool { preparingPickedMediaProgress != nil }
         public var preparingPickedMediaProgress: PreparingPickedMediaProgress?
 
         // Dev fixtures
@@ -70,8 +68,9 @@ public struct MediaPickerFeature {
 
         // Library data
         case systemPickerFinished([any PickedMediaLoading])
-        case pickedMediaProgressUpdated(done: Int, index: Int, thumbnail: Data?)
-        case photosPickedFromSystemPicker(media: [PickedMedia])
+        case pickedMediaTransferProgress(importID: UUID, index: Int, fraction: Double)
+        case pickedMediaLoaded(importID: UUID, index: Int, media: PickedMedia)
+        case cancelPreparingPickedMedia
         case photoAssetTapped(PhotoLibraryAsset)
 
         // Preview
@@ -124,6 +123,13 @@ public struct MediaPickerFeature {
 
     @Dependency(\.photoLibraryClient) var photoLibraryClient
     @Dependency(\.analyticsTracker) var analyticsTracker
+    @Dependency(\.uuid) var uuid
+
+    private enum CancelID: Hashable {
+        case importing(UUID)
+    }
+
+    private static let concurrentImports = 3
 
     // MARK: - Reducer
 
@@ -197,80 +203,63 @@ public struct MediaPickerFeature {
             case let .systemPickerFinished(results):
                 state.isSystemPhotoPickerPresented = false
                 guard !results.isEmpty, !state.isPreparingPickedMedia else { return .none }
-                state.isPreparingPickedMedia = true
-                state.preparingPickedMediaProgress = .init(done: 0, total: results.count)
+                let importID = uuid()
+                state.preparingPickedMediaProgress = .init(id: importID, total: results.count)
                 return .run { send in
-                    var media = [PickedMedia?](repeating: nil, count: results.count)
                     await withTaskGroup(of: (Int, PickedMedia).self) { group in
                         for (index, result) in results.enumerated() {
+                            if index >= Self.concurrentImports, let (index, item) = await group.next() {
+                                await send(.pickedMediaLoaded(importID: importID, index: index, media: item))
+                            }
+                            guard !Task.isCancelled else { return }
                             group.addTask {
-                                let picked = await result.load() ?? PickedMedia(
+                                let (updates, progress) = AsyncStream<Double>.makeStream(bufferingPolicy: .bufferingNewest(1))
+                                async let reportProgress: Void = {
+                                    for await fraction in updates {
+                                        await send(.pickedMediaTransferProgress(importID: importID, index: index, fraction: fraction))
+                                    }
+                                }()
+                                let picked = await result.load(progress: { progress.yield($0) }) ?? PickedMedia(
                                     id: result.id, kind: .unknown,
                                     thumbnailData: nil, videoURL: nil, capturedAt: nil,
                                     duration: nil, displaySize: nil
                                 )
+                                progress.finish()
+                                await reportProgress
                                 return (index, picked)
                             }
                         }
-                        var done = 0
                         for await (index, picked) in group {
-                            media[index] = picked
-                            done += 1
-                            await send(.pickedMediaProgressUpdated(done: done, index: index, thumbnail: picked.thumbnailData))
+                            await send(.pickedMediaLoaded(importID: importID, index: index, media: picked))
                         }
                     }
-                    await send(.photosPickedFromSystemPicker(media: media.compactMap { $0 }))
                 }
+                .cancellable(id: CancelID.importing(importID))
 
-            case let .pickedMediaProgressUpdated(done, index, thumbnail):
-                if var progress = state.preparingPickedMediaProgress {
-                    progress.done = min(max(done, 0), progress.total)
-                    if index < 4 { progress.thumbnails[index] = thumbnail }
+            case let .pickedMediaTransferProgress(importID, index, fraction):
+                guard var progress = state.preparingPickedMediaProgress, progress.id == importID,
+                      progress.completed[index] == nil, fraction.isFinite else { return .none }
+                progress.transfers[index] = max(progress.transfers[index] ?? 0, min(fraction, 0.99))
+                state.preparingPickedMediaProgress = progress
+                return .none
+
+            case let .pickedMediaLoaded(importID, index, item):
+                guard var progress = state.preparingPickedMediaProgress, progress.id == importID else { return .none }
+                progress.transfers[index] = nil
+                progress.completed[index] = item
+                if progress.done == progress.total {
+                    storePickedMedia(progress.orderedMedia, in: &state)
+                    state.preparingPickedMediaProgress = nil
+                } else {
                     state.preparingPickedMediaProgress = progress
                 }
                 return .none
 
-            case let .photosPickedFromSystemPicker(media):
-                state.isSystemPhotoPickerPresented = false
-                state.isPreparingPickedMedia = false
+            case .cancelPreparingPickedMedia:
+                guard let progress = state.preparingPickedMediaProgress else { return .none }
+                storePickedMedia(progress.orderedMedia.filter { $0.thumbnailData != nil && $0.videoURL != nil }, in: &state)
                 state.preparingPickedMediaProgress = nil
-                guard !media.isEmpty else { return .none }
-
-                for item in media {
-                    // 재선택한 원본을 읽지 못해도 이미 준비된 동일 클립은 그대로 사용할 수 있다.
-                    if state.media[item.id]?.isReadyForTimeline == true,
-                       item.thumbnailData == nil || item.videoURL == nil { continue }
-                    let asset = PhotoLibraryAsset(
-                        id: item.id,
-                        kind: item.kind,
-                        capturedAt: item.capturedAt,
-                        pixelSize: item.displaySize ?? .zero
-                    )
-                    if let index = state.photoAssets.firstIndex(where: { $0.id == item.id }) {
-                        state.photoAssets[index] = asset
-                    } else {
-                        state.photoAssets.append(asset)
-                    }
-                    if !state.selectedAssetIDs.contains(item.id) {
-                        state.selectedAssetIDs.append(item.id)
-                    }
-                    state.assetThumbnails[item.id] = item.thumbnailData
-
-                    // picker 단계에서 이미 모든 데이터를 꺼냈으므로 비동기 로딩 없이 즉시 ready 상태.
-                    var loaded = MediaLoadState(
-                        kind: item.kind,
-                        thumbnail: item.thumbnailData,
-                        isLoading: false
-                    )
-                    loaded.thumbnailFailed = (item.thumbnailData == nil)
-                    loaded.videoURL = item.videoURL
-                    loaded.videoFailed = (item.videoURL == nil)
-                    loaded.duration = item.duration
-                    loaded.capturedAt = item.capturedAt
-                    loaded.displaySize = item.displaySize
-                    state.media[item.id] = loaded
-                }
-                return .none
+                return .cancel(id: CancelID.importing(progress.id))
 
             case let .photoAssetTapped(asset):
                 if let idx = state.selectedAssetIDs.firstIndex(of: asset.id) {
@@ -386,6 +375,36 @@ public struct MediaPickerFeature {
         }
     }
 
+    private func storePickedMedia(_ media: [PickedMedia], in state: inout State) {
+        for item in media {
+            // 재선택한 원본을 읽지 못해도 이미 준비된 동일 클립은 그대로 사용할 수 있다.
+            if state.media[item.id]?.isReadyForTimeline == true,
+               item.thumbnailData == nil || item.videoURL == nil { continue }
+            let asset = PhotoLibraryAsset(
+                id: item.id, kind: item.kind, capturedAt: item.capturedAt,
+                pixelSize: item.displaySize ?? .zero
+            )
+            if let index = state.photoAssets.firstIndex(where: { $0.id == item.id }) {
+                state.photoAssets[index] = asset
+            } else {
+                state.photoAssets.append(asset)
+            }
+            if !state.selectedAssetIDs.contains(item.id) {
+                state.selectedAssetIDs.append(item.id)
+            }
+            state.assetThumbnails[item.id] = item.thumbnailData
+
+            var loaded = MediaLoadState(kind: item.kind, thumbnail: item.thumbnailData)
+            loaded.thumbnailFailed = (item.thumbnailData == nil)
+            loaded.videoURL = item.videoURL
+            loaded.videoFailed = (item.videoURL == nil)
+            loaded.duration = item.duration
+            loaded.capturedAt = item.capturedAt
+            loaded.displaySize = item.displaySize
+            state.media[item.id] = loaded
+        }
+    }
+
     // MARK: - Confirm helpers
 
     private func confirmPhotoLibrary(state: inout State) -> Effect<Action> {
@@ -441,15 +460,24 @@ public enum MediaPickerSource: Sendable {
     case devFixtures(any DevMediaSourcing)
 }
 
-/// PHPicker 결과 추출 진행 상태 (완료 개수 / 전체 개수). 오버레이 카운트 표시용.
+/// 한 번의 사진 가져오기에서 준비된 결과와 진행률을 원래 선택 위치로 기록한다.
 public struct PreparingPickedMediaProgress: Equatable, Sendable {
-    public var done: Int
-    public var total: Int
-    public var thumbnails: [Int: Data] = [:]
+    let id: UUID
+    public let total: Int
+    var completed: [Int: PickedMedia] = [:]
+    var transfers: [Int: Double] = [:]
 
-    public init(done: Int, total: Int) {
-        self.done = done
-        self.total = total
+    public var done: Int { completed.count }
+    public var fractionCompleted: Double {
+        (Double(done) + transfers.values.reduce(0, +)) / Double(total)
+    }
+
+    func thumbnail(at index: Int) -> Data? {
+        completed[index]?.thumbnailData
+    }
+
+    var orderedMedia: [PickedMedia] {
+        completed.sorted { $0.key < $1.key }.map(\.value)
     }
 }
 
