@@ -207,7 +207,9 @@ public struct ExportView: View {
         if store.phase == .idle {
             VStack(alignment: .leading, spacing: 8) {
                 Text("출력 형식").font(ChalNaTypography.label).foregroundStyle(ChalNaColor.textSecondary)
-                Text(verbatim: "1080 × 1920 · 30fps").font(ChalNaTypography.headline)
+                Text(verbatim: "\(store.resolution.width) × \(store.resolution.height) · 30fps")
+                    .font(ChalNaTypography.headline)
+                    .accessibilityIdentifier("export.outputFormat")
             }
             VStack(alignment: .leading, spacing: 8) {
                 Text("생성 횟수").font(ChalNaTypography.label)

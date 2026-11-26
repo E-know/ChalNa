@@ -5,6 +5,7 @@ import UIKit
 import ComposableArchitecture
 import DesignSystem
 import PhotosService
+import Models
 
 /// 선택된 미디어(Live Photo paired video / 일반 영상)를 하단 바텀시트에서
 /// 확대해 보여주고 탭으로 play/pause 하는 미리보기 시트.
@@ -58,7 +59,7 @@ struct MediaPreviewSheet: View {
                 // SF Mono 에 해당 글리프가 없어 폴백되며 자간·베이스라인이 어긋난다.
                 // 이것이 감사 #11 이 지적한 바로 그 증상이고, mono 토큰의 문서 계약도
                 // "한글에 쓰지 않는다" 로 못박고 있다.
-                Text(String(format: String(localized: "%.1f초"), duration))
+                Text(String(format: String(localized: "%.1f초", bundle: AppLocalization.bundle, locale: AppLocalization.locale), duration))
                     .font(ChalNaTypography.label)
                     .foregroundColor(ChalNaColor.textSecondary)
             }

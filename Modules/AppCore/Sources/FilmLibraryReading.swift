@@ -1,5 +1,6 @@
 import ComposableArchitecture
 import Foundation
+import Models
 
 public struct ArchivedFilm: Identifiable, Equatable, Sendable {
     public let id: UUID
@@ -25,7 +26,7 @@ public struct ArchivedFilm: Identifiable, Equatable, Sendable {
 
     public var metaLabel: String {
         let seconds = Int(totalDurationSeconds)
-        return String(format: String(localized: "클립 %d개 · %02d:%02d"), clipCount, seconds / 60, seconds % 60)
+        return String(format: String(localized: "클립 %d개 · %02d:%02d", bundle: AppLocalization.bundle, locale: AppLocalization.locale), clipCount, seconds / 60, seconds % 60)
     }
 }
 

@@ -1,12 +1,35 @@
 import Testing
 import ComposableArchitecture
+import AppCore
+import Models
 @testable import SettingsFeature
 
 @MainActor
 struct SettingsFeatureTests {
-    @Test func onAppearIsNoOp() async {
-        let store = TestStore(initialState: SettingsFeature.State()) { SettingsFeature() }
-        await store.send(.onAppear)   // analytics(Noop) 로깅, 상태 불변
+    @Test func onAppearLoadsTheSavedResolution() async {
+        let store = TestStore(initialState: SettingsFeature.State()) { SettingsFeature() } withDependencies: {
+            $0.filmOutputResolution.get = { .hd }
+        }
+
+        await store.send(.onAppear) {
+            $0.outputResolution = .hd
+        }
+    }
+
+    @Test func selectingResolutionSavesItAndKeepsTheCurrentDetail() async {
+        let selections = LockIsolated<[FilmOutputResolution]>([])
+        var initial = SettingsFeature.State()
+        initial.selectedSection = .support
+        let store = TestStore(initialState: initial) { SettingsFeature() } withDependencies: {
+            $0.filmOutputResolution.set = { resolution in
+                selections.withValue { $0.append(resolution) }
+            }
+        }
+
+        await store.send(.outputResolutionSelected(.fourK)) {
+            $0.outputResolution = .fourK
+        }
+        #expect(selections.value == [.fourK])
     }
 
     @Test func switchingSectionsKeepsTheSupportDraft() async {

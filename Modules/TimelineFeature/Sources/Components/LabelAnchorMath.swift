@@ -13,7 +13,7 @@ enum LabelAnchorMath {
     /// 빈 문구는 placeholder 로 실측한다 — 편집 중 인라인 TextField 폭을 글자에 맞추기 위함
     /// (기본 최소폭 제거). placeholder 치환이 이 타입의 유일한 실측 책임이다.
     static func displayText(_ text: String) -> String {
-        text.isEmpty ? String(localized: "자막 입력") : text
+        text.isEmpty ? String(localized: "자막 입력", bundle: AppLocalization.bundle, locale: AppLocalization.locale) : text
     }
 
     /// 텍스트(패딩 제외)만의 표시 크기(point). 빈 문자열이면 placeholder("자막 입력") 기준.

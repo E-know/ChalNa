@@ -20,15 +20,9 @@ public enum LabelText {
     // MARK: - Locale
 
     /// 앱에서 선택한 표시 언어("appLanguage", 없으면 시스템)에 맞춘 오버레이 로케일.
-    /// 언어 스위즐은 `Bundle` 만 바꾸므로 `Locale.current` 는 기기 언어를 반영한다 —
-    /// 따라서 앱 선택 언어를 직접 읽어 매핑한다.
+    /// 미리보기와 합성이 문자열 조회와 같은 앱 로케일을 사용한다.
     public static func locale() -> Locale {
-        switch UserDefaults.standard.string(forKey: "appLanguage") {
-        case "ko": return Locale(identifier: "ko")
-        case "en": return Locale(identifier: "en")
-        case "ja": return Locale(identifier: "ja")
-        default:   return Locale.current
-        }
+        AppLocalization.locale
     }
 
     private static func isEnglish(_ locale: Locale) -> Bool {

@@ -27,6 +27,7 @@ public struct ExportFeature {
 
     @ObservableState
     public struct State: Equatable {
+        public let resolution: FilmOutputResolution
         public var phase: ExportPhase
         public var progress: Double
         public var exportedURL: URL?
@@ -38,7 +39,9 @@ public struct ExportFeature {
         public var isPlayerPresented = false
         public var quotaUnlocked = false
 
-        public init(phase: ExportPhase = .idle, progress: Double = 0, exportedURL: URL? = nil) {
+        public init(phase: ExportPhase = .idle, progress: Double = 0, exportedURL: URL? = nil,
+                    resolution: FilmOutputResolution = .fullHD) {
+            self.resolution = resolution
             self.phase = phase
             self.progress = progress
             self.exportedURL = exportedURL
@@ -100,8 +103,10 @@ public struct ExportFeature {
                 )
                 state.phase = .exporting
                 analyticsTracker.log(.exportStarted(clipCount: clips.count))
+                let resolution = state.resolution
                 return .run { send in
-                    for await event in composer.export(clips: clips, rotations: rotations, transforms: transforms, clipLabels: clipLabels) {
+                    for await event in composer.export(clips: clips, rotations: rotations, transforms: transforms,
+                                                       clipLabels: clipLabels, resolution: resolution) {
                         switch event {
                         case let .progress(p): await send(.exportProgress(p))
                         case let .completed(url): await send(.exportCompleted(url))

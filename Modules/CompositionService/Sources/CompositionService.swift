@@ -15,18 +15,21 @@ public enum ExportError: LocalizedError {
     case noVideoClips
     case sessionSetupFailed
     case trackCreationFailed
+    case unexpectedOutputSize
     case exportFailed(String)
 
     public var errorDescription: String? {
         switch self {
         case .noVideoClips:
-            return String(localized: "합성 가능한 영상이 없어요. 영상 또는 Live Photo를 골라주세요.")
+            return String(localized: "합성 가능한 영상이 없어요. 영상 또는 Live Photo를 골라주세요.", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
         case .sessionSetupFailed:
-            return String(localized: "내보내기 세션을 준비하지 못했어요.")
+            return String(localized: "내보내기 세션을 준비하지 못했어요.", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
         case .trackCreationFailed:
-            return String(localized: "비디오 트랙을 만들 수 없어요.")
+            return String(localized: "비디오 트랙을 만들 수 없어요.", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
+        case .unexpectedOutputSize:
+            return String(localized: "선택한 해상도로 저장하지 못했어요.", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
         case .exportFailed(let msg):
-            return String(localized: "저장 중 문제가 생겼어요: \(msg)")
+            return String(localized: "저장 중 문제가 생겼어요: \(msg)", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
         }
     }
 }
@@ -55,7 +58,8 @@ public actor AVFoundationCompositionService: CompositionServicing {
         clips: [Clip],                          // 이어붙일 클립들(이미 촬영순 정렬)
         rotations: [Clip.ID: ClipRotation],     // 클립별 사용자 회전(없으면 0°)
         transforms: [Clip.ID: ClipTransform],   // 클립별 확대·이동(없으면 .fill = 센터 크롭)
-        clipLabels: [Clip.ID: ClipLabel]        // 클립별 사용자 자막
+        clipLabels: [Clip.ID: ClipLabel],       // 클립별 사용자 자막
+        resolution: FilmOutputResolution
     ) -> AsyncStream<ExportEvent> {             // 반환값 = 이벤트가 흘러나오는 통로
         AsyncStream { continuation in
             // continuation = 이 통로에 이벤트를 밀어 넣는 손잡이.
@@ -66,7 +70,8 @@ public actor AVFoundationCompositionService: CompositionServicing {
                 }
                 // 여기서부터 actor 격리 안. run()이 전 과정을 진행하며
                 // continuation으로 .progress / .completed / .failed 를 흘려보낸다.
-                await self.run(clips: clips, rotations: rotations, transforms: transforms, clipLabels: clipLabels, continuation: continuation)
+                await self.run(clips: clips, rotations: rotations, transforms: transforms, clipLabels: clipLabels,
+                               resolution: resolution, continuation: continuation)
             }
             // 구독자가 통로를 버리면(화면 이탈 등) 굽기 Task도 취소된다.
             // 안 보이는 영상을 계속 굽느라 배터리·발열을 낭비하지 않기 위함.
@@ -83,17 +88,22 @@ public actor AVFoundationCompositionService: CompositionServicing {
         rotations: [Clip.ID: ClipRotation],
         transforms: [Clip.ID: ClipTransform],
         clipLabels: [Clip.ID: ClipLabel],
+        resolution: FilmOutputResolution,
         continuation: AsyncStream<ExportEvent>.Continuation
     ) async {
         do {
             // [1·2·3단계] 트랙 잇기 + 클립별 변환·라벨 instruction 만들기.
-            let built = try await buildComposition(clips: clips, rotations: rotations, transforms: transforms, clipLabels: clipLabels)
+            let built = try await buildComposition(clips: clips, rotations: rotations, transforms: transforms,
+                                                   clipLabels: clipLabels, renderSize: resolution.renderSize)
             guard built.hasContent else {
                 throw ExportError.noVideoClips   // 한 장도 못 붙였으면 중단.
             }
 
             let outputURL = Self.makeOutputURL()                // 임시폴더/chalNa-<UUID>.mp4
-            try? FileManager.default.removeItem(at: outputURL)  // 남은 동명 파일 정리.
+            var keepsOutput = false
+            defer {
+                if !keepsOutput { try? FileManager.default.removeItem(at: outputURL) }
+            }
 
             // [5단계] 굽는 기계 준비 — 최고 화질 프리셋.
             guard let session = AVAssetExportSession(
@@ -118,18 +128,24 @@ public actor AVFoundationCompositionService: CompositionServicing {
             }
 
             do {
+                defer { progressTask.cancel() }
                 try await session.export(to: outputURL, as: .mp4)     // iOS 18 async 굽기.
-                progressTask.cancel()
             } catch {
-                progressTask.cancel()
                 throw ExportError.exportFailed(error.localizedDescription)
             }
 
+            let output = AVURLAsset(url: outputURL)
+            let videoTracks = try await output.loadTracks(withMediaType: .video)
+            guard let videoTrack = videoTracks.first,
+                  try await videoTrack.load(.naturalSize) == resolution.renderSize else {
+                throw ExportError.unexpectedOutputSize
+            }
+            keepsOutput = true
             continuation.yield(.progress(1.0))          // 진짜 끝났을 때만 100%.
             continuation.yield(.completed(outputURL))   // 완성 파일 위치 전달.
         } catch let err as ExportError {
             // 도메인 에러든 그 외 에러든, 사용자에겐 한국어 메시지 하나(.failed)로만 수렴시킨다.
-            continuation.yield(.failed(err.errorDescription ?? String(localized: "알 수 없는 오류")))
+            continuation.yield(.failed(err.errorDescription ?? String(localized: "알 수 없는 오류", bundle: AppLocalization.bundle, locale: AppLocalization.locale)))
         } catch {
             continuation.yield(.failed(error.localizedDescription))
         }
@@ -150,7 +166,8 @@ public actor AVFoundationCompositionService: CompositionServicing {
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation],
         transforms: [Clip.ID: ClipTransform],
-        clipLabels: [Clip.ID: ClipLabel]
+        clipLabels: [Clip.ID: ClipLabel],
+        renderSize: CGSize
     ) async throws -> BuiltComposition {
         // [1단계] 빈 필름 릴 + 비디오 트랙 1줄.
         let composition = AVMutableComposition()
@@ -161,10 +178,6 @@ public actor AVFoundationCompositionService: CompositionServicing {
             throw ExportError.trackCreationFailed
         }
         var compAudioTrack: AVMutableCompositionTrack?   // 오디오는 첫 소리를 만날 때 lazy 생성.
-
-        // 1) 출력 캔버스는 항상 outputSize(9:16, 1080×1920) 고정.
-        //    비율이 다른 클립은 `transform()`이 aspectFill + 가운데 정렬(센터 크롭)로 캔버스를 꽉 채운다.
-        let renderSize = await Self.resolveRenderSize(clips: clips, rotations: rotations)
 
         // 2) 시간순으로 트랙을 채우면서 클립별 layerInstruction 누적.
         //    cursor = "지금까지 채운 시간"(빨래집게). 클립 하나 붙일 때마다 그 길이만큼 전진.
@@ -553,12 +566,11 @@ public actor AVFoundationCompositionService: CompositionServicing {
 
     // MARK: - RenderSize
 
-    /// 최종 출력 캔버스 — 9:16 세로 고정.
-    public static let outputSize = CGSize(width: 1080, height: 1920)
+    /// 기본 9:16 출력 캔버스.
+    public static let outputSize = FilmOutputResolution.fullHD.renderSize
 
-    /// 출력 캔버스는 입력 클립과 무관하게 항상 `outputSize`(1080×1920).
-    /// 비율이 다른 클립은 `transform()` 이 aspectFill + 가운데 정렬(센터 크롭)로 캔버스를 꽉 채운다.
-    /// (시그니처는 호출부 호환을 위해 유지)
+    /// 기본 출력 캔버스는 입력 클립과 무관하게 `outputSize`(1080×1920)다.
+    /// 기존 호출부와의 호환을 위해 시그니처를 유지한다.
     public static func resolveRenderSize(
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation]

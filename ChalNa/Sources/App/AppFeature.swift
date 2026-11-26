@@ -46,6 +46,7 @@ public struct AppFeature {
     @Dependency(\.analyticsTracker) var analyticsTracker
     @Dependency(\.editSession) var editSession
     @Dependency(\.exportQuotaClient) var exportQuotaClient
+    @Dependency(\.filmOutputResolution) var filmOutputResolution
 
     public var body: some ReducerOf<Self> {
         Scope(state: \.home, action: \.home) {
@@ -86,7 +87,7 @@ public struct AppFeature {
             case let .path(.element(id: _, action: .timeline(.delegate(delegateAction)))):
                 switch delegateAction {
                 case .exportRequested:
-                    state.path.append(.export(ExportFeature.State()))
+                    state.path.append(.export(ExportFeature.State(resolution: filmOutputResolution.get())))
                     analyticsTracker.log(.exportScreenOpened)
                 case let .clipAdjustRequested(clipID):
                     state.path.append(.clipAdjust(ClipAdjustFeature.State(clipID: clipID)))

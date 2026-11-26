@@ -1,4 +1,5 @@
 import Foundation
+import Models
 
 /// 신고 분류. 텔레그램 메시지 헤더 이모지/한글명 포함.
 public enum FeedbackCategory: String, CaseIterable, Sendable, Equatable {
@@ -8,9 +9,9 @@ public enum FeedbackCategory: String, CaseIterable, Sendable, Equatable {
 
     public var koreanName: String {
         switch self {
-        case .bug:        return String(localized: "버그")
-        case .suggestion: return String(localized: "제안")
-        case .other:      return String(localized: "기타")
+        case .bug:        return String(localized: "버그", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
+        case .suggestion: return String(localized: "제안", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
+        case .other:      return String(localized: "기타", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
         }
     }
 

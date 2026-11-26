@@ -8,7 +8,8 @@ private enum ComposerKey: TestDependencyKey {
 
     private struct UnavailableComposer: FilmComposing {
         func export(clips: [Clip], rotations: [Clip.ID: ClipRotation],
-                    transforms: [Clip.ID: ClipTransform], clipLabels: [Clip.ID: ClipLabel]) -> AsyncStream<FilmExportEvent> {
+                    transforms: [Clip.ID: ClipTransform], clipLabels: [Clip.ID: ClipLabel],
+                    resolution: FilmOutputResolution) -> AsyncStream<FilmExportEvent> {
             AsyncStream { stream in
                 stream.yield(.failed(CocoaError(.featureUnsupported).localizedDescription))
                 stream.finish()

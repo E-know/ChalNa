@@ -1,6 +1,66 @@
 import XCTest
 
 final class SettingsSplitViewUITests: XCTestCase {
+    func testOutputResolutionPersistsAndReachesExportInLocalizedSettings() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchEnvironment["CHALNA_APP_MODE"] = "devMock"
+        app.launchEnvironment["CHALNA_UI_TEST_ISOLATE_EXPORT_QUOTA"] = "1"
+
+        func launch(language: String) {
+            app.launchArguments = ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR", "-appLanguage", language]
+            app.launch()
+        }
+
+        let picker = app.descendants(matching: .any).matching(identifier: "settings.filmOutputResolution").firstMatch
+        let languageSettings = app.descendants(matching: .any).matching(identifier: "settings.language").firstMatch
+
+        launch(language: "system")
+        tap(app.buttons["home.settings"])
+        assertHittable(picker)
+        XCTAssertTrue(picker.label.hasPrefix("영상 해상도"))
+        tap(picker)
+        for option in ["4K", "Full HD", "HD"] { assertHittable(app.buttons[option].firstMatch) }
+        let menu = XCTAttachment(screenshot: app.screenshot())
+        menu.name = "output-resolution-picker"
+        menu.lifetime = .keepAlways
+        add(menu)
+        tap(app.buttons["4K"].firstMatch)
+
+        app.terminate()
+        launch(language: "system")
+        tap(app.buttons["home.newFilm"])
+        tap(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "협재 바다")).firstMatch)
+        tap(app.buttons["picker.confirm"].firstMatch)
+        let export = app.buttons["timeline.export"]
+        XCTAssertTrue(export.waitForExistence(timeout: 30), app.debugDescription)
+        tap(export)
+        let format = app.staticTexts["export.outputFormat"]
+        XCTAssertTrue(format.waitForExistence(timeout: 10))
+        XCTAssertEqual(format.label, "2160 × 3840 · 30fps")
+
+        app.terminate()
+        launch(language: "en")
+        tap(app.buttons["home.settings"])
+        assertHittable(picker)
+        assertResolution(picker, label: "Video Resolution", selection: "4K")
+        tap(picker)
+        tap(app.buttons["HD"].firstMatch)
+        tap(languageSettings)
+        assertHittable(app.buttons["System"].firstMatch)
+
+        app.terminate()
+        launch(language: "ja")
+        tap(app.buttons["home.settings"])
+        assertHittable(picker)
+        assertResolution(picker, label: "動画の解像度", selection: "HD")
+        tap(picker)
+        tap(app.buttons["Full HD"].firstMatch)
+        assertResolution(picker, label: "動画の解像度", selection: "Full HD")
+        tap(languageSettings)
+        assertHittable(app.buttons["システム設定"].firstMatch)
+    }
+
     func testSettingsNavigationPreservesTheUnsentSupportDraft() {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -61,6 +121,15 @@ final class SettingsSplitViewUITests: XCTestCase {
     private func tap(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
         assertHittable(element, file: file, line: line)
         element.tap()
+    }
+
+    private func assertResolution(_ picker: XCUIElement, label: String, selection: String,
+                                  file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(picker.label.hasPrefix(label), picker.debugDescription, file: file, line: line)
+        let combinedSelection = String(picker.label.dropFirst(label.count))
+            .trimmingCharacters(in: .punctuationCharacters.union(.whitespaces))
+        XCTAssertTrue(picker.value as? String == selection || combinedSelection == selection,
+                      picker.debugDescription, file: file, line: line)
     }
 
     private func assertHittable(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {

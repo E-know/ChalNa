@@ -9,6 +9,43 @@ import Models
 /// 좌표(상하/좌우 뒤집힘) 수학이 맞는지 픽셀 단위로 검증한다.
 struct CompositorRenderTests {
 
+    @Test(.serialized, arguments: FilmOutputResolution.allCases)
+    func testExportedMP4UsesSelectedPortraitResolutionAt30FPS(resolution: FilmOutputResolution) async throws {
+        let expectedSize = switch resolution {
+        case .fourK: CGSize(width: 2160, height: 3840)
+        case .fullHD: CGSize(width: 1080, height: 1920)
+        case .hd: CGSize(width: 720, height: 1280)
+        }
+        let srcURL = try await makeQuadrantVideo(width: 640, height: 360, seconds: 0.5, fps: 24)
+        defer { try? FileManager.default.removeItem(at: srcURL) }
+        let clip = Clip(kind: .video, capturedAt: Date(), duration: 0.5, preset: .jejuSea, videoURL: srcURL)
+        let service = AVFoundationCompositionService()
+        defer { withExtendedLifetime(service) {} }
+
+        var outURL: URL?
+        for await event in service.export(clips: [clip], rotations: [:], transforms: [:], clipLabels: [:],
+                                          resolution: resolution) {
+            switch event {
+            case .completed(let url): outURL = url
+            case .failed(let message):
+                Issue.record("\(resolution.title) export failed: \(message)")
+                return
+            case .progress: break
+            }
+        }
+
+        let exportedURL = try #require(outURL)
+        defer { try? FileManager.default.removeItem(at: exportedURL) }
+        #expect(exportedURL.pathExtension == "mp4")
+        let asset = AVURLAsset(url: exportedURL)
+        let videoTracks = try await asset.loadTracks(withMediaType: .video)
+        let videoTrack = try #require(videoTracks.first)
+        let size = try await videoTrack.load(.naturalSize)
+        let frameRate = try await videoTrack.load(.nominalFrameRate)
+        #expect(size == expectedSize)
+        #expect(abs(frameRate - 30) < 0.01)
+    }
+
     /// 4분면(좌상 RED·우상 GREEN·좌하 BLUE·우하 YELLOW) 가로 영상을 만들어 export 한 뒤,
     /// 1080×1920 캔버스에서 전경 클립이 뒤집힘 없이 aspectFill 센터 크롭으로
     /// 캔버스 전체(상하 여백 없음)를 채우는지 확인한다.
@@ -53,6 +90,8 @@ struct CompositorRenderTests {
         generator.requestedTimeToleranceBefore = .zero
         generator.requestedTimeToleranceAfter = .zero
         let cgImage = try await generator.image(at: CMTime(seconds: 0.25, preferredTimescale: 600)).image
+        #expect(cgImage.width == 1080)
+        #expect(cgImage.height == 1920)
 
         // 1080×1920 RGBA8 비트맵으로 그려 픽셀 샘플.
         let sampler = try PixelSampler(cgImage: cgImage, width: 1080, height: 1920)
