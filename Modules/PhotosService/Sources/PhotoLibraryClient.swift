@@ -170,7 +170,7 @@ extension PhotoLibraryClient: DependencyKey {
                     if success {
                         cont.resume(returning: .ok)
                     } else {
-                        cont.resume(returning: .failed(error?.localizedDescription ?? String(localized: "알 수 없는 오류")))
+                        cont.resume(returning: .failed(error?.localizedDescription ?? String(localized: "알 수 없는 오류", bundle: AppLocalization.bundle, locale: AppLocalization.locale)))
                     }
                 }
             }

@@ -193,15 +193,15 @@ final class FilmStripVC: UIViewController,
         cell.accessibilityIdentifier = "timeline.clip.\(flatIndex)"
         cell.isAccessibilityElement = true
         cell.accessibilityLabel = accessibilityLabel(for: clip, index: flatIndex, isCurrent: isCurrent)
-        cell.accessibilityHint = String(localized: "선택하려면 두 번 탭하고, 순서를 바꾸려면 사용자 동작을 사용하세요.")
+        cell.accessibilityHint = String(localized: "선택하려면 두 번 탭하고, 순서를 바꾸려면 사용자 동작을 사용하세요.", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
         var traits: UIAccessibilityTraits = [.button]
         if isCurrent { traits.insert(.selected) }
         cell.accessibilityTraits = traits
         cell.accessibilityCustomActions = [
-            UIAccessibilityCustomAction(name: String(localized: "앞으로 이동")) { [weak self] _ in
+            UIAccessibilityCustomAction(name: String(localized: "앞으로 이동", bundle: AppLocalization.bundle, locale: AppLocalization.locale)) { [weak self] _ in
                 self?.moveClipForAccessibility(clipID, by: -1) ?? false
             },
-            UIAccessibilityCustomAction(name: String(localized: "뒤로 이동")) { [weak self] _ in
+            UIAccessibilityCustomAction(name: String(localized: "뒤로 이동", bundle: AppLocalization.bundle, locale: AppLocalization.locale)) { [weak self] _ in
                 self?.moveClipForAccessibility(clipID, by: 1) ?? false
             },
         ]
@@ -215,7 +215,7 @@ final class FilmStripVC: UIViewController,
         }
         .margins(.all, 0)
         cell.isAccessibilityElement = true
-        cell.accessibilityLabel = String(localized: "\(dayKey) 촬영일")
+        cell.accessibilityLabel = String(localized: "\(dayKey) 촬영일", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
         cell.accessibilityTraits = [.staticText]
         cell.accessibilityCustomActions = nil
     }
@@ -511,9 +511,9 @@ final class FilmStripVC: UIViewController,
     }
 
     private func accessibilityLabel(for clip: Clip, index: Int, isCurrent: Bool) -> String {
-        let kind = clip.kind == .live ? String(localized: "라이브 포토") : String(localized: "비디오")
-        let selected = isCurrent ? String(localized: ", 선택됨") : ""
-        return String(localized: "\(index + 1)번째 클립, \(kind), \(clip.durationSecondsLabel)\(selected)")
+        let kind = clip.kind == .live ? String(localized: "라이브 포토", bundle: AppLocalization.bundle, locale: AppLocalization.locale) : String(localized: "비디오", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
+        let selected = isCurrent ? String(localized: ", 선택됨", bundle: AppLocalization.bundle, locale: AppLocalization.locale) : ""
+        return String(localized: "\(index + 1)번째 클립, \(kind), \(clip.durationSecondsLabel)\(selected)", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
     }
 
     private func moveClipForAccessibility(_ clipID: Clip.ID, by delta: Int) -> Bool {
@@ -523,7 +523,7 @@ final class FilmStripVC: UIViewController,
         onMove?(clipID, target)
         UIAccessibility.post(
             notification: .announcement,
-            argument: String(localized: "\(target + 1)번째 위치로 이동했습니다.")
+            argument: String(localized: "\(target + 1)번째 위치로 이동했습니다.", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
         )
         return true
     }

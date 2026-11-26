@@ -1,8 +1,8 @@
 import Foundation
 
 /// main 번들의 클래스를 이 서브클래스로 바꿔(`object_setClass`) 문자열 조회를
-/// 선택 언어의 `.lproj` 로 위임한다. SwiftUI `Text` 와 `String(localized:)` 가
-/// 모두 `Bundle.main.localizedString(forKey:value:table:)` 를 거치므로 둘 다 즉시 전환된다.
+/// 선택 언어의 `.lproj` 로 위임한다. SwiftUI는 환경의 locale을 사용하며,
+/// `String(localized:)` 호출에는 `AppLocalization.bundle`을 명시한다.
 final class LanguageBundle: Bundle, @unchecked Sendable {
     /// 선택 언어의 `.lproj` 번들. nil 이면 시스템(super) 동작.
     nonisolated(unsafe) static var overrideBundle: Bundle?

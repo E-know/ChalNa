@@ -11,8 +11,20 @@ public protocol FilmComposing: Sendable {
         clips: [Clip],
         rotations: [Clip.ID: ClipRotation],
         transforms: [Clip.ID: ClipTransform],
-        clipLabels: [Clip.ID: ClipLabel]
+        clipLabels: [Clip.ID: ClipLabel],
+        resolution: FilmOutputResolution
     ) -> AsyncStream<FilmExportEvent>
+}
+
+public extension FilmComposing {
+    func export(
+        clips: [Clip],
+        rotations: [Clip.ID: ClipRotation],
+        transforms: [Clip.ID: ClipTransform],
+        clipLabels: [Clip.ID: ClipLabel]
+    ) -> AsyncStream<FilmExportEvent> {
+        export(clips: clips, rotations: rotations, transforms: transforms, clipLabels: clipLabels, resolution: .fullHD)
+    }
 }
 
 public enum FilmPhotoSaveResult: Equatable, Sendable {

@@ -1,5 +1,6 @@
 import Foundation
 import ComposableArchitecture
+import Models
 
 /// 신고를 외부(텔레그램 봇)로 전송하는 클라이언트. liveValue 가 URLSession 으로 sendMessage POST.
 @DependencyClient
@@ -32,9 +33,9 @@ public enum FeedbackError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .network:
-            return String(localized: "전송에 실패했어요. 네트워크 상태를 확인하고 다시 시도해 주세요.")
+            return String(localized: "전송에 실패했어요. 네트워크 상태를 확인하고 다시 시도해 주세요.", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
         case .telegram:
-            return String(localized: "전송에 실패했어요. 잠시 후 다시 시도해 주세요.")
+            return String(localized: "전송에 실패했어요. 잠시 후 다시 시도해 주세요.", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
         }
     }
 }

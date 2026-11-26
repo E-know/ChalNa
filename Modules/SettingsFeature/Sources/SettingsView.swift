@@ -1,6 +1,7 @@
 import SwiftUI
 import ComposableArchitecture
 import DesignSystem
+import Models
 
 public struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
@@ -16,6 +17,7 @@ public struct SettingsView: View {
                     .accessibilityIdentifier("settings.language")
                 menuLink(.support, title: "문의·신고", subtitle: "불편한 점이나 제안을 보내주세요")
                     .accessibilityIdentifier("settings.support")
+                outputResolutionPicker
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
@@ -47,6 +49,25 @@ public struct SettingsView: View {
             preferredCompactColumn = section == nil ? .sidebar : .detail
         }
         .onAppear { store.send(.onAppear) }
+    }
+
+    private var outputResolutionPicker: some View {
+        Picker(selection: $store.outputResolution.sending(\.outputResolutionSelected)) {
+            ForEach(FilmOutputResolution.allCases, id: \.self) { resolution in
+                Text(verbatim: resolution.title).tag(resolution)
+            }
+        } label: {
+            Text("영상 해상도")
+                .font(ChalNaTypography.body)
+                .foregroundStyle(ChalNaColor.textPrimary)
+        }
+        .pickerStyle(.menu)
+        .tint(ChalNaColor.accent)
+        .frame(minHeight: 56)
+        .listRowBackground(ChalNaColor.bg)
+        .listRowSeparatorTint(ChalNaColor.border)
+        .accessibilityHint(Text("내보낼 영상의 해상도를 선택하세요"))
+        .accessibilityIdentifier("settings.filmOutputResolution")
     }
 
     private func menuLink(_ section: SettingsFeature.Section, title: LocalizedStringKey,

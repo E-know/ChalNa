@@ -1,5 +1,6 @@
 import ComposableArchitecture
 import Foundation
+import Models
 
 public enum ExportQuotaDecision: Equatable, Sendable {
     case allowed
@@ -13,9 +14,9 @@ public enum ExportQuotaBlockReason: String, Equatable, Sendable {
     public var message: String {
         switch self {
         case .dailyLimit:
-            return String(localized: "영상은 하루에 2번까지 만들 수 있어요.")
+            return String(localized: "영상은 하루에 2번까지 만들 수 있어요.", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
         case .weeklyLimit:
-            return String(localized: "영상은 일주일에 5번까지 만들 수 있어요.")
+            return String(localized: "영상은 일주일에 5번까지 만들 수 있어요.", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
         }
     }
 }

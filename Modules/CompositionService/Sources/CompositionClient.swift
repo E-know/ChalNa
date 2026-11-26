@@ -9,8 +9,9 @@ public struct CompositionClient: Sendable {
         _ clips: [Clip],
         _ rotations: [Clip.ID: ClipRotation],
         _ transforms: [Clip.ID: ClipTransform],
-        _ clipLabels: [Clip.ID: ClipLabel]
-    ) -> AsyncStream<ExportEvent> = { _, _, _, _ in
+        _ clipLabels: [Clip.ID: ClipLabel],
+        _ resolution: FilmOutputResolution
+    ) -> AsyncStream<ExportEvent> = { _, _, _, _, _ in
         AsyncStream { $0.finish() }
     }
 }
@@ -19,8 +20,9 @@ extension CompositionClient: DependencyKey {
     public static let liveValue: CompositionClient = {
         let service = AVFoundationCompositionService()
         return CompositionClient(
-            export: { clips, rotations, transforms, clipLabels in
-                service.export(clips: clips, rotations: rotations, transforms: transforms, clipLabels: clipLabels)
+            export: { clips, rotations, transforms, clipLabels, resolution in
+                service.export(clips: clips, rotations: rotations, transforms: transforms, clipLabels: clipLabels,
+                               resolution: resolution)
             }
         )
     }()

@@ -1,6 +1,7 @@
 import ComposableArchitecture
 import AnalyticsService
 import AppCore
+import Models
 
 /// 문의·신고 화면. 자유 텍스트 + 분류를 텔레그램 봇으로 전송.
 @Reducer
@@ -90,7 +91,7 @@ public struct SupportFeature {
                 analyticsTracker.log(.feedbackSubmitted(category: state.category.rawValue))
                 state.isSending = false
                 state.text = ""
-                state.alert = AlertInfo(message: String(localized: "소중한 의견 감사합니다. 잘 전달했어요."), isSuccess: true)
+                state.alert = AlertInfo(message: String(localized: "소중한 의견 감사합니다. 잘 전달했어요.", bundle: AppLocalization.bundle, locale: AppLocalization.locale), isSuccess: true)
                 return .none
 
             case let .sendFailed(reason):
@@ -120,17 +121,17 @@ public struct SupportFeature {
             case .redeemSubmitted:
                 let code = state.redeemCode.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !code.isEmpty else {
-                    state.redeemError = String(localized: "리딤 코드를 입력해 주세요.")
+                    state.redeemError = String(localized: "리딤 코드를 입력해 주세요.", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
                     return .none
                 }
                 guard exportQuotaClient.redeem(code) else {
-                    state.redeemError = String(localized: "리딤 코드가 맞지 않아요.")
+                    state.redeemError = String(localized: "리딤 코드가 맞지 않아요.", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
                     return .none
                 }
                 state.isRedeemPresented = false
                 state.redeemCode = ""
                 state.redeemError = nil
-                state.alert = AlertInfo(message: String(localized: "2026년까지 영상 생성 제한이 해제됐어요."), isSuccess: false)
+                state.alert = AlertInfo(message: String(localized: "2026년까지 영상 생성 제한이 해제됐어요.", bundle: AppLocalization.bundle, locale: AppLocalization.locale), isSuccess: false)
                 return .none
 
             case .delegate:

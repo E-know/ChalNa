@@ -41,7 +41,7 @@ struct ClipLabelText: View {
     /// 축 정렬된 사각형이 되어 기운 라벨과 어긋난다.
     var selected: Bool = false
 
-    private var displayString: String { placeholder ? String(localized: "자막 입력") : label.text }
+    private var displayString: String { placeholder ? String(localized: "자막 입력", bundle: AppLocalization.bundle, locale: AppLocalization.locale) : label.text }
 
     /// 합성과 동일한 실측 — `Models.ClipLabelMetrics` 가 단일 출처다.
     private var measuredSize: CGSize { ClipLabelMetrics.textSize(displayString, fontPx: fontPx) }

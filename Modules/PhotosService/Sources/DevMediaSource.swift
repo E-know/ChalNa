@@ -46,11 +46,11 @@ public enum DevMediaError: LocalizedError, Equatable, Sendable {
     public var errorDescription: String? {
         switch self {
         case .missingAssetIDs(let ids):
-            return String(localized: "알 수 없는 Dev fixture예요: \(ids.joined(separator: ", "))")
+            return String(localized: "알 수 없는 Dev fixture예요: \(ids.joined(separator: ", "))", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
         case .missingResource(let id):
-            return String(localized: "Dev fixture 파일을 찾을 수 없어요: \(id)")
+            return String(localized: "Dev fixture 파일을 찾을 수 없어요: \(id)", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
         case .unreadableVideo(let id):
-            return String(localized: "Dev fixture 영상을 읽을 수 없어요: \(id)")
+            return String(localized: "Dev fixture 영상을 읽을 수 없어요: \(id)", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
         }
     }
 }
@@ -207,39 +207,39 @@ public actor BundledDevMediaSource: DevMediaSourcing {
         return [
             DevMediaAsset(
                 id: "dev-jeju-sea",
-                title: String(localized: "협재 바다"),
+                title: String(localized: "협재 바다", bundle: AppLocalization.bundle, locale: AppLocalization.locale),
                 kind: .live,
                 capturedAt: base,
                 duration: 2.4,
                 preset: .jejuSea,
-                locationNote: String(localized: "Dev · 협재 바다")
+                locationNote: String(localized: "Dev · 협재 바다", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
             ),
             DevMediaAsset(
                 id: "dev-cafe-table",
-                title: String(localized: "카페 테이블"),
+                title: String(localized: "카페 테이블", bundle: AppLocalization.bundle, locale: AppLocalization.locale),
                 kind: .video,
                 capturedAt: base.addingTimeInterval(420),
                 duration: 2.0,
                 preset: .cafe,
-                locationNote: String(localized: "Dev · 카페")
+                locationNote: String(localized: "Dev · 카페", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
             ),
             DevMediaAsset(
                 id: "dev-sunset-walk",
-                title: String(localized: "노을 산책"),
+                title: String(localized: "노을 산책", bundle: AppLocalization.bundle, locale: AppLocalization.locale),
                 kind: .video,
                 capturedAt: base.addingTimeInterval(1_080),
                 duration: 2.8,
                 preset: .sunset,
-                locationNote: String(localized: "Dev · 노을")
+                locationNote: String(localized: "Dev · 노을", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
             ),
             DevMediaAsset(
                 id: "dev-forest-light",
-                title: String(localized: "숲의 빛"),
+                title: String(localized: "숲의 빛", bundle: AppLocalization.bundle, locale: AppLocalization.locale),
                 kind: .live,
                 capturedAt: base.addingTimeInterval(1_560),
                 duration: 2.2,
                 preset: .forest,
-                locationNote: String(localized: "Dev · 숲길")
+                locationNote: String(localized: "Dev · 숲길", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
             ),
         ]
     }

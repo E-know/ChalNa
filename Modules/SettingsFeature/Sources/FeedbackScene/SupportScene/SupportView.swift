@@ -1,12 +1,13 @@
 import SwiftUI
 import ComposableArchitecture
 import DesignSystem
+import Models
 
 /// 문의·신고 화면. 분류 칩 + 멀티라인 입력 + 전송 버튼.
 public struct SupportView: View {
     @Bindable var store: StoreOf<SupportFeature>
 
-    private let placeholder = String(localized: "불편한 점이나 제안을 자유롭게 적어주세요.")
+    private let placeholder = String(localized: "불편한 점이나 제안을 자유롭게 적어주세요.", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
 
     public init(store: StoreOf<SupportFeature>) {
         self.store = store
@@ -134,7 +135,7 @@ public struct SupportView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             ChalNaTextField(
-                placeholder: "Redeem Code",
+                placeholder: String(localized: "리딤 코드", bundle: AppLocalization.bundle, locale: AppLocalization.locale),
                 errorText: store.redeemError,
                 text: $store.redeemCode.sending(\.redeemCodeChanged)
             )

@@ -1,4 +1,5 @@
 import Foundation
+import Models
 
 /// 앱 표시 언어. `system` 은 기기 언어를 따른다(오버라이드 없음).
 public enum AppLanguage: String, CaseIterable, Sendable {
@@ -23,7 +24,7 @@ public enum AppLanguage: String, CaseIterable, Sendable {
     /// 설정 화면 표시명. system 만 현지화, 나머지는 endonym 고정.
     public var displayName: String {
         switch self {
-        case .system: return String(localized: "시스템 설정")
+        case .system: return String(localized: "시스템 설정", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
         case .ko:     return "한국어"
         case .en:     return "English"
         case .ja:     return "日本語"

@@ -1,4 +1,5 @@
 import Foundation
+import Models
 import Observation
 
 /// 앱 표시 언어의 런타임 단일 출처. UserDefaults 에 영속하고, 변경 시
@@ -6,7 +7,7 @@ import Observation
 @Observable
 @MainActor
 public final class AppLanguageStore: AppLanguageWriting {
-    public nonisolated static let storageKey = "appLanguage"
+    public nonisolated static let storageKey = AppLocalization.languagePreferenceKey
 
     public private(set) var language: AppLanguage
 

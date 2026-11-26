@@ -3,6 +3,7 @@ import ComposableArchitecture
 import DesignSystem
 import PhotosService
 import PhotosUI
+import Models
 
 public struct MediaPickerView: View {
     @Environment(\.openURL) private var openURL
@@ -196,8 +197,8 @@ public struct MediaPickerView: View {
     }
 
     private var titleField: some View {
-        ChalNaTextField(label: String(localized: "필름 제목 (선택)"),
-                        placeholder: String(localized: "필름 제목"),
+        ChalNaTextField(label: String(localized: "필름 제목 (선택)", bundle: AppLocalization.bundle, locale: AppLocalization.locale),
+                        placeholder: String(localized: "필름 제목", bundle: AppLocalization.bundle, locale: AppLocalization.locale),
                         text: $store.titleInput.sending(\.titleChanged))
             .accessibilityIdentifier("picker.title")
     }
@@ -311,9 +312,9 @@ public struct MediaPickerView: View {
     private func kindName(_ asset: PhotoLibraryAsset) -> String {
         switch asset.kind {
         case .livePhoto: return "Live Photo"
-        case .video: return String(localized: "동영상")
-        case .image: return String(localized: "사진")
-        case .unknown: return String(localized: "미디어")
+        case .video: return String(localized: "동영상", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
+        case .image: return String(localized: "사진", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
+        case .unknown: return String(localized: "미디어", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
         }
     }
 
@@ -324,7 +325,7 @@ public struct MediaPickerView: View {
 
     private func metadata(_ asset: PhotoLibraryAsset, includeDuration: Bool) -> some View {
         let duration = includeDuration ? store.media[asset.id]?.duration : nil
-        let suffix = duration.map { " · " + String(format: String(localized: "%.1f초"), $0) } ?? ""
+        let suffix = duration.map { " · " + String(format: String(localized: "%.1f초", bundle: AppLocalization.bundle, locale: AppLocalization.locale), $0) } ?? ""
         return Text(verbatim: kindName(asset) + suffix)
             .font(ChalNaTypography.caption).foregroundStyle(ChalNaColor.textSecondary)
     }
@@ -390,11 +391,11 @@ public struct MediaPickerView: View {
     }
 
     private var actionTitle: String {
-        if isEmptyLibrary { return denied ? String(localized: "앱 설정 열기") : String(localized: "사진 보관함 열기") }
-        if store.state.hasUnavailableMedia { return String(localized: "원본 확인 필요") }
-        if store.state.selectedCount == 0 { return String(localized: "선택 후 다음") }
-        if !store.state.canProceed || store.isResolving { return String(localized: "장면을 준비하는 중") }
-        return String(localized: "\(store.state.selectedCount)개 장면 편집하기")
+        if isEmptyLibrary { return denied ? String(localized: "앱 설정 열기", bundle: AppLocalization.bundle, locale: AppLocalization.locale) : String(localized: "사진 보관함 열기", bundle: AppLocalization.bundle, locale: AppLocalization.locale) }
+        if store.state.hasUnavailableMedia { return String(localized: "원본 확인 필요", bundle: AppLocalization.bundle, locale: AppLocalization.locale) }
+        if store.state.selectedCount == 0 { return String(localized: "선택 후 다음", bundle: AppLocalization.bundle, locale: AppLocalization.locale) }
+        if !store.state.canProceed || store.isResolving { return String(localized: "장면을 준비하는 중", bundle: AppLocalization.bundle, locale: AppLocalization.locale) }
+        return String(localized: "\(store.state.selectedCount)개 장면 편집하기", bundle: AppLocalization.bundle, locale: AppLocalization.locale)
     }
 }
 

@@ -72,7 +72,7 @@ public extension Clip {
 
     /// "3.0s" 형태.
     var durationSecondsLabel: String {
-        String(format: String(localized: "%.1fs"), duration)
+        String(format: String(localized: "%.1fs", bundle: AppLocalization.bundle, locale: AppLocalization.locale), duration)
     }
 
     /// "MM:SS" 형태.

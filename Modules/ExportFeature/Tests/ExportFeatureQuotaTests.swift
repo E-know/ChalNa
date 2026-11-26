@@ -15,21 +15,24 @@ struct ExportFeatureQuotaTests {
     private let clip = Clip(kind: .video, capturedAt: .distantPast, duration: 1, preset: .jejuSea)
     private let movie = URL(fileURLWithPath: "/tmp/chalna-export-test.mp4")
 
-    @Test func openingConfirmationNeverReservesAndRepeatedConfirmationOnlyStartsOneRender() async {
+    @Test func openingConfirmationNeverReservesAndRepeatedConfirmationOnlyRendersSelectedResolutionOnce() async {
         let reservations = LockIsolated(0)
-        let renders = LockIsolated(0)
+        let renders = LockIsolated<[FilmOutputResolution]>([])
         let (stream, continuation) = AsyncStream<FilmExportEvent>.makeStream()
-        let store = TestStore(initialState: ExportFeature.State()) { ExportFeature() } withDependencies: {
+        let store = TestStore(initialState: ExportFeature.State(resolution: .fourK)) { ExportFeature() } withDependencies: {
             $0.uuid = .incrementing
             $0.date.now = .distantPast
             $0.exportQuotaClient.isUnlocked = { true }
             $0.exportQuotaClient.reserveExport = { reservations.withValue { $0 += 1 }; return .allowed }
-            $0.filmComposer = CompositionClient(export: { _, _, _, _ in renders.withValue { $0 += 1 }; return stream })
+            $0.filmComposer = CompositionClient(export: { _, _, _, _, resolution in
+                renders.withValue { $0.append(resolution) }
+                return stream
+            })
         }
         store.exhaustivity = .off
         await store.send(.confirmationAppeared)
         #expect(store.state.phase == .idle && store.state.quotaUnlocked)
-        #expect(reservations.value == 0 && renders.value == 0)
+        #expect(reservations.value == 0 && renders.value.isEmpty)
         await store.send(.startExport(clips: [], rotations: [:], transforms: [:], clipLabels: [:]))
         #expect(reservations.value == 0)
         let start = ExportFeature.Action.startExport(clips: [clip], rotations: [:], transforms: [:], clipLabels: [:], title: "제주의 오후")
@@ -39,7 +42,7 @@ struct ExportFeatureQuotaTests {
         continuation.finish()
         await store.receive(\.exportFailed)
         #expect(store.state.phase == .failed)
-        #expect(reservations.value == 1 && renders.value == 1)
+        #expect(reservations.value == 1 && renders.value == [.fourK])
     }
 
     @Test(arguments: [ExportQuotaBlockReason.dailyLimit, .weeklyLimit])
@@ -49,7 +52,7 @@ struct ExportFeatureQuotaTests {
         let store = TestStore(initialState: ExportFeature.State()) { ExportFeature() } withDependencies: {
             $0.analyticsTracker = analytics
             $0.exportQuotaClient.reserveExport = { .blocked(reason) }
-            $0.filmComposer = CompositionClient(export: { _, _, _, _ in
+            $0.filmComposer = CompositionClient(export: { _, _, _, _, _ in
                 renders.withValue { $0 += 1 }
                 return AsyncStream { $0.finish() }
             })
