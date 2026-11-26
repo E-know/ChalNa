@@ -10,6 +10,7 @@ final class HomeLibraryCoverUITests: XCTestCase {
     func testExportedFilmAppearsInHomeLibraryAndDailyLimitBlocksBothEntryPoints() {
         let app = XCUIApplication()
         app.launchEnvironment["CHALNA_APP_MODE"] = "devMock"
+        app.launchEnvironment["CHALNA_UI_TEST_ISOLATE_EXPORT_QUOTA"] = "1"
         app.launchArguments += ["-AppleLanguages", "(ko)"]
         app.launch()
 

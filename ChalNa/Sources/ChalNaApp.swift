@@ -31,6 +31,18 @@ struct ChalNaApp: App {
             $0.appLanguageWriter = languages
             $0.filmComposer = AVFoundationCompositionService()
             $0.photoWriter = PhotoLibraryClient.liveValue
+            #if DEBUG
+            if AppMode.current == .devMock,
+               ProcessInfo.processInfo.environment["CHALNA_UI_TEST_ISOLATE_EXPORT_QUOTA"] == "1" {
+                let ledger = LockIsolated(ExportQuotaLedger())
+                $0.exportQuotaClient = ExportQuotaClient(
+                    isUnlocked: { ledger.value.isUnlocked(at: Date()) },
+                    checkExport: { ledger.value.checkExport(now: Date()) },
+                    reserveExport: { ledger.withValue { $0.reserveExport(now: Date()) } },
+                    redeem: { code in ledger.withValue { $0.redeem(code: code, now: Date()) } }
+                )
+            }
+            #endif
             if case let .success(container) = library {
                 let archive = SwiftDataFilmArchive(container: container)
                 $0.filmArchive = archive
