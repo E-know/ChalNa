@@ -34,8 +34,18 @@ struct ClipTrimRangeTests {
         #expect(clip.trimRange == 0...0.32)
     }
 
-    @Test func unsupportedClipsKeepTheirOriginalRange() {
-        for var clip in [clip(kind: .live), clip(file: false), clip(duration: .nan), clip(duration: 0)] {
+    @Test func livePhotoPairedVideoCanBeTrimmed() {
+        var clip = clip(kind: .live, duration: 3)
+        #expect(clip.canTrim)
+        clip.setTrimStart(0.5)
+        clip.setTrimEnd(2)
+        #expect(clip.trimRange == 0.5...2)
+        #expect(clip.sourceDuration == 3)
+    }
+
+    @Test(arguments: [ClipKind.video, .live])
+    func unsupportedClipsKeepTheirOriginalRange(kind: ClipKind) {
+        for var clip in [clip(kind: kind, file: false), clip(kind: kind, duration: .nan), clip(kind: kind, duration: 0)] {
             let original = clip
             #expect(!clip.canTrim)
             clip.setTrimRange(2...7.5)
@@ -45,8 +55,9 @@ struct ClipTrimRangeTests {
         }
     }
 
-    @Test func missingDurationKeepsPlaybackFallbackAndDisablesTrimming() {
-        var clip = clip(duration: nil)
+    @Test(arguments: [ClipKind.video, .live])
+    func missingDurationKeepsPlaybackFallbackAndDisablesTrimming(kind: ClipKind) {
+        var clip = clip(kind: kind, duration: nil)
         #expect(clip.videoURL != nil)
         #expect(!clip.canTrim)
         #expect(clip.sourceDuration == 0)

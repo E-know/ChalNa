@@ -13,7 +13,7 @@ public struct Clip: Identifiable, Hashable, Sendable {
     public let sourceDuration: TimeInterval
     public private(set) var trimRange: ClosedRange<TimeInterval>
     public var duration: TimeInterval { trimRange.upperBound - trimRange.lowerBound }
-    public var canTrim: Bool { kind == .video && videoURL != nil && sourceDuration > 0 }
+    public var canTrim: Bool { videoURL != nil && sourceDuration > 0 }
     private var minimumTrimDuration: TimeInterval { min(0.5, sourceDuration) }
     public let preset: ThumbnailPreset
     public var thumbnailData: Data?

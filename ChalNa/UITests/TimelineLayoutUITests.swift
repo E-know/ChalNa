@@ -94,6 +94,44 @@ final class TimelineLayoutUITests: XCTestCase {
         }
     }
 
+    func testTrimLivePhotoAndReopenSavedRange() throws {
+        let app = openTimeline()
+        let livePhoto = app.collectionViews.firstMatch.descendants(matching: .any)
+            .matching(identifier: "timeline.clip.0").firstMatch
+        XCTAssertTrue(livePhoto.waitForExistence(timeout: 10))
+        XCTAssertTrue(livePhoto.label.contains("라이브 포토"))
+        livePhoto.tap()
+        let untrimmedLabel = livePhoto.label
+
+        let trim = app.buttons["timeline.trim"]
+        XCTAssertTrue(trim.waitForExistence(timeout: 5))
+        trim.tap()
+        let elements = app.descendants(matching: .any)
+        let start = elements.matching(identifier: "trim.start").firstMatch
+        let end = elements.matching(identifier: "trim.end").firstMatch
+        let done = app.buttons["trim.done"]
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        XCTAssertTrue(done.wait(for: \.isEnabled, toEqual: true, timeout: 10))
+        let initialStart = try XCTUnwrap(start.value as? String)
+        let initialEnd = try XCTUnwrap(end.value as? String)
+        let distance = (end.frame.midX - start.frame.midX) * 0.20
+        drag(start, by: distance)
+        drag(end, by: -distance)
+        let savedStart = try XCTUnwrap(start.value as? String)
+        let savedEnd = try XCTUnwrap(end.value as? String)
+        XCTAssertNotEqual(savedStart, initialStart)
+        XCTAssertNotEqual(savedEnd, initialEnd)
+
+        done.tap()
+        XCTAssertTrue(trim.waitForExistence(timeout: 10))
+        XCTAssertNotEqual(livePhoto.label, untrimmedLabel)
+        XCTAssertTrue(livePhoto.label.contains("라이브 포토"))
+        trim.tap()
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        XCTAssertEqual(start.value as? String, savedStart)
+        XCTAssertEqual(end.value as? String, savedEnd)
+    }
+
     func testTrimVideoFromBothEndsAndCancelSubsequentChanges() {
         let app = openTimeline()
         let window = app.windows.firstMatch
@@ -102,7 +140,6 @@ final class TimelineLayoutUITests: XCTestCase {
         if !unfolded { XCUIDevice.shared.orientation = .portrait }
         defer { if !unfolded { XCUIDevice.shared.orientation = .portrait } }
         let trim = app.buttons["timeline.trim"]
-        XCTAssertFalse(trim.exists, "Live Photo에는 자르기를 표시하지 않는다")
         let video = app.collectionViews.firstMatch.descendants(matching: .any)
             .matching(identifier: "timeline.clip.1").firstMatch
         video.tap()
