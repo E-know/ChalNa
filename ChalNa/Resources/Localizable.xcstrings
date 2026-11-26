@@ -4284,19 +4284,70 @@
         }
       }
     },
-    "하루 1회 · 주 3회" : {
+    "하루 2회 · 주 5회" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1 per day · 3 per week"
+            "value" : "2 per day · 5 per week"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1日1回・週3回"
+            "value" : "1日2回・週5回"
+          }
+        }
+      }
+    },
+    "필름 생성 한도에 도달했어요" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Film creation limit reached"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フィルムの作成上限に達しました"
+          }
+        }
+      }
+    },
+    "영상은 하루에 2번까지 만들 수 있어요." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can create up to 2 films per day."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フィルムは1日2本まで作成できます。"
+          }
+        }
+      }
+    },
+    "영상은 일주일에 5번까지 만들 수 있어요." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can create up to 5 films per week."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フィルムは週に5本まで作成できます。"
           }
         }
       }

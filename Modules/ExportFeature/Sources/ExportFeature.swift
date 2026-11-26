@@ -89,6 +89,7 @@ public struct ExportFeature {
                     state.phase = .limited(reason)
                     state.errorMessage = reason.message
                     analyticsTracker.log(.exportFailed(reason: "quota_\(reason)"))
+                    analyticsTracker.log(.exportQuotaBlocked(reason: reason.rawValue, stage: "export_start"))
                     return .none
                 }
                 state.entry = FilmArchiveEntry(

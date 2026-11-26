@@ -30,6 +30,7 @@ public struct RootView: View {
             SettingsView(store: settingsStore)
                 .dynamicTypeSize(...DynamicTypeSize.accessibility1)
         }
+        .alert($store.scope(\.quotaAlert, action: \.quotaAlert))
         .environment(session)
         .environment(\.locale, languageStore.locale)
         .dynamicTypeSize(...DynamicTypeSize.accessibility1)

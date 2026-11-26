@@ -22,6 +22,7 @@ public struct AppFeature {
         public var home = HomeFeature.State()
         public var path = StackState<Path.State>()
         @Presents public var settings: SettingsFeature.State?
+        @Presents public var quotaAlert: AlertState<Never>?
 
         public init() {}
     }
@@ -30,6 +31,7 @@ public struct AppFeature {
         case home(HomeFeature.Action)
         case path(StackActionOf<Path>)
         case settings(PresentationAction<SettingsFeature.Action>)
+        case quotaAlert(PresentationAction<Never>)
     }
 
     @Reducer
@@ -43,6 +45,7 @@ public struct AppFeature {
 
     @Dependency(\.analyticsTracker) var analyticsTracker
     @Dependency(\.editSession) var editSession
+    @Dependency(\.exportQuotaClient) var exportQuotaClient
 
     public var body: some ReducerOf<Self> {
         Scope(state: \.home, action: \.home) {
@@ -56,6 +59,7 @@ public struct AppFeature {
             case let .home(.delegate(delegateAction)):
                 switch delegateAction {
                 case .newVlogRequested:
+                    guard canStartFilm(state: &state) else { return .none }
                     pushMediaPicker(state: &state)
                 case .settingsRequested:
                     state.settings = SettingsFeature.State()
@@ -96,21 +100,36 @@ public struct AppFeature {
                 case .homeRequested:
                     state.path.removeAll()
                 case .newFilmRequested:
+                    guard canStartFilm(state: &state) else { return .none }
                     editSession.clear()
                     state.path.removeAll()
                     pushMediaPicker(state: &state)
                 }
                 return .none
 
-            case .home, .path, .settings:
+            case .home, .path, .settings, .quotaAlert:
                 return .none
             }
         }
         .forEach(\.path, action: \.path)
         .ifLet(\.$settings, action: \.settings) { SettingsFeature() }
+        .ifLet(\.$quotaAlert, action: \.quotaAlert)
     }
 
     // MARK: - Helpers
+
+    private func canStartFilm(state: inout State) -> Bool {
+        guard case let .blocked(reason) = exportQuotaClient.checkExport() else { return true }
+        analyticsTracker.log(.exportQuotaBlocked(reason: reason.rawValue, stage: "film_entry"))
+        state.quotaAlert = AlertState {
+            TextState("필름 생성 한도에 도달했어요")
+        } actions: {
+            ButtonState(role: .cancel) { TextState("확인") }
+        } message: {
+            TextState(verbatim: reason.message)
+        }
+        return false
+    }
 
     private func pushMediaPicker(state: inout State) {
         let source = mediaPickerSource

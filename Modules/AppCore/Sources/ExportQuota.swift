@@ -6,16 +6,16 @@ public enum ExportQuotaDecision: Equatable, Sendable {
     case blocked(ExportQuotaBlockReason)
 }
 
-public enum ExportQuotaBlockReason: Equatable, Sendable {
-    case dailyLimit
-    case weeklyLimit
+public enum ExportQuotaBlockReason: String, Equatable, Sendable {
+    case dailyLimit = "daily_limit"
+    case weeklyLimit = "weekly_limit"
 
     public var message: String {
         switch self {
         case .dailyLimit:
-            return String(localized: "영상 생성은 하루에 1번만 할 수 있어요.")
+            return String(localized: "영상은 하루에 2번까지 만들 수 있어요.")
         case .weeklyLimit:
-            return String(localized: "영상 생성은 일주일에 3번까지만 할 수 있어요.")
+            return String(localized: "영상은 일주일에 5번까지 만들 수 있어요.")
         }
     }
 }
@@ -34,6 +34,11 @@ public struct ExportQuotaLedger: Equatable, Codable, Sendable {
         return now <= unlockExpiresAt
     }
 
+    public func checkExport(now: Date, calendar: Calendar = .autoupdatingCurrent) -> ExportQuotaDecision {
+        var preview = self
+        return preview.reserveExport(now: now, calendar: calendar)
+    }
+
     @discardableResult
     public mutating func reserveExport(now: Date, calendar: Calendar = .autoupdatingCurrent) -> ExportQuotaDecision {
         guard !isUnlocked(at: now, calendar: calendar) else { return .allowed }
@@ -41,9 +46,9 @@ public struct ExportQuotaLedger: Equatable, Codable, Sendable {
         prune(toWeekContaining: now, calendar: calendar)
 
         let exportsToday = exportedAt.filter { calendar.isDate($0, inSameDayAs: now) }.count
-        guard exportsToday < 1 else { return .blocked(.dailyLimit) }
+        guard exportsToday < 2 else { return .blocked(.dailyLimit) }
 
-        guard exportedAt.count < 3 else { return .blocked(.weeklyLimit) }
+        guard exportedAt.count < 5 else { return .blocked(.weeklyLimit) }
 
         exportedAt.append(now)
         return .allowed
@@ -84,6 +89,7 @@ public struct ExportQuotaLedger: Equatable, Codable, Sendable {
 @DependencyClient
 public struct ExportQuotaClient: Sendable {
     public var isUnlocked: @Sendable () -> Bool = { false }
+    public var checkExport: @Sendable () -> ExportQuotaDecision = { .allowed }
     public var reserveExport: @Sendable () -> ExportQuotaDecision = { .allowed }
     public var redeem: @Sendable (_ code: String) -> Bool = { _ in false }
 }
@@ -91,6 +97,7 @@ public struct ExportQuotaClient: Sendable {
 extension ExportQuotaClient: DependencyKey {
     public static let liveValue = ExportQuotaClient(
         isUnlocked: { ExportQuotaUserDefaults.isUnlocked() },
+        checkExport: { ExportQuotaUserDefaults.checkExport() },
         reserveExport: {
             ExportQuotaUserDefaults.reserveExport()
         },
@@ -116,6 +123,10 @@ private enum ExportQuotaUserDefaults {
 
     static func isUnlocked() -> Bool {
         lock.withLock { load().isUnlocked(at: Date()) }
+    }
+
+    static func checkExport() -> ExportQuotaDecision {
+        lock.withLock { load().checkExport(now: Date()) }
     }
 
     static func reserveExport() -> ExportQuotaDecision {

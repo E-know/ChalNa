@@ -1,3 +1,4 @@
+import AnalyticsService
 import AppCore
 import ComposableArchitecture
 import CompositionService
@@ -44,7 +45,9 @@ struct ExportFeatureQuotaTests {
     @Test(arguments: [ExportQuotaBlockReason.dailyLimit, .weeklyLimit])
     func blockedExportDoesNotStartComposition(reason: ExportQuotaBlockReason) async {
         let renders = LockIsolated(0)
+        let analytics = RecordingAnalytics()
         let store = TestStore(initialState: ExportFeature.State()) { ExportFeature() } withDependencies: {
+            $0.analyticsTracker = analytics
             $0.exportQuotaClient.reserveExport = { .blocked(reason) }
             $0.filmComposer = CompositionClient(export: { _, _, _, _ in
                 renders.withValue { $0 += 1 }
@@ -56,16 +59,22 @@ struct ExportFeatureQuotaTests {
         #expect(renders.value == 0)
         #expect(store.state.phase == .limited(reason))
         #expect(store.state.errorMessage == reason.message)
+        #expect(analytics.events.value == [
+            .exportFailed(reason: "quota_\(reason)"),
+            .exportQuotaBlocked(reason: reason.rawValue, stage: "export_start")
+        ])
     }
 
     @Test func renderCompletionStartsBothSavesOnce() async {
         let archive = RecordingArchive()
         let writes = LockIsolated<[URL]>([])
+        let analytics = RecordingAnalytics()
         var state = ExportFeature.State(phase: .exporting)
         let entry = FilmArchiveEntry(id: UUID(), title: "ChalNa", createdAt: .distantPast,
                                      thumbnail: nil, clipCount: 1, liveCount: 0, duration: 1)
         state.entry = entry
         let store = TestStore(initialState: state) { ExportFeature() } withDependencies: {
+            $0.analyticsTracker = analytics
             $0.filmArchive = archive
             var photos = PhotoLibraryClient.testValue
             photos.saveVideoToPhotoLibrary = { url in writes.withValue { $0.append(url) }; return .ok }
@@ -79,6 +88,7 @@ struct ExportFeatureQuotaTests {
         #expect(await archive.ids == [entry.id])
         #expect(writes.value == [movie])
         #expect(store.state.phase == .done)
+        #expect(analytics.events.value == [.exportCompleted(durationMs: nil), .vlogSavedToLibrary])
     }
 
     @Test func photoDenialCanRetryTheSameMovieEvenAfterArchivingSucceeded() async {
@@ -175,6 +185,13 @@ struct ExportFeatureQuotaTests {
         #expect(film.thumbnailData == entry.thumbnail)
         #expect(try container.mainContext.fetchCount(FetchDescriptor<Film>()) == 1)
     }
+}
+
+private struct RecordingAnalytics: AnalyticsTracker {
+    let events = LockIsolated<[AnalyticsEvent]>([])
+
+    func log(_ event: AnalyticsEvent) { events.withValue { $0.append(event) } }
+    func setUserProperty(_ value: String?, forName name: String) {}
 }
 
 private actor RecordingArchive: FilmArchiving {
