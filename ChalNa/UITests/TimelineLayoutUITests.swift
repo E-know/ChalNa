@@ -218,6 +218,69 @@ final class TimelineLayoutUITests: XCTestCase {
         }
     }
 
+    func testTrimAddsSeparateClipsFromOneVideo() throws {
+        let app = openTimeline(videoTitle: "노을 산책")
+        let cells = app.collectionViews.firstMatch.descendants(matching: .any)
+        let source = cells.matching(identifier: "timeline.clip.1").firstMatch
+        let first = cells.matching(identifier: "timeline.clip.2").firstMatch
+        let second = cells.matching(identifier: "timeline.clip.3").firstMatch
+        XCTAssertTrue(source.waitForExistence(timeout: 10))
+        let originalLabel = source.label
+        source.tap()
+
+        let trim = app.buttons["timeline.trim"]
+        let addClip = app.buttons["trim.add"]
+        let elements = app.descendants(matching: .any)
+        let start = elements.matching(identifier: "trim.start").firstMatch
+        let end = elements.matching(identifier: "trim.end").firstMatch
+        trim.tap()
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["trim.done"].wait(for: \.isEnabled, toEqual: true, timeout: 10))
+        let initialEnd = try XCTUnwrap(end.value as? String)
+        let width = end.frame.midX - start.frame.midX
+        drag(start, by: width * 0.10)
+        drag(end, by: -width * 0.52)
+        let firstStart = try XCTUnwrap(start.value as? String)
+        let firstEnd = try XCTUnwrap(end.value as? String)
+        XCTAssertLessThan(firstEnd, initialEnd)
+        XCTAssertTrue(addClip.wait(for: \.isEnabled, toEqual: true, timeout: 5))
+        let trimScreenshot = XCTAttachment(screenshot: app.screenshot())
+        trimScreenshot.name = "trim-add-clip"
+        trimScreenshot.lifetime = .keepAlways
+        add(trimScreenshot)
+        addClip.tap()
+
+        XCTAssertTrue(first.wait(for: \.isSelected, toEqual: true, timeout: 10))
+        XCTAssertEqual(source.label, originalLabel)
+        trim.tap()
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["trim.done"].wait(for: \.isEnabled, toEqual: true, timeout: 10))
+        XCTAssertEqual(start.value as? String, firstStart)
+        XCTAssertEqual(end.value as? String, firstEnd)
+        drag(end, by: width * 0.54)
+        XCTAssertEqual(end.value as? String, initialEnd)
+        drag(start, by: width * 0.48)
+        let secondStart = try XCTUnwrap(start.value as? String)
+        XCTAssertGreaterThan(secondStart, firstEnd)
+        addClip.tap()
+
+        XCTAssertTrue(second.wait(for: \.isSelected, toEqual: true, timeout: 10))
+        XCTAssertEqual(source.label, originalLabel)
+        let timelineScreenshot = XCTAttachment(screenshot: app.screenshot())
+        timelineScreenshot.name = "timeline-with-two-new-clips"
+        timelineScreenshot.lifetime = .keepAlways
+        add(timelineScreenshot)
+        trim.tap()
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        XCTAssertEqual(start.value as? String, secondStart)
+        XCTAssertEqual(end.value as? String, initialEnd)
+        app.buttons["trim.cancel"].tap()
+
+        app.buttons["timeline.export"].tap()
+        let exportCount = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH '클립 4개'")).firstMatch
+        XCTAssertTrue(exportCount.waitForExistence(timeout: 10))
+    }
+
     func testTrimPlayheadScrubsAndPlaysWithinSelection() throws {
         let app = openTimeline(videoTitle: "노을 산책")
         app.collectionViews.firstMatch.descendants(matching: .any)

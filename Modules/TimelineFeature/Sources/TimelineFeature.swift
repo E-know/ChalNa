@@ -96,6 +96,7 @@ public struct TimelineFeature {
         case trimTapped
         case trimDismissed
         case trimCommitted(ClosedRange<TimeInterval>, thumbnail: Data?)
+        case trimAdded(ClosedRange<TimeInterval>, thumbnail: Data?)
 
         // Delete flow
         case deleteCurrentRequested
@@ -128,6 +129,7 @@ public struct TimelineFeature {
     }
 
     @Dependency(\.editSession) var session
+    @Dependency(\.uuid) var uuid
 
     // MARK: - Reducer
 
@@ -210,6 +212,32 @@ public struct TimelineFeature {
                     state.clips[index].thumbnailData = thumbnail
                 }
                 state.playheadSeconds = state.cumulativeStart(ofClipAt: state.currentIndex)
+                session.clips = state.clips
+                return .none
+
+            case let .trimAdded(range, thumbnail):
+                guard let id = state.trimEditorClip?.id else { return .none }
+                state.trimEditorClip = nil
+                guard range.lowerBound.isFinite, range.upperBound.isFinite,
+                      let index = state.clips.firstIndex(where: { $0.id == id }) else { return .none }
+
+                let source = state.clips[index]
+                guard source.canTrim else { return .none }
+                var added = Clip(
+                    id: uuid(), kind: source.kind, capturedAt: source.capturedAt,
+                    duration: source.sourceDuration, preset: source.preset,
+                    videoURL: source.videoURL, locationNote: source.locationNote, displaySize: source.displaySize
+                )
+                added.setTrimRange(range)
+                added.thumbnailData = added.trimRange.lowerBound == source.trimRange.lowerBound
+                    ? source.thumbnailData : thumbnail
+                session.rotations[added.id] = session.rotations[id]
+                session.transforms[added.id] = session.transforms[id]
+
+                let addedIndex = index + 1
+                state.clips.insert(added, at: addedIndex)
+                state.currentIndex = addedIndex
+                state.playheadSeconds = state.cumulativeStart(ofClipAt: addedIndex)
                 session.clips = state.clips
                 return .none
 

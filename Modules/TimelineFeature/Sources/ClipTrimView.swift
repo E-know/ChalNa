@@ -5,10 +5,13 @@ import Models
 import SwiftUI
 
 struct ClipTrimView: View {
+    enum SaveAction { case update, add }
+
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     let clip: Clip
-    let onCommit: (ClosedRange<TimeInterval>, Data?) -> Void
+    let onCommit: (SaveAction, ClosedRange<TimeInterval>, Data?) -> Void
     let onCancel: () -> Void
 
     @State private var draft: Clip
@@ -23,11 +26,11 @@ struct ClipTrimView: View {
     @State private var playhead: TimeInterval
     @State private var resumeAfterScrub: Bool?
     @State private var timeObserver: Any?
-    @State private var saving = false
+    @State private var pendingSave: SaveAction?
     @State private var seekTask: Task<Void, Never>?
     @State private var requestedSeek: CMTime?
 
-    init(clip: Clip, onCommit: @escaping (ClosedRange<TimeInterval>, Data?) -> Void, onCancel: @escaping () -> Void) {
+    init(clip: Clip, onCommit: @escaping (SaveAction, ClosedRange<TimeInterval>, Data?) -> Void, onCancel: @escaping () -> Void) {
         self.clip = clip
         self.onCommit = onCommit
         self.onCancel = onCancel
@@ -75,23 +78,23 @@ struct ClipTrimView: View {
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("취소", systemImage: "xmark") {
-                    saving = false
+                    pendingSave = nil
                     stop()
                     onCancel()
                 }
                 .accessibilityIdentifier("trim.cancel")
             }
             ToolbarItem(placement: donePlacement) {
-                Button("완료", systemImage: "checkmark") { saving = true }
+                Button("완료", systemImage: "checkmark") { pendingSave = .update }
                     .tint(ChalNaColor.accent)
-                    .disabled(!ready || failed || saving)
+                    .disabled(!ready || failed || pendingSave != nil)
                     .accessibilityIdentifier("trim.done")
             }
         }
         .task { await prepare() }
-        .task(id: saving) { if saving { await commit() } }
+        .task(id: pendingSave) { if let pendingSave { await commit(pendingSave) } }
         .onDisappear {
-            saving = false
+            pendingSave = nil
             stop()
             seekTask?.cancel()
             seekTask = nil
@@ -120,7 +123,8 @@ struct ClipTrimView: View {
     }
 
     private var controls: some View {
-        VStack(spacing: 0) {
+        let inlineAdd = horizontalSizeClass == .regular && verticalSizeClass != .compact
+        return VStack(spacing: 0) {
             HStack(spacing: 12) {
                 Button { togglePlayback() } label: {
                     ChalNaIcon(playing ? .pause : .play, size: 16, weight: .semibold)
@@ -135,6 +139,7 @@ struct ClipTrimView: View {
                 Spacer(minLength: 4)
                 Text(verbatim: timelineClock(draft.duration)).font(ChalNaTypography.title).monospacedDigit()
                     .accessibilityIdentifier("trim.duration")
+                if inlineAdd { addClipButton(fillWidth: false) }
             }
             TrimFilmstrip(range: draft.trimRange, duration: draft.sourceDuration, playhead: playhead,
                           thumbnails: thumbnails, fallbackThumbnail: fallbackThumbnail, onScrub: scrub) { edge, time in
@@ -145,9 +150,18 @@ struct ClipTrimView: View {
                 stop()
                 seekPreview(to: edge == .start ? draft.trimRange.lowerBound : draft.trimRange.upperBound)
             }
+            if !inlineAdd {
+                addClipButton(fillWidth: true).padding(.top, 12)
+            }
         }
         .padding(.bottom, 8)
-        .disabled(!ready || saving)
+        .disabled(!ready || pendingSave != nil)
+    }
+
+    private func addClipButton(fillWidth: Bool) -> some View {
+        Button("새 클립으로 추가") { pendingSave = .add }
+            .buttonStyle(.chalNa(.secondary, size: .lg, fillWidth: fillWidth))
+            .accessibilityIdentifier("trim.add")
     }
 
     private func prepare() async {
@@ -263,11 +277,12 @@ struct ClipTrimView: View {
         }
     }
 
-    private func commit() async {
+    private func commit(_ action: SaveAction) async {
+        guard pendingSave == action, !Task.isCancelled, ready, !failed else { return }
         stop()
         let range = draft.trimRange
         guard range.lowerBound != clip.trimRange.lowerBound, let asset = item?.asset else {
-            onCommit(range, nil)
+            onCommit(action, range, nil)
             return
         }
         let generator = AVAssetImageGenerator(asset: asset)
@@ -277,15 +292,15 @@ struct ClipTrimView: View {
         generator.requestedTimeToleranceAfter = .zero
         let start = cmTime(range.lowerBound)
         var image = try? await generator.image(at: start).image
-        guard saving, !Task.isCancelled else { return }
+        guard pendingSave == action, !Task.isCancelled else { return }
         if image == nil {
             // A variable-frame-rate source can lack a decodable sample exactly at the boundary.
             generator.requestedTimeToleranceAfter = cmTime(max(0, range.upperBound - range.lowerBound - 1.0 / 600))
             image = try? await generator.image(at: start).image
         }
-        guard saving, !Task.isCancelled, !failed else { return }
+        guard pendingSave == action, !Task.isCancelled, !failed else { return }
         let jpeg = image.flatMap { UIImage(cgImage: $0).jpegData(compressionQuality: 0.8) }
-        onCommit(range, jpeg)
+        onCommit(action, range, jpeg)
     }
 
     private func cmTime(_ seconds: TimeInterval) -> CMTime {

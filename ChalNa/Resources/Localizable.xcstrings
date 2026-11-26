@@ -1480,6 +1480,23 @@
         }
       }
     },
+    "새 클립으로 추가" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add as New Clip"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しいクリップとして追加"
+          }
+        }
+      }
+    },
     "선택 구간 재생" : {
       "extractionState" : "manual",
       "localizations" : {
