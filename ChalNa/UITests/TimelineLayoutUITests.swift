@@ -251,7 +251,7 @@ final class TimelineLayoutUITests: XCTestCase {
         addClip.tap()
 
         XCTAssertTrue(first.wait(for: \.isSelected, toEqual: true, timeout: 10))
-        XCTAssertEqual(source.label, originalLabel)
+        XCTAssertTrue(source.wait(for: \.label, toEqual: originalLabel, timeout: 10))
         trim.tap()
         XCTAssertTrue(start.waitForExistence(timeout: 10))
         XCTAssertTrue(app.buttons["trim.done"].wait(for: \.isEnabled, toEqual: true, timeout: 10))
@@ -265,7 +265,7 @@ final class TimelineLayoutUITests: XCTestCase {
         addClip.tap()
 
         XCTAssertTrue(second.wait(for: \.isSelected, toEqual: true, timeout: 10))
-        XCTAssertEqual(source.label, originalLabel)
+        XCTAssertTrue(source.wait(for: \.label, toEqual: originalLabel, timeout: 10))
         let timelineScreenshot = XCTAttachment(screenshot: app.screenshot())
         timelineScreenshot.name = "timeline-with-two-new-clips"
         timelineScreenshot.lifetime = .keepAlways
