@@ -42,4 +42,27 @@ struct TimelineTrimTests {
         await store.send(.trimTapped)
         #expect(store.state.trimEditorClip == nil)
     }
+
+    @Test func livePhotoTrimPersistsInEditSession() async {
+        let pairedVideo = URL(fileURLWithPath: "/paired.mov")
+        let livePhoto = Clip(kind: .live, capturedAt: Date(), duration: 3, preset: .field, videoURL: pairedVideo)
+        let session = EditSession(clips: [livePhoto])
+        let store = TestStore(initialState: TimelineFeature.State(clips: [livePhoto])) {
+            TimelineFeature()
+        } withDependencies: { $0.editSession = session }
+        store.exhaustivity = .off
+
+        await store.send(.trimTapped)
+        #expect(store.state.trimEditorClip == livePhoto)
+        await store.send(.trimCommitted(0.5...2, thumbnail: nil))
+
+        #expect(store.state.totalDuration == 1.5)
+        #expect(session.clips == store.state.clips)
+        #expect(session.clips.first?.trimRange == 0.5...2)
+        #expect(session.clips.first?.kind == .live)
+        #expect(session.clips.first?.videoURL == pairedVideo)
+
+        await store.send(.trimTapped)
+        #expect(store.state.trimEditorClip?.trimRange == 0.5...2)
+    }
 }

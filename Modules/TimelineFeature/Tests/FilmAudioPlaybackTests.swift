@@ -9,9 +9,9 @@ struct FilmAudioPlaybackTests {
     private final class TestBundle: NSObject {}
 
     // 카페 테스트 영상 1초에 0.25~0.55초 동안만 440Hz 신호를 담은 MOV.
-    private func clip() throws -> Clip {
+    private func clip(kind: ClipKind = .video) throws -> Clip {
         let url = try #require(Bundle(for: TestBundle.self).url(forResource: "original-audio", withExtension: "mov"))
-        return Clip(kind: .video, capturedAt: Date(), duration: 1, preset: .cafe, videoURL: url)
+        return Clip(kind: kind, capturedAt: Date(), duration: 1, preset: .cafe, videoURL: url)
     }
 
     @Test func editingPlaybackUsesMovieAudioEvenIfPreviouslyAmbient() throws {
@@ -57,9 +57,11 @@ struct FilmAudioPlaybackTests {
         #expect(try peak(in: asset, track: track, at: 0.35) > 0.1)
     }
 
-    @Test func trimmedExportUsesSelectedFramesAndSound() async throws {
-        var clip = try clip()
+    @Test(.serialized, arguments: [ClipKind.video, .live])
+    func trimmedExportUsesSelectedFramesAndSound(kind: ClipKind) async throws {
+        var clip = try clip(kind: kind)
         clip.setTrimRange(0.3...0.8)
+        try #require(clip.trimRange == 0.3...0.8)
         let source = AVURLAsset(url: try #require(clip.videoURL))
         let url = try await export(clip)
         defer { try? FileManager.default.removeItem(at: url) }
@@ -83,8 +85,9 @@ struct FilmAudioPlaybackTests {
         }
     }
 
-    @Test func rangeChangeOnLoadedClipSeeksAndEndsOnce() async throws {
-        var clip = try clip()
+    @Test(.serialized, arguments: [ClipKind.video, .live])
+    func rangeChangeOnLoadedClipSeeksAndEndsOnce(kind: ClipKind) async throws {
+        var clip = try clip(kind: kind)
         let playback = ClipPlaybackController()
         playback.load(clip: clip)
         let original = playback.player.currentItem
