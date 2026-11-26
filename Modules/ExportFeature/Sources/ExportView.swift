@@ -214,7 +214,7 @@ public struct ExportView: View {
                 if store.quotaUnlocked {
                     Text("2026년까지 영상 생성 제한이 해제됐어요.").font(ChalNaTypography.headline)
                 } else {
-                    Text("하루 1회 · 주 3회").font(ChalNaTypography.headline)
+                    Text("하루 2회 · 주 5회").font(ChalNaTypography.headline)
                     Text("만들기를 누르면 생성 횟수 1회를 사용해요.").font(ChalNaTypography.label)
                         .foregroundStyle(ChalNaColor.textSecondary)
                 }

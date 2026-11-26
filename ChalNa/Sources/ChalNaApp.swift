@@ -21,7 +21,8 @@ struct ChalNaApp: App {
         let library = Result { try ModelContainer(for: Film.self) }
         self.library = library
 
-        if Bundle.main.url(forResource: "GoogleService-Info", withExtension: "plist") != nil {
+        if AppMode.current == .real, !AppMode.isShowcase,
+           Bundle.main.url(forResource: "GoogleService-Info", withExtension: "plist") != nil {
             FirebaseApp.configure()
         }
         let tracker: any AnalyticsTracker = FirebaseApp.app() == nil ? NoopAnalyticsTracker() : FirebaseAnalyticsTracker()

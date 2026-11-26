@@ -18,6 +18,7 @@ public enum AnalyticsEvent: Sendable, Equatable {
     case exportStarted(clipCount: Int)
     case exportCompleted(durationMs: Int?)
     case exportFailed(reason: String)
+    case exportQuotaBlocked(reason: String, stage: String)
 
     // 저장 / 공유
     case vlogSavedToLibrary
@@ -46,6 +47,7 @@ public enum AnalyticsEvent: Sendable, Equatable {
         case .exportStarted:       return "export_started"
         case .exportCompleted:     return "export_completed"
         case .exportFailed:        return "export_failed"
+        case .exportQuotaBlocked:  return "export_quota_blocked"
         case .vlogSavedToLibrary:  return "vlog_saved_to_library"
         case .vlogSaveFailed:      return "vlog_save_failed"
         case .filmDeleted:         return "film_deleted"
@@ -71,6 +73,8 @@ public enum AnalyticsEvent: Sendable, Equatable {
             return ["duration_ms": .int(ms)]
         case let .exportFailed(reason):
             return ["reason": .string(reason)]
+        case let .exportQuotaBlocked(reason, stage):
+            return ["reason": .string(reason), "stage": .string(stage)]
         case let .vlogSaveFailed(reason):
             return ["reason": .string(reason)]
         case let .filmDetailOpened(filmID):
