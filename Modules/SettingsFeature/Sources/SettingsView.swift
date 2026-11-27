@@ -78,9 +78,11 @@ public struct SettingsView: View {
     private var filmStorageDetail: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                storageOption(.photosOnly, title: String(localized: "사진 앱에만 저장"))
+                storageOption(.photosOnly, title: String(localized: "사진 앱에만 저장",
+                                                             bundle: AppLocalization.bundle, locale: AppLocalization.locale))
                 ChalNaListDivider()
-                storageOption(.appAndPhotos, title: String(localized: "이 앱과 사진 앱에 저장"))
+                storageOption(.appAndPhotos, title: String(localized: "이 앱과 사진 앱에 저장",
+                                                             bundle: AppLocalization.bundle, locale: AppLocalization.locale))
                 Text("앞으로 내보내는 영상에 적용돼요.")
                     .font(ChalNaTypography.label)
                     .foregroundStyle(ChalNaColor.textSecondary)

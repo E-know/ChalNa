@@ -64,7 +64,7 @@ final class SettingsSplitViewUITests: XCTestCase {
     func testVideoStorageSelectionPersistsAfterRelaunch() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
+        app.launchArguments = ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR", "-appLanguage", "system"]
         app.launch()
 
         let settings = app.buttons["home.settings"]
@@ -86,12 +86,15 @@ final class SettingsSplitViewUITests: XCTestCase {
         tap(alternate)
         XCTAssertTrue(alternate.isSelected)
         app.terminate()
+        app.launchArguments = ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR", "-appLanguage", "en"]
         app.launch()
         tap(settings)
         tap(storage)
         assertHittable(alternate)
         XCTAssertTrue(alternate.isSelected)
         XCTAssertFalse(initial.isSelected)
+        XCTAssertEqual(photosOnly.label, "Save to Photos Only")
+        XCTAssertEqual(appAndPhotos.label, "Save to This App and Photos")
         let savedScreenshot = XCTAttachment(screenshot: app.screenshot())
         savedScreenshot.name = "film-storage-saved-selection"
         savedScreenshot.lifetime = .keepAlways
