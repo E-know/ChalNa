@@ -61,6 +61,44 @@ final class SettingsSplitViewUITests: XCTestCase {
         assertHittable(app.buttons["システム設定"].firstMatch)
     }
 
+    func testVideoStorageSelectionPersistsAfterRelaunch() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
+        app.launch()
+
+        let settings = app.buttons["home.settings"]
+        let storage = app.descendants(matching: .any).matching(identifier: "settings.filmStorage").firstMatch
+        let photosOnly = app.buttons["settings.filmStorage.photosOnly"].firstMatch
+        let appAndPhotos = app.buttons["settings.filmStorage.appAndPhotos"].firstMatch
+        tap(settings)
+        tap(storage)
+        assertHittable(photosOnly)
+        assertHittable(appAndPhotos)
+        XCTAssertNotEqual(photosOnly.isSelected, appAndPhotos.isSelected)
+        let initial = photosOnly.isSelected ? photosOnly : appAndPhotos
+        let alternate = photosOnly.isSelected ? appAndPhotos : photosOnly
+        let initialScreenshot = XCTAttachment(screenshot: app.screenshot())
+        initialScreenshot.name = "film-storage-initial-selection"
+        initialScreenshot.lifetime = .keepAlways
+        add(initialScreenshot)
+
+        tap(alternate)
+        XCTAssertTrue(alternate.isSelected)
+        app.terminate()
+        app.launch()
+        tap(settings)
+        tap(storage)
+        assertHittable(alternate)
+        XCTAssertTrue(alternate.isSelected)
+        XCTAssertFalse(initial.isSelected)
+        let savedScreenshot = XCTAttachment(screenshot: app.screenshot())
+        savedScreenshot.name = "film-storage-saved-selection"
+        savedScreenshot.lifetime = .keepAlways
+        add(savedScreenshot)
+        tap(initial)
+    }
+
     func testSettingsNavigationPreservesTheUnsentSupportDraft() {
         continueAfterFailure = false
         let app = XCUIApplication()

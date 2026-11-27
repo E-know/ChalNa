@@ -1,5 +1,6 @@
 import SwiftUI
 import ComposableArchitecture
+import AppCore
 import DesignSystem
 import Models
 
@@ -13,6 +14,8 @@ public struct SettingsView: View {
     public var body: some View {
         NavigationSplitView(preferredCompactColumn: $preferredCompactColumn) {
             List(selection: $store.selectedSection.sending(\.sectionSelected)) {
+                menuLink(.filmStorage, title: "영상 저장 위치", subtitle: "완성한 영상을 저장할 곳을 선택하세요")
+                    .accessibilityIdentifier("settings.filmStorage")
                 menuLink(.language, title: "언어", subtitle: "앱 표시 언어를 선택하세요")
                     .accessibilityIdentifier("settings.language")
                 menuLink(.support, title: "문의·신고", subtitle: "불편한 점이나 제안을 보내주세요")
@@ -32,6 +35,8 @@ public struct SettingsView: View {
             }
         } detail: {
             switch store.selectedSection {
+            case .filmStorage:
+                filmStorageDetail
             case .language:
                 LanguageView(store: store.scope(state: \.language, action: \.language))
             case .support:
@@ -68,6 +73,35 @@ public struct SettingsView: View {
         .listRowSeparatorTint(ChalNaColor.border)
         .accessibilityHint(Text("내보낼 영상의 해상도를 선택하세요"))
         .accessibilityIdentifier("settings.filmOutputResolution")
+    }
+
+    private var filmStorageDetail: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                storageOption(.photosOnly, title: String(localized: "사진 앱에만 저장"))
+                ChalNaListDivider()
+                storageOption(.appAndPhotos, title: String(localized: "이 앱과 사진 앱에 저장"))
+                Text("앞으로 내보내는 영상에 적용돼요.")
+                    .font(ChalNaTypography.label)
+                    .foregroundStyle(ChalNaColor.textSecondary)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+            }
+            .frame(maxWidth: 620)
+            .padding(.horizontal, 24)
+            .padding(.top, 16)
+            .padding(.bottom, 32)
+        }
+        .chalNaScreen()
+        .navigationTitle("영상 저장 위치")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func storageOption(_ mode: FilmStorageMode, title: String) -> some View {
+        ChalNaListRow.check(verbatimTitle: title, isChecked: store.filmStorageMode == mode) {
+            store.send(.filmStorageModeSelected(mode))
+        }
+        .accessibilityIdentifier("settings.filmStorage.\(mode.rawValue)")
     }
 
     private func menuLink(_ section: SettingsFeature.Section, title: LocalizedStringKey,

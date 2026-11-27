@@ -12,6 +12,7 @@ public struct SettingsFeature {
     public struct State: Equatable {
         var selectedSection: Section?
         var outputResolution = FilmOutputResolution.fullHD
+        var filmStorageMode: FilmStorageMode = .photosOnly
         var language = LanguageFeature.State()
         var support = SupportFeature.State()
 
@@ -19,6 +20,7 @@ public struct SettingsFeature {
     }
 
     public enum Section: Hashable {
+        case filmStorage
         case language
         case support
     }
@@ -27,12 +29,14 @@ public struct SettingsFeature {
         case onAppear
         case sectionSelected(Section?)
         case outputResolutionSelected(FilmOutputResolution)
+        case filmStorageModeSelected(FilmStorageMode)
         case language(LanguageFeature.Action)
         case support(SupportFeature.Action)
     }
 
     @Dependency(\.analyticsTracker) var analyticsTracker
     @Dependency(\.filmOutputResolution) var filmOutputResolution
+    @Dependency(\.filmStoragePreference) var filmStoragePreference
 
     public var body: some ReducerOf<Self> {
         Scope(state: \.language, action: \.language) { LanguageFeature() }
@@ -40,6 +44,7 @@ public struct SettingsFeature {
         Reduce { state, action in
             switch action {
             case .onAppear:
+                state.filmStorageMode = filmStoragePreference.load()
                 analyticsTracker.log(.settingsOpened)
                 state.outputResolution = filmOutputResolution.get()
                 return .none
@@ -49,6 +54,11 @@ public struct SettingsFeature {
             case let .outputResolutionSelected(resolution):
                 state.outputResolution = resolution
                 filmOutputResolution.set(resolution)
+                return .none
+            case let .filmStorageModeSelected(mode):
+                guard state.filmStorageMode != mode else { return .none }
+                state.filmStorageMode = mode
+                filmStoragePreference.save(mode)
                 return .none
             case .support(.delegate(.finished)):
                 if state.selectedSection == .support { state.selectedSection = nil }

@@ -126,7 +126,7 @@ let project = Project(
                         "UIColorName": "",
                         "UIImageName": "",
                     ],
-                    "NSPhotoLibraryUsageDescription": "필름에 담을 Live Photo와 동영상을 사진 보관함에서 불러옵니다.",
+                    "NSPhotoLibraryUsageDescription": "사진 보관함에서 편집할 Live Photo와 동영상을 불러오고, 완성한 필름을 재생합니다.",
                     "NSPhotoLibraryAddUsageDescription": "완성한 필름을 사진 앱에 저장합니다.",
                     "UIUserInterfaceStyle": "Light",
                     "UISupportedInterfaceOrientations": [

@@ -34,23 +34,6 @@ struct FilmCoverTests {
         #expect(data == nil)
     }
 
-    /// 원본 비율(가로 16:9)로 저장된 구 썸네일은 재생성 대상이다.
-    @Test func testNeedsRegeneration_SourceAspectThumbnail_True() throws {
-        let landscape = try #require(solidJPEG(width: 160, height: 90))
-        #expect(FilmCover.needsRegeneration(thumbnailData: landscape))
-    }
-
-    /// 이미 결과물 비율(9:16)인 커버는 재생성하지 않는다 (백필 무한 반복 방지).
-    @Test func testNeedsRegeneration_RenderAspectThumbnail_False() throws {
-        let portrait = try #require(solidJPEG(width: 90, height: 160))
-        #expect(!FilmCover.needsRegeneration(thumbnailData: portrait))
-    }
-
-    /// 썸네일이 아예 없으면 재생성 대상이다 (movie 존재 여부는 호출처가 가드).
-    @Test func testNeedsRegeneration_NilThumbnail_True() {
-        #expect(FilmCover.needsRegeneration(thumbnailData: nil))
-    }
-
     // MARK: - Helpers
 
     /// 단색 프레임으로 채운 클린 H.264 영상을 temp URL 로 만든다.
@@ -121,16 +104,5 @@ struct FilmCoverTests {
         // BGRA 중간 회색으로 전체 채움.
         memset(base, 0x80, CVPixelBufferGetBytesPerRow(pb) * height)
         return pb
-    }
-
-    private func solidJPEG(width: CGFloat, height: CGFloat) -> Data? {
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = 1
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: width, height: height), format: format)
-        let image = renderer.image { context in
-            UIColor.gray.setFill()
-            context.fill(CGRect(x: 0, y: 0, width: width, height: height))
-        }
-        return image.jpegData(compressionQuality: 0.8)
     }
 }

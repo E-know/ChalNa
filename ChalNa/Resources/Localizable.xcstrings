@@ -1345,7 +1345,7 @@
       }
     },
     "사진 보관함 접근 권한이 필요해요" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1356,7 +1356,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "写真ライブラリへのアクセス許可が必要です"
+            "value" : "写真ライブラリへのアクセスが必要です"
           }
         }
       }
@@ -4420,19 +4420,19 @@
         }
       }
     },
-    "앱에 보관했어요" : {
+    "홈에 추가했어요" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Saved in the app"
+            "value" : "Added to Home"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "アプリに保存しました"
+            "value" : "ホームに追加しました"
           }
         }
       }
@@ -4932,6 +4932,244 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "選択した解像度で保存できませんでした。"
+          }
+        }
+      }
+    },
+    "사진 앱에 연결된 영상이 없어요" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No video is linked in Photos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写真アプリに紐づけられた動画がありません。"
+          }
+        }
+      }
+    },
+    "사진 앱에서 영상이 삭제되어 재생할 수 없어요" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This video was deleted from Photos and can’t be played."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写真アプリから動画が削除されたため、再生できません。"
+          }
+        }
+      }
+    },
+    "필름 기록은 홈에 남아 있어요." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The film is still listed on Home."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フィルムの記録はホームに残っています。"
+          }
+        }
+      }
+    },
+    "사진 앱에 저장된 영상을 보려면 접근 권한을 허용해 주세요." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow access to play videos saved in Photos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写真アプリに保存した動画を見るには、アクセスを許可してください。"
+          }
+        }
+      }
+    },
+    "사진 접근 허용" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow Photo Access"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写真へのアクセスを許可"
+          }
+        }
+      }
+    },
+    "사진 앱에서 영상을 불러오는 중이에요" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading video from Photos…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写真アプリから動画を読み込んでいます…"
+          }
+        }
+      }
+    },
+    "네트워크 연결을 확인하고 다시 시도해 주세요." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check your internet connection and try again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ネットワーク接続を確認して、もう一度お試しください。"
+          }
+        }
+      }
+    },
+    "홈에서 필름 기록을 삭제해요. 사진 앱에 저장한 영상은 그대로예요." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove the film from Home. The video stays in Photos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ホームからフィルムの記録を削除します。写真アプリの動画は残ります。"
+          }
+        }
+      }
+    },
+    "영상 저장 위치" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Video Save Location"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "動画の保存先"
+          }
+        }
+      }
+    },
+    "완성한 영상을 저장할 곳을 선택하세요" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose where to save finished videos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成した動画の保存先を選んでください"
+          }
+        }
+      }
+    },
+    "사진 앱에만 저장" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save to Photos Only"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写真アプリのみに保存"
+          }
+        }
+      }
+    },
+    "이 앱과 사진 앱에 저장" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save to This App and Photos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このアプリと写真アプリに保存"
+          }
+        }
+      }
+    },
+    "앞으로 내보내는 영상에 적용돼요." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Applies to future exports."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今後書き出す動画に適用されます。"
+          }
+        }
+      }
+    },
+    "앱에 영상을 저장했어요" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved the video in the app"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "動画をアプリに保存しました"
           }
         }
       }

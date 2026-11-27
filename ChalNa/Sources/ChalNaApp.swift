@@ -26,11 +26,19 @@ struct ChalNaApp: App {
             FirebaseApp.configure()
         }
         let tracker: any AnalyticsTracker = FirebaseApp.app() == nil ? NoopAnalyticsTracker() : FirebaseAnalyticsTracker()
+        let photos = PhotoLibraryClient.liveValue
         prepareDependencies {
             $0.analyticsTracker = tracker
             $0.appLanguageWriter = languages
             $0.filmComposer = AVFoundationCompositionService()
-            $0.photoWriter = PhotoLibraryClient.liveValue
+            $0.photoWriter = photos
+            $0.filmVideo = FilmVideoClient(
+                availability: photos.videoAvailability,
+                loadPlayerItem: photos.loadPlayerItem,
+                loadShareURL: photos.loadShareURL,
+                changes: photos.photoLibraryChanges,
+                requestAccess: { _ = await photos.requestAuthorization() }
+            )
             #if DEBUG
             if AppMode.current == .devMock,
                ProcessInfo.processInfo.environment["CHALNA_UI_TEST_ISOLATE_EXPORT_QUOTA"] == "1" {
@@ -49,6 +57,9 @@ struct ChalNaApp: App {
                 $0.filmRemoval = archive
                 $0.filmReader = archive
             }
+        }
+        Task.detached(priority: .utility) {
+            try? SwiftDataFilmArchive.removeLegacyMovieFiles()
         }
         RemovedSettingsCleanup.run()
     }

@@ -96,7 +96,10 @@ public struct AppFeature {
 
             // MARK: Export delegate
 
-            case let .path(.element(id: _, action: .export(.delegate(delegateAction)))):
+            case let .path(.element(id: id, action: .export(.delegate(delegateAction)))):
+                let temporaryMovie: URL? = if case let .export(export)? = state.path[id: id] {
+                    export.exportedURL
+                } else { nil }
                 switch delegateAction {
                 case .homeRequested:
                     state.path.removeAll()
@@ -106,7 +109,8 @@ public struct AppFeature {
                     state.path.removeAll()
                     pushMediaPicker(state: &state)
                 }
-                return .none
+                guard let temporaryMovie else { return .none }
+                return .run { _ in try? FileManager.default.removeItem(at: temporaryMovie) }
 
             case .home, .path, .settings, .quotaAlert:
                 return .none
