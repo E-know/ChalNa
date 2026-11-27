@@ -28,9 +28,16 @@ public extension FilmComposing {
 }
 
 public enum FilmPhotoSaveResult: Equatable, Sendable {
-    case ok
+    case ok(localIdentifier: String)
     case denied
     case failed(String)
+}
+
+public enum PhotoVideoAvailability: Equatable, Sendable {
+    case available
+    case missing
+    case authorizationRequired
+    case accessRequired
 }
 
 public protocol FilmPhotoWriting: Sendable {

@@ -1,2 +1,2 @@
-"NSPhotoLibraryUsageDescription" = "フィルムに使うLive Photosと動画を写真ライブラリから読み込みます。";
+"NSPhotoLibraryUsageDescription" = "写真ライブラリから編集に使うLive Photosと動画を読み込み、完成したフィルムを再生します。";
 "NSPhotoLibraryAddUsageDescription" = "完成したフィルムを写真アプリに保存します。";

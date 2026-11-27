@@ -23,15 +23,17 @@ public struct FilmArchiveEntry: Equatable, Sendable {
 }
 
 public protocol FilmArchiving: Sendable {
-    /// 영상과 보관함 항목을 저장한 뒤 완성본의 표지를 반환한다.
-    func archive(_ entry: FilmArchiveEntry, movie: URL) async throws -> Data?
+    /// 보관함 기록을 저장하고 필요한 경우 앱에 완성본을 복사한다.
+    func archive(_ entry: FilmArchiveEntry, photoAssetIdentifier: String?, coverSource: URL,
+                 keepAppCopy: Bool) async throws -> Data?
 }
 
 private enum FilmArchiveKey: DependencyKey {
     static let liveValue: any FilmArchiving = UnconfiguredArchive()
 
     private struct UnconfiguredArchive: FilmArchiving {
-        func archive(_ entry: FilmArchiveEntry, movie: URL) async throws -> Data? {
+        func archive(_ entry: FilmArchiveEntry, photoAssetIdentifier: String?, coverSource: URL,
+                     keepAppCopy: Bool) async throws -> Data? {
             throw CocoaError(.fileWriteUnknown)
         }
     }

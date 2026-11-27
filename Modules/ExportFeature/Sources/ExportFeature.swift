@@ -34,10 +34,14 @@ public struct ExportFeature {
         public var errorMessage: String?
         public var archiveStatus: SaveStatus = .idle
         public var photoStatus: SaveStatus = .idle
+        public var storageMode: FilmStorageMode = .photosOnly
+        public var photoAssetIdentifier: String?
         public var entry: FilmArchiveEntry?
         public var cover: Data?
         public var isPlayerPresented = false
         public var quotaUnlocked = false
+
+        var isSaving: Bool { photoStatus == .saving || archiveStatus == .saving }
 
         public init(phase: ExportPhase = .idle, progress: Double = 0, exportedURL: URL? = nil,
                     resolution: FilmOutputResolution = .fullHD) {
@@ -75,6 +79,7 @@ public struct ExportFeature {
     @Dependency(\.analyticsTracker) var analyticsTracker
     @Dependency(\.exportQuotaClient) var exportQuotaClient
     @Dependency(\.filmArchive) var filmArchive
+    @Dependency(\.filmStoragePreference) var filmStoragePreference
     @Dependency(\.uuid) var uuid
     @Dependency(\.date.now) var now
     @Dependency(\.dismiss) var dismiss
@@ -95,6 +100,7 @@ public struct ExportFeature {
                     analyticsTracker.log(.exportQuotaBlocked(reason: reason.rawValue, stage: "export_start"))
                     return .none
                 }
+                state.storageMode = filmStoragePreference.load()
                 state.entry = FilmArchiveEntry(
                     id: uuid(), title: title.isEmpty ? "ChalNa" : title, createdAt: now,
                     thumbnail: clips.first?.thumbnailData, clipCount: clips.count,
@@ -126,9 +132,7 @@ public struct ExportFeature {
                 state.phase = .done
                 state.exportedURL = url
                 analyticsTracker.log(.exportCompleted(durationMs: nil))
-                let archive = startArchive(state: &state)
-                let photo = startPhotoSave(state: &state)
-                return .merge(archive, photo)
+                return startPhotoSave(state: &state)
 
             case let .exportFailed(message):
                 guard state.phase == .exporting else { return .none }
@@ -157,9 +161,11 @@ public struct ExportFeature {
             case let .saveCompleted(result):
                 guard state.photoStatus == .saving else { return .none }
                 switch result {
-                case .ok:
+                case let .ok(localIdentifier):
+                    state.photoAssetIdentifier = localIdentifier
                     state.photoStatus = .saved
                     analyticsTracker.log(.vlogSavedToLibrary)
+                    if state.archiveStatus == .saved { state.archiveStatus = .idle }
                 case .denied:
                     state.photoStatus = .denied
                     analyticsTracker.log(.vlogSaveFailed(reason: "denied"))
@@ -167,7 +173,7 @@ public struct ExportFeature {
                     state.photoStatus = .failed(message)
                     analyticsTracker.log(.vlogSaveFailed(reason: message))
                 }
-                return .none
+                return startArchive(state: &state)
 
             case let .playerPresentedChanged(value):
                 state.isPlayerPresented = value
@@ -175,10 +181,10 @@ public struct ExportFeature {
             case .backToEditTapped:
                 return .run { _ in await dismiss() }
             case .startAnotherTapped:
-                guard state.archiveStatus != .saving else { return .none }
+                guard !state.isSaving else { return .none }
                 return .send(.delegate(.newFilmRequested))
             case .homeTapped:
-                guard state.archiveStatus != .saving else { return .none }
+                guard !state.isSaving else { return .none }
                 return .send(.delegate(.homeRequested))
             case .delegate:
                 return .none
@@ -187,15 +193,20 @@ public struct ExportFeature {
     }
 
     private func startArchive(state: inout State) -> Effect<Action> {
-        guard let url = state.exportedURL, let entry = state.entry, state.archiveStatus.allowsRetry else { return .none }
+        let keepAppCopy = state.storageMode == .appAndPhotos
+        let identifier = state.photoAssetIdentifier
+        guard let url = state.exportedURL, let entry = state.entry,
+              keepAppCopy || identifier != nil, !state.isSaving, state.archiveStatus.allowsRetry else { return .none }
         state.archiveStatus = .saving
         return .run { send in
-            await send(.archiveCompleted(TaskResult { try await filmArchive.archive(entry, movie: url) }))
+            await send(.archiveCompleted(TaskResult {
+                try await filmArchive.archive(entry, photoAssetIdentifier: identifier, coverSource: url, keepAppCopy: keepAppCopy)
+            }))
         }
     }
 
     private func startPhotoSave(state: inout State) -> Effect<Action> {
-        guard let url = state.exportedURL, state.photoStatus.allowsRetry else { return .none }
+        guard let url = state.exportedURL, !state.isSaving, state.photoStatus.allowsRetry else { return .none }
         state.photoStatus = .saving
         return .run { send in
             await send(.saveCompleted(photoWriter.saveVideo(at: url)))

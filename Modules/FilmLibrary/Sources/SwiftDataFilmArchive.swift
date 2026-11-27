@@ -6,25 +6,37 @@ import SwiftData
 
 public struct SwiftDataFilmArchive: FilmArchiving, FilmRemoving {
     let container: ModelContainer
-    let coverRepair = FilmLibraryCoverRepair()
+    let documents: URL
     private let operations = FilmArchiveOperations()
 
-    public init(container: ModelContainer) {
+    public init(container: ModelContainer, documents: URL = FilmStorage.documentsURL) {
         self.container = container
+        self.documents = documents
     }
 
-    public func archive(_ entry: FilmArchiveEntry, movie: URL) async throws -> Data? {
-        try await operations.perform(.archive, id: entry.id) {
-            let existing = try await existingCover(id: entry.id)
-            if existing.hasMovie { return existing.cover }
-            let filename = try FilmStorage.importMovie(from: movie, filmID: entry.id)
-            let url = FilmStorage.documentsURL.appendingPathComponent(filename)
-            let cover = await FilmCover.firstFrameJPEG(fromMovieAt: url) ?? entry.thumbnail
+    public static func removeLegacyMovieFiles(in documents: URL = FilmStorage.documentsURL) throws {
+        try FilmStorage.removeLegacyMovies(in: documents)
+    }
+
+    public func archive(_ entry: FilmArchiveEntry, photoAssetIdentifier: String?, coverSource: URL,
+                        keepAppCopy: Bool) async throws -> Data? {
+        try await operations.perform(.archive(photoAssetIdentifier, keepAppCopy), id: entry.id) {
+            let existing = try await MainActor.run {
+                try film(id: entry.id).map { (filename: $0.movieFilename, cover: $0.thumbnailData) }
+            }
+            let cover: Data?
+            if let existing { cover = existing.cover }
+            else { cover = await FilmCover.firstFrameJPEG(fromMovieAt: coverSource) ?? entry.thumbnail }
+
+            let filename = keepAppCopy ? try FilmStorage.storeAppCopy(from: coverSource, id: entry.id, in: documents) : nil
             do {
-                try await commit(entry, filename: filename, cover: cover)
+                try await commit(entry, photoAssetIdentifier: photoAssetIdentifier, movieFilename: filename, cover: cover)
                 return cover
             } catch {
-                FilmStorage.deleteMovie(filename: filename)
+                if filename != existing?.filename,
+                   let copy = FilmStorage.appMovieURL(id: entry.id, filename: filename, in: documents) {
+                    try? FileManager.default.removeItem(at: copy)
+                }
                 throw error
             }
         }
@@ -33,7 +45,7 @@ public struct SwiftDataFilmArchive: FilmArchiving, FilmRemoving {
     public func remove(id: UUID) async throws {
         _ = try await operations.perform(.remove, id: id) {
             let filename = try await MainActor.run { try film(id: id)?.movieFilename }
-            try await FilmStorage.removingMovie(filename: filename) {
+            try await FilmStorage.removingAppCopy(id: id, filename: filename, in: documents) {
                 try await MainActor.run {
                     let context = container.mainContext
                     guard let entry = try film(id: id) else { return }
@@ -57,31 +69,24 @@ public struct SwiftDataFilmArchive: FilmArchiving, FilmRemoving {
     }
 
     @MainActor
-    private func existingCover(id: UUID) throws -> (hasMovie: Bool, cover: Data?) {
-        let existing = try film(id: id)
-        return (existing?.movieURL != nil, existing?.thumbnailData)
-    }
-
-    @MainActor
-    private func commit(_ entry: FilmArchiveEntry, filename: String, cover: Data?) throws {
+    private func commit(_ entry: FilmArchiveEntry, photoAssetIdentifier: String?, movieFilename: String?, cover: Data?) throws {
         let context = container.mainContext
-        let existing = try film(id: entry.id)
-        let film = existing ?? Film(
-            id: entry.id, title: entry.title, createdAt: entry.createdAt, thumbnailData: cover,
-            clipCount: entry.clipCount, liveCount: entry.liveCount, totalDurationSeconds: entry.duration
-        )
-        let previousFilename = film.movieFilename
-        let previousCover = film.thumbnailData
-        film.movieFilename = filename
-        if let cover { film.thumbnailData = cover }
-        if existing == nil { context.insert(film) }
+        if let existing = try film(id: entry.id) {
+            let identifier = photoAssetIdentifier ?? existing.photoAssetIdentifier
+            let filename = movieFilename ?? existing.movieFilename
+            guard existing.photoAssetIdentifier != identifier || existing.movieFilename != filename else { return }
+            existing.photoAssetIdentifier = identifier
+            existing.movieFilename = filename
+        } else {
+            context.insert(Film(
+                id: entry.id, title: entry.title, createdAt: entry.createdAt, movieFilename: movieFilename,
+                photoAssetIdentifier: photoAssetIdentifier, thumbnailData: cover,
+                clipCount: entry.clipCount, liveCount: entry.liveCount, totalDurationSeconds: entry.duration
+            ))
+        }
         do { try context.save() }
         catch {
-            if existing == nil { context.delete(film) }
-            else {
-                film.movieFilename = previousFilename
-                film.thumbnailData = previousCover
-            }
+            context.rollback()
             throw error
         }
     }
@@ -89,7 +94,7 @@ public struct SwiftDataFilmArchive: FilmArchiving, FilmRemoving {
 
 /// 화면이 사라져도 시작한 파일 작업은 끝까지 진행한다. 한 필름의 보관·삭제만 직렬화한다.
 private actor FilmArchiveOperations {
-    enum Kind: Equatable, Sendable { case archive, remove }
+    enum Kind: Equatable, Sendable { case archive(String?, Bool), remove }
     private var pending: [UUID: (kind: Kind, task: Task<Data?, Error>)] = [:]
 
     func perform(_ kind: Kind, id: UUID, operation: @escaping @Sendable () async throws -> Data?) async throws -> Data? {

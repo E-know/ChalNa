@@ -77,7 +77,7 @@ public struct ExportView: View {
             if store.phase == .done {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("닫기", systemImage: "xmark") { store.send(.homeTapped) }
-                        .disabled(archivePending)
+                        .disabled(store.isSaving)
                 }
             }
         }
@@ -108,10 +108,6 @@ public struct ExportView: View {
                 .dynamicTypeSize(...DynamicTypeSize.accessibility1)
             }
         }
-    }
-
-    private var archivePending: Bool {
-        store.phase == .done && (store.archiveStatus == .idle || store.archiveStatus == .saving)
     }
 
     private var title: String { store.entry?.title ?? (session.title.isEmpty ? "ChalNa" : session.title) }
@@ -225,8 +221,8 @@ public struct ExportView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(ChalNaColor.selection, in: RoundedRectangle(cornerRadius: ChalNaRadius.sm))
         } else {
-            saveRow(photo: false)
             saveRow(photo: true)
+            if store.photoStatus == .saved || store.storageMode == .appAndPhotos { saveRow(photo: false) }
         }
     }
 
@@ -241,7 +237,10 @@ public struct ExportView: View {
                 Group {
                     switch status {
                     case .idle, .saving: Text("저장 중…")
-                    case .saved: Text(photo ? LocalizedStringKey("사진 앱에 저장했어요") : "앱에 보관했어요")
+                    case .saved:
+                        if photo { Text("사진 앱에 저장했어요") }
+                        else if store.storageMode == .appAndPhotos { Text("앱에 영상을 저장했어요") }
+                        else { Text("홈에 추가했어요") }
                     case .denied: Text("사진 추가 권한이 필요해요")
                     case .failed(let message): Text(verbatim: message)
                     }
@@ -255,11 +254,13 @@ public struct ExportView: View {
                         openURL(url) { if !$0 { returningFromSettings = false } }
                     }
                     .buttonStyle(.chalNa(.ghost, size: .md))
+                    .disabled(store.isSaving)
                 } else if case .failed = status {
                     Button(photo ? LocalizedStringKey("사진 앱에 다시 저장") : "보관 다시 시도") {
                         store.send(photo ? .saveToPhotoLibraryTapped : .archiveRequested)
                     }
                     .buttonStyle(.chalNa(.ghost, size: .md))
+                    .disabled(store.isSaving)
                 }
             }
         }
@@ -289,7 +290,7 @@ public struct ExportView: View {
                         Button("다른 영상 만들기") { store.send(.startAnotherTapped) }
                     }
                     .accessibilityAction(named: Text("다른 영상 만들기")) { store.send(.startAnotherTapped) }
-                    .disabled(archivePending)
+                    .disabled(store.isSaving)
             }
         }
     }

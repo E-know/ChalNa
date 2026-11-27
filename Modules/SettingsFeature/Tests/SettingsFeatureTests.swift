@@ -32,6 +32,42 @@ struct SettingsFeatureTests {
         #expect(selections.value == [.fourK])
     }
 
+    @Test func storageModeDefaultsToPhotosOnly() async {
+        let store = TestStore(initialState: SettingsFeature.State()) { SettingsFeature() } withDependencies: {
+            $0.filmOutputResolution.get = { .fullHD }
+        }
+        await store.send(.onAppear)
+        #expect(store.state.filmStorageMode == .photosOnly)
+    }
+
+    @Test func changingStorageModePersistsAndLoadsTheSelection() async {
+        let saved = LockIsolated(FilmStorageMode.photosOnly)
+        let preference = FilmStoragePreference(
+            load: { saved.value },
+            save: { mode in saved.setValue(mode) }
+        )
+        let store = TestStore(initialState: SettingsFeature.State()) { SettingsFeature() } withDependencies: {
+            $0.filmStoragePreference = preference
+        }
+
+        await store.send(.filmStorageModeSelected(.appAndPhotos)) {
+            $0.filmStorageMode = .appAndPhotos
+        }
+        #expect(saved.value == .appAndPhotos)
+
+        let reopened = TestStore(initialState: SettingsFeature.State()) { SettingsFeature() } withDependencies: {
+            $0.filmStoragePreference = preference
+            $0.filmOutputResolution.get = { .fullHD }
+        }
+        await reopened.send(.onAppear) {
+            $0.filmStorageMode = .appAndPhotos
+        }
+        await reopened.send(.filmStorageModeSelected(.photosOnly)) {
+            $0.filmStorageMode = .photosOnly
+        }
+        #expect(saved.value == .photosOnly)
+    }
+
     @Test func switchingSectionsKeepsTheSupportDraft() async {
         let store = TestStore(initialState: SettingsFeature.State()) { SettingsFeature() }
         await store.send(.sectionSelected(.support)) {

@@ -1,3 +1,4 @@
+import AVFoundation
 import ComposableArchitecture
 import Foundation
 import Models
@@ -26,6 +27,57 @@ private enum PhotoWriterKey: TestDependencyKey {
     }
 }
 
+public struct FilmVideoClient: TestDependencyKey, Sendable {
+    public var availability: @Sendable (String) -> PhotoVideoAvailability
+    public var loadPlayerItem: @Sendable (String) async -> AVPlayerItem?
+    public var loadShareURL: @Sendable (String) async -> URL?
+    public var changes: @Sendable () -> AsyncStream<Void>
+    public var requestAccess: @Sendable () async -> Void
+
+    public init(
+        availability: @escaping @Sendable (String) -> PhotoVideoAvailability = { _ in .accessRequired },
+        loadPlayerItem: @escaping @Sendable (String) async -> AVPlayerItem? = { _ in nil },
+        loadShareURL: @escaping @Sendable (String) async -> URL? = { _ in nil },
+        changes: @escaping @Sendable () -> AsyncStream<Void> = { AsyncStream { $0.finish() } },
+        requestAccess: @escaping @Sendable () async -> Void = {}
+    ) {
+        self.availability = availability
+        self.loadPlayerItem = loadPlayerItem
+        self.loadShareURL = loadShareURL
+        self.changes = changes
+        self.requestAccess = requestAccess
+    }
+
+    public static let testValue = Self()
+}
+
+public enum FilmStorageMode: String, CaseIterable, Sendable {
+    case photosOnly
+    case appAndPhotos
+}
+
+@DependencyClient
+public struct FilmStoragePreference: Sendable {
+    public var load: @Sendable () -> FilmStorageMode = { .photosOnly }
+    public var save: @Sendable (_ mode: FilmStorageMode) -> Void = { _ in }
+}
+
+extension FilmStoragePreference: DependencyKey {
+    private static let storageKey = "filmStorageMode"
+
+    public static let liveValue = Self(
+        load: {
+            UserDefaults.standard.string(forKey: storageKey)
+                .flatMap(FilmStorageMode.init(rawValue:)) ?? .photosOnly
+        },
+        save: { mode in
+            UserDefaults.standard.set(mode.rawValue, forKey: storageKey)
+        }
+    )
+
+    public static let testValue = Self(load: { .photosOnly }, save: { _ in })
+}
+
 public extension DependencyValues {
     var filmComposer: any FilmComposing {
         get { self[ComposerKey.self] }
@@ -35,5 +87,15 @@ public extension DependencyValues {
     var photoWriter: any FilmPhotoWriting {
         get { self[PhotoWriterKey.self] }
         set { self[PhotoWriterKey.self] = newValue }
+    }
+
+    var filmVideo: FilmVideoClient {
+        get { self[FilmVideoClient.self] }
+        set { self[FilmVideoClient.self] = newValue }
+    }
+
+    var filmStoragePreference: FilmStoragePreference {
+        get { self[FilmStoragePreference.self] }
+        set { self[FilmStoragePreference.self] = newValue }
     }
 }

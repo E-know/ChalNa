@@ -6,18 +6,21 @@ public struct ArchivedFilm: Identifiable, Equatable, Sendable {
     public let id: UUID
     public let title: String
     public let createdAt: Date
-    public let movieURL: URL?
+    public let photoAssetIdentifier: String?
+    public let appMovieURL: URL?
     public let thumbnailData: Data?
     public let clipCount: Int
     public let liveCount: Int
     public let totalDurationSeconds: Double
 
-    public init(id: UUID, title: String, createdAt: Date, movieURL: URL?, thumbnailData: Data?,
+    public init(id: UUID, title: String, createdAt: Date, photoAssetIdentifier: String? = nil, appMovieURL: URL? = nil,
+                thumbnailData: Data?,
                 clipCount: Int, liveCount: Int, totalDurationSeconds: Double) {
         self.id = id
         self.title = title
         self.createdAt = createdAt
-        self.movieURL = movieURL
+        self.photoAssetIdentifier = photoAssetIdentifier
+        self.appMovieURL = appMovieURL
         self.thumbnailData = thumbnailData
         self.clipCount = clipCount
         self.liveCount = liveCount

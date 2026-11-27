@@ -4,6 +4,7 @@ import Photos
 import UIKit
 import AVFoundation
 import Models
+import os
 
 public enum PhotoLibraryAccess: Sendable, Equatable {
     case notDetermined, restricted, denied, authorized, limited
@@ -54,6 +55,12 @@ public struct PhotoLibraryClient: Sendable {
 
     /// 완성된 영상을 사진 보관함에 저장.
     public var saveVideoToPhotoLibrary: @Sendable (_ url: URL) async -> PhotoSaveResult = { _ in .denied }
+
+    public var videoAvailability: @Sendable (_ assetID: String) -> PhotoVideoAvailability = { _ in .accessRequired }
+    public var loadPlayerItem: @Sendable (_ assetID: String) async -> AVPlayerItem? = { _ in nil }
+    /// 임시 공유 파일은 사용이 끝나면 호출자가 삭제한다.
+    public var loadShareURL: @Sendable (_ assetID: String) async -> URL? = { _ in nil }
+    public var photoLibraryChanges: @Sendable () -> AsyncStream<Void> = { AsyncStream { $0.finish() } }
 }
 
 public typealias PhotoSaveResult = FilmPhotoSaveResult
@@ -151,28 +158,47 @@ extension PhotoLibraryClient: DependencyKey {
             fetchAsset(with: assetID)?.creationDate
         },
         saveVideoToPhotoLibrary: { url in
-            let status = PHPhotoLibrary.authorizationStatus(for: .addOnly)
-            let granted: Bool
-            switch status {
-            case .authorized, .limited:
-                granted = true
-            case .notDetermined:
-                let new = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
-                granted = (new == .authorized || new == .limited)
-            default:
-                granted = false
+            var status = PHPhotoLibrary.authorizationStatus(for: .addOnly)
+            if status == .notDetermined {
+                status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
             }
-            guard granted else { return .denied }
-            return await withCheckedContinuation { (cont: CheckedContinuation<PhotoSaveResult, Never>) in
-                PHPhotoLibrary.shared().performChanges {
-                    PHAssetCreationRequest.creationRequestForAssetFromVideo(atFileURL: url)
-                } completionHandler: { success, error in
-                    if success {
-                        cont.resume(returning: .ok)
-                    } else {
-                        cont.resume(returning: .failed(error?.localizedDescription ?? String(localized: "알 수 없는 오류", bundle: AppLocalization.bundle, locale: AppLocalization.locale)))
-                    }
+            guard status == .authorized || status == .limited else { return .denied }
+            let identifier = OSAllocatedUnfairLock<String?>(initialState: nil)
+            do {
+                try await PHPhotoLibrary.shared().performChanges {
+                    let request = PHAssetCreationRequest.forAsset()
+                    request.addResource(with: .video, fileURL: url, options: nil)
+                    let localIdentifier = request.placeholderForCreatedAsset?.localIdentifier
+                    identifier.withLock { $0 = localIdentifier }
                 }
+                guard let localIdentifier = identifier.withLock({ $0 }) else {
+                    return .failed(String(localized: "알 수 없는 오류", bundle: AppLocalization.bundle, locale: AppLocalization.locale))
+                }
+                return .ok(localIdentifier: localIdentifier)
+            } catch {
+                return .failed(error.localizedDescription)
+            }
+        },
+        videoAvailability: { assetID in
+            switch PhotoLibraryAccess(PHPhotoLibrary.authorizationStatus(for: .readWrite)) {
+            case .authorized: storedVideoAsset(with: assetID) == nil ? .missing : .available
+            case .limited: storedVideoAsset(with: assetID) == nil ? .accessRequired : .available
+            case .notDetermined: .authorizationRequired
+            case .denied, .restricted: .accessRequired
+            }
+        },
+        loadPlayerItem: { assetID in
+            await loadPlayerItemImpl(forAssetID: assetID)
+        },
+        loadShareURL: { assetID in
+            await loadShareURLImpl(forAssetID: assetID)
+        },
+        photoLibraryChanges: {
+            AsyncStream(bufferingPolicy: .bufferingNewest(1)) { continuation in
+                let library = PHPhotoLibrary.shared()
+                let observer = PhotoLibraryChanges(continuation: continuation)
+                library.register(observer)
+                continuation.onTermination = { _ in library.unregisterChangeObserver(observer) }
             }
         }
     )
@@ -223,6 +249,63 @@ public struct PhotoLibraryAsset: Identifiable, Hashable, Sendable {
 
 private func fetchAsset(with localID: String) -> PHAsset? {
     PHAsset.fetchAssets(withLocalIdentifiers: [localID], options: nil).firstObject
+}
+
+private func storedVideoAsset(with localID: String) -> PHAsset? {
+    let options = PHFetchOptions()
+    options.includeHiddenAssets = true
+    let asset = PHAsset.fetchAssets(withLocalIdentifiers: [localID], options: options).firstObject
+    return asset?.mediaType == .video ? asset : nil
+}
+
+private func loadPlayerItemImpl(forAssetID localID: String) async -> AVPlayerItem? {
+    guard !Task.isCancelled, let asset = storedVideoAsset(with: localID) else { return nil }
+    let manager = PHImageManager.default()
+    let options = PHVideoRequestOptions()
+    options.isNetworkAccessAllowed = true
+    let (items, continuation) = AsyncStream<AVPlayerItem>.makeStream()
+    let request = manager.requestPlayerItem(forVideo: asset, options: options) { item, _ in
+        if let item { continuation.yield(item) }
+        continuation.finish()
+    }
+    var iterator = items.makeAsyncIterator()
+    let item = await iterator.next()
+    if Task.isCancelled {
+        manager.cancelImageRequest(request)
+        return nil
+    }
+    return item
+}
+
+private func loadShareURLImpl(forAssetID localID: String) async -> URL? {
+    guard !Task.isCancelled, let asset = storedVideoAsset(with: localID) else { return nil }
+    let resources = PHAssetResource.assetResources(for: asset)
+    guard let resource = resources.first(where: { $0.type == .fullSizeVideo })
+        ?? resources.first(where: { $0.type == .video }) else { return nil }
+    let ext = URL(fileURLWithPath: resource.originalFilename).pathExtension
+    let url = FileManager.default.temporaryDirectory
+        .appendingPathComponent(UUID().uuidString)
+        .appendingPathExtension(ext.isEmpty ? "mov" : ext)
+    do {
+        try await writePHAssetResource(resource, to: url)
+        try Task.checkCancellation()
+        return url
+    } catch {
+        try? FileManager.default.removeItem(at: url)
+        return nil
+    }
+}
+
+private final class PhotoLibraryChanges: NSObject, PHPhotoLibraryChangeObserver, Sendable {
+    private let continuation: AsyncStream<Void>.Continuation
+
+    init(continuation: AsyncStream<Void>.Continuation) {
+        self.continuation = continuation
+    }
+
+    func photoLibraryDidChange(_ changeInstance: PHChange) {
+        continuation.yield(())
+    }
 }
 
 private func loadThumbnailImpl(forAssetID localID: String) async -> Data? {

@@ -1,3 +1,4 @@
+import Photos
 import XCTest
 
 /// devMock으로 필름을 실제로 만들어 홈 라이브러리 표지와 생성 한도를 검증한다.
@@ -11,7 +12,7 @@ final class HomeLibraryCoverUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["CHALNA_APP_MODE"] = "devMock"
         app.launchEnvironment["CHALNA_UI_TEST_ISOLATE_EXPORT_QUOTA"] = "1"
-        app.launchArguments += ["-AppleLanguages", "(ko)"]
+        app.launchArguments += ["-AppleLanguages", "(ko)", "-filmStorageMode", "photosOnly"]
         app.launch()
 
         let filmTitle = "필름 " + UUID().uuidString.prefix(8)
@@ -44,7 +45,108 @@ final class HomeLibraryCoverUITests: XCTestCase {
         XCTAssertTrue(newVlog.isHittable, "한도에 도달하면 홈에 남아 있어야 한다")
     }
 
-    private func createFilm(in app: XCUIApplication, title filmTitle: String) -> XCUIElement {
+    #if targetEnvironment(simulator)
+    func testDeletingExportFromPhotosKeepsFilmRecordAndDisablesPlayback() throws {
+        try checkPlaybackAfterDeletingFromPhotos(keepAppCopy: false)
+    }
+
+    func testDeletingExportFromPhotosKeepsTheAppCopyPlayable() throws {
+        try checkPlaybackAfterDeletingFromPhotos(keepAppCopy: true)
+    }
+
+    private func checkPlaybackAfterDeletingFromPhotos(keepAppCopy: Bool) throws {
+        try XCTSkipUnless(PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized,
+                          "사진 보관함 전체 접근을 허용한 전용 테스트 시뮬레이터에서 실행합니다.")
+        let existingVideoIDs = videoAssetIDs()
+        let app = XCUIApplication()
+        app.launchEnvironment["CHALNA_APP_MODE"] = "devMock"
+        app.launchEnvironment["CHALNA_UI_TEST_ISOLATE_EXPORT_QUOTA"] = "1"
+        app.launchArguments += ["-AppleLanguages", "(ko)", "-filmStorageMode", keepAppCopy ? "appAndPhotos" : "photosOnly"]
+        app.launch()
+
+        let title = "삭제 테스트 " + UUID().uuidString.prefix(8)
+        createFilm(in: app, title: title, keepAppCopy: keepAppCopy).tap()
+        let poster = app.buttons["home.latestFilm"].firstMatch
+        XCTAssertTrue(poster.waitForExistence(timeout: 10))
+        XCTAssertTrue(poster.label.contains(title))
+        poster.tap()
+
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let requestAccess = app.buttons["사진 접근 허용"].firstMatch
+        if requestAccess.waitForExistence(timeout: 2) {
+            requestAccess.tap()
+            dismissPhotoPermissionAlert(springboard: springboard)
+        }
+        let play = app.buttons["완성된 영상 재생"].firstMatch
+        XCTAssertTrue(play.waitForExistence(timeout: 10), app.debugDescription)
+        play.tap()
+        let close = app.buttons["닫기"].firstMatch
+        XCTAssertTrue(close.waitForExistence(timeout: 15), app.debugDescription)
+        close.tap()
+        XCTAssertTrue(close.waitForNonExistence(timeout: 5))
+
+        // 테스트가 시작된 후 새로 추가된 찰나 내보내기 한 건만 삭제한다.
+        let newVideoIDs = videoAssetIDs().subtracting(existingVideoIDs)
+        let identifier = try XCTUnwrap(newVideoIDs.count == 1 ? newVideoIDs.first : nil, "테스트 영상이 정확히 한 건 추가되어야 한다")
+        let asset = try XCTUnwrap(PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil).firstObject)
+        let isChalNaExport = PHAssetResource.assetResources(for: asset).contains { resource in
+            let filename = resource.originalFilename
+            let basename = (filename as NSString).deletingPathExtension
+            return resource.type == .video && filename.hasPrefix("chalNa-") && filename.hasSuffix(".mp4")
+                && UUID(uuidString: String(basename.dropFirst("chalNa-".count))) != nil
+        }
+        guard isChalNaExport else {
+            XCTFail("테스트가 만든 찰나 영상만 삭제할 수 있어야 한다")
+            return
+        }
+
+        let deletion = expectation(description: "테스트 영상 삭제")
+        PHPhotoLibrary.shared().performChanges {
+            let matching = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil)
+            PHAssetChangeRequest.deleteAssets(matching)
+        } completionHandler: { success, error in
+            XCTAssertTrue(success, String(describing: error))
+            deletion.fulfill()
+        }
+        let runnerPrompt = NSPredicate(format: "label CONTAINS %@", "ChalNaUITests-Runner")
+        let runnerAlert = springboard.alerts.matching(runnerPrompt).firstMatch
+        let delete = runnerAlert.buttons.matching(NSPredicate(
+            format: "label IN %@", ["Delete", "Delete Video", "삭제", "비디오 삭제", "동영상 삭제"]
+        )).firstMatch
+        XCTAssertTrue(delete.waitForExistence(timeout: 20), springboard.debugDescription)
+        delete.tap()
+        wait(for: [deletion], timeout: 10)
+        XCTAssertFalse(videoAssetIDs().contains(identifier))
+
+        let warning = app.staticTexts.matching(NSPredicate(
+            format: "label CONTAINS %@", "사진 앱에서 영상이 삭제되어 재생할 수 없어요"
+        )).firstMatch
+        if keepAppCopy {
+            XCTAssertFalse(warning.exists)
+            XCTAssertTrue(app.buttons["공유하기"].exists)
+            play.tap()
+            XCTAssertTrue(close.waitForExistence(timeout: 10), app.debugDescription)
+            close.tap()
+            return
+        }
+        XCTAssertTrue(warning.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.staticTexts[title].exists)
+        XCTAssertFalse(play.exists)
+        XCTAssertFalse(app.buttons["공유하기"].exists)
+
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "film-deleted-from-photos"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    private func videoAssetIDs() -> Set<String> {
+        let videos = PHAsset.fetchAssets(with: .video, options: nil)
+        return Set((0..<videos.count).map { videos.object(at: $0).localIdentifier })
+    }
+    #endif
+
+    private func createFilm(in app: XCUIApplication, title filmTitle: String, keepAppCopy: Bool = false) -> XCUIElement {
         // 홈 → 새 Vlog
         let newVlog = app.buttons["home.newFilm"].firstMatch
         XCTAssertTrue(newVlog.waitForExistence(timeout: 10), "홈의 새 Vlog 버튼")
@@ -75,10 +177,10 @@ final class HomeLibraryCoverUITests: XCTestCase {
         XCTAssertTrue(startExport.waitForExistence(timeout: 8))
         startExport.tap()
 
-        // 합성이 끝나면 홈 버튼이 먼저 나타난다. 앱 보관이 끝나야 탭할 수 있다.
+        // 사진 앱에 저장하고 홈에 필름 기록을 추가할 때까지 기다린다.
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         let goHome = app.buttons["내 필름으로"].firstMatch
-        let archived = app.staticTexts["앱에 보관했어요"].firstMatch
+        let archived = app.staticTexts[keepAppCopy ? "앱에 영상을 저장했어요" : "홈에 추가했어요"].firstMatch
         let deadline = Date().addingTimeInterval(120)
         while Date() < deadline {
             dismissPhotoPermissionAlert(springboard: springboard)
