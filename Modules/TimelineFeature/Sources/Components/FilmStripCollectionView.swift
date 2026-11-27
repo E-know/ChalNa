@@ -262,7 +262,11 @@ final class FilmStripVC: UIViewController,
         self.onMove = onMove
 
         if previousItems != nextItems {
-            applySnapshot(animated: true)
+            var insertedSelection: FilmStripItem?
+            if previousCurrentClipID != nil, let nextCurrentClipID, !previousItems.contains(.clip(nextCurrentClipID)) {
+                insertedSelection = .clip(nextCurrentClipID)
+            }
+            applySnapshot(animated: true, revealing: insertedSelection)
             return
         }
 
@@ -278,12 +282,21 @@ final class FilmStripVC: UIViewController,
         refreshVisibleCells(matching: layoutChanged ? nil : Set(itemsToRefresh))
     }
 
-    private func applySnapshot(animated: Bool) {
+    private func applySnapshot(animated: Bool, revealing item: FilmStripItem? = nil) {
         var snapshot = NSDiffableDataSourceSnapshot<Int, FilmStripItem>()
         snapshot.appendSections([0])
         snapshot.appendItems(Self.items(for: clips), toSection: 0)
         dataSource.apply(snapshot, animatingDifferences: animated) { [weak self] in
-            self?.refreshVisibleCells(matching: nil)
+            guard let self else { return }
+            refreshVisibleCells(matching: nil)
+            guard let item, let currentClipID, item == .clip(currentClipID),
+                  let indexPath = dataSource.indexPath(for: item) else { return }
+            collectionView.layoutIfNeeded()
+            if let attributes = collectionView.layoutAttributesForItem(at: indexPath),
+               !collectionView.bounds.contains(attributes.frame) {
+                let position: UICollectionView.ScrollPosition = layout == .strip ? .centeredHorizontally : .centeredVertically
+                collectionView.scrollToItem(at: indexPath, at: position, animated: animated)
+            }
         }
     }
 

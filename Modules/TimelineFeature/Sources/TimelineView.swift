@@ -90,7 +90,12 @@ public struct TimelineView: View {
             NavigationStack {
                 ClipTrimView(
                     clip: clip,
-                    onCommit: { store.send(.trimCommitted($0, thumbnail: $1)) },
+                    onCommit: { action, range, thumbnail in
+                        switch action {
+                        case .update: store.send(.trimCommitted(range, thumbnail: thumbnail))
+                        case .add: store.send(.trimAdded(range, thumbnail: thumbnail))
+                        }
+                    },
                     onCancel: { store.send(.trimDismissed) }
                 )
             }
